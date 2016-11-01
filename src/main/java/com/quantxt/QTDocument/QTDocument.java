@@ -27,13 +27,15 @@ abstract public class QTDocument {
 	protected Set<String> persons;
 	protected List<String> organizations = null;
 	private List<String> ticker = null;
-	protected List<String> statements = null;
+	protected List<String> sentences = new ArrayList<>();
+//	protected List<String> statements = new ArrayList<>();
+//	protected List<String> actions = new ArrayList<>();
 	protected Map<Integer, Integer> topics;
 	protected String sector;
 	protected String industry;
 //	protected List<Integer> topics;
 //	protected String topics = null;
-	protected int id;
+//	protected int id;
 	protected String directLink;
 	protected String origLink;
 	protected String title;
@@ -44,10 +46,14 @@ abstract public class QTDocument {
 	private String sourceName;
 	private String categories;
 	private String author;
-	private String [] tags;
+	private Set<String> tags = new HashSet<>();
+	private String excerpt;
+	private String logo;
 
 	private static Translate translator;
-	private static CategoryDetection categoryDetection = new CategoryDetection();
+
+//	private static CategoryDetection categoryDetection = new CategoryDetection();
+	private static CategoryDetection categoryDetection = null;
 	
 	public QTDocument(String b, String t){
 		body = b;
@@ -59,7 +65,7 @@ abstract public class QTDocument {
 //		statements		= new ArrayList<>();
 		topics          = new HashMap<>();
 //		topics          = new ArrayList<Integer>();
-		id = Math.abs(title.hashCode());
+//		id = Math.abs(title.hashCode());
 	}
 	
 	protected String Translate(String text, Language inLang, Language outLang) throws Exception{
@@ -81,27 +87,41 @@ abstract public class QTDocument {
 		sector = s;
 	}
 
+	protected void setExcerpt(String s){
+		excerpt = s;
+	}
+
 	public void setCategories (String s){
 		categories = s;
 	}
 
-	public void setTags (List<String> taglist){
-		tags = taglist.toArray(new String[taglist.size()]);
+	public void addTags (List<String> taglist){
+		tags.addAll(taglist);
+	}
+
+	public void addTag (String tag){
+		tags.add(tag);
 	}
 	
 	protected void setIndustry(String s){
 		industry = s;
 	}
+
+	public void setLogo(String s){
+		logo = s;
+	}
 	
 	protected void getSentenceNER(final String[] sentences,
 								  final NameFinderME nameFinder,
-								  final NameFinderME organizationFinder){
-		
+								  final NameFinderME organizationFinder)
+	{
+		if (sentences.length > 0){
+			excerpt = sentences[0];
+		} else {
+			logger.info(" --> " + title);
+		}
+
 	    for(String sentence: sentences) {
-	    	if (isStatement(sentence))
-	    		addStatement(sentence);
-	    	else
-	    		continue;
 
 	    	String tokens[]             = getTokens(sentence);
 	    	if (nameFinder != null){
@@ -170,13 +190,8 @@ abstract public class QTDocument {
 		}
 		ticker.add(o);
 	}
-	
-	public void addStatement(String s){
-		if (statements == null){
-			statements 	= new ArrayList<String>();
-		}
-		statements.add(s);
-	}
+
+
 	
 	public void addTopic(int t, double v){
 //		Topic topic = new Topic(t,v);
@@ -218,6 +233,7 @@ abstract public class QTDocument {
 	public void setSource(String s) {
 		sourceName = s;
 	}
+
 	
 	public String getTokenizedBody(){
 		String b = body;
@@ -228,6 +244,10 @@ abstract public class QTDocument {
 	
 	public String getBody(){
 		return body;
+	}
+
+	public String getExcerpt(){
+		return excerpt;
 	}
 	
 	public Set<String> getPersons(){
@@ -249,6 +269,7 @@ abstract public class QTDocument {
 	public String getDirectLink(){
 		return directLink;
 	}
+
 	public String getTitle(){
 		return title;
 	}
@@ -257,7 +278,9 @@ abstract public class QTDocument {
 		return englishTitle;
 	}
 
-	public int getID() {return id;}
+	public String getLogo(){return logo;}
+
+//	public int getID() {return id;}
 
 	public String getCategories() {
 		if (categories == null) {
@@ -267,10 +290,24 @@ abstract public class QTDocument {
 		return categories;
 	}
 
-	public String [] getTags(){ return tags;}
+	public Set<String> getTags(){ return tags;}
 
 	public String getDate() {return date;}
-	
+
+	public String getAuthor() {return author;}
+
+	public List<String> getSentences(){
+		return sentences;
+	}
+
+//	public List<String> getStatements(){
+//		return statements;
+//	}
+
+//	public List<String> getActions(){
+//		return actions;
+//	}
+
 	//interface to process document
 	public void processDoc() throws Exception{
 	}
@@ -286,8 +323,8 @@ abstract public class QTDocument {
 			.append(title)
 			.append("\nDate: ")
 			.append(date);
-		if (statements.size() > 0)
-			out.append("\nStatements: ").append(statements.toString());
+		if (sentences.size() > 0)
+			out.append("\nStatements: ").append(sentences.toString());
 		if (persons.size() > 0)
 			out.append("\nPerson: ").append(persons.toString());
 		if (organizations != null)
@@ -305,8 +342,8 @@ abstract public class QTDocument {
 
 	public String getWPDocument(){
 		JsonObject json = new JsonObject();
-		json.addProperty("ID", id);
-		json.addProperty("post_id", id);
+//		json.addProperty("ID", id);
+//		json.addProperty("post_id", id);
 		json.addProperty("post_date", date);
 		json.addProperty("post_date_gmt", date);
 		json.addProperty("post_title", title);

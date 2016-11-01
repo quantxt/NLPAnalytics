@@ -1,27 +1,18 @@
 package com.quantxt.QTDocument;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.io.*;
+import java.util.*;
 
-import cc.mallet.types.Instance;
-import cc.mallet.types.InstanceList;
-import com.quantxt.helpers.Company;
+import com.quantxt.helpers.ValueComparator;
+import com.quantxt.nlp.TopicModel;
 import opennlp.tools.namefind.NameFinderME;
-import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.tokenize.Tokenizer;
 
 import opennlp.tools.util.Span;
+import org.ahocorasick.trie.Trie;
+import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,49 +21,89 @@ public class ENDocumentInfo extends QTDocument {
 
 	protected static final Logger logger = LoggerFactory.getLogger(ENDocumentInfo.class);
 
-	final private static Pattern statementWords = Pattern.compile("(?i)\\bsaid|told|stated|announced|says|added\\b");
+//	final private static Pattern statementWords = Pattern.compile("(?i)\\bsaid|told|stated|announced|tells|says|mentioned|indicated|pointed|says|added\\b");
+	private static Trie statementWords = null;
+	private static Trie actionWords = null;
 	final private static int NumOfTopics = 100;
 	final private static double bodyWeight  = .3;
 	final private static double titleWeight = .7;
+	private static boolean initialized = false;
+	private static TopicModel topicModel;
 
-	private SentenceDetectorME sentenceDetector = null;
-	private NameFinderME nameFinder = null;
-	private NameFinderME organizationFinder = null;
-	private Tokenizer tokenizer = null;
+	private static double [] interestVec;
+	private static double [] inflationVec;
+	private static double [] growthVec;
+	private static double [] laborVec;
+
+	private String rawText;
+
+	private static SentenceDetectorME sentenceDetector = null;
+//	private NameFinderME nameFinder = null;
+//	private NameFinderME organizationFinder = null;
+	private static Tokenizer tokenizer = null;
 //	private static cc.mallet.topics.TopicInferencer inferencer;
 //	private static cc.mallet.pipe.Pipe trainingPipe = null;
 //	private static Set<String> stopWordList = null;
 //	private static String wordTopicList = null;
 //	private static Map<String, ArrayList<Integer>> topicWeight = null;
-	private List<Company> companyName = new ArrayList<>();
+//	private List<Company> companyName = new ArrayList<>();
 	
 	public ENDocumentInfo (String body, String title) throws IOException {
 		super(body, title);
-/*		InputStream sentenceModellIn = new FileInputStream("models/en-sent.bin");
-		InputStream nerPersonmodelIn = new FileInputStream("models/en-ner-person.bin");
-		InputStream nerOrganizationnmodelIn = new FileInputStream("models/en-ner-organization.bin");
-		InputStream tokenizerModelIn = new FileInputStream("models/en-token.bin");
-		SentenceModel sentenceModel = new SentenceModel(sentenceModellIn);
-		sentenceDetector = new SentenceDetectorME(sentenceModel);
-		TokenNameFinderModel nerPersonModel = new TokenNameFinderModel(nerPersonmodelIn);
-		nameFinder = new NameFinderME(nerPersonModel);
-		TokenNameFinderModel nerOrganizationModel = new TokenNameFinderModel(nerOrganizationnmodelIn);
-		organizationFinder = new NameFinderME(nerOrganizationModel);
-		TokenizerModel tokenizerModel = new TokenizerModel(tokenizerModelIn);
-		tokenizer = new TokenizerME(tokenizerModel);
-		logger.info("English model initialized");
-		*/
+	}
+
+	public ENDocumentInfo (Elements body, String title) throws IOException {
+		super(body.html(), title);
+		rawText = body.text();
 	}
 	
 	public static void init() throws Exception{
+		if( initialized) return;
 //		stopWordList = new HashSet<String>();
 //		wordTopicList = "topWords." + NumOfTopics + ".en.txt";
 //		private static InstanceList instances;
 //		private static cc.mallet.topics.TopicInferencer inferencer;
 		InputStream sentenceModellIn = new FileInputStream("models/en-sent.bin");
-		InputStream nerPersonmodelIn = new FileInputStream("models/en-ner-person.bin");
-		InputStream nerOrganizationnmodelIn = new FileInputStream("models/en-ner-organization.bin");
-		InputStream tokenizerModelIn = new FileInputStream("models/en-token.bin");
+		SentenceModel sentenceModel = new SentenceModel(sentenceModellIn);
+		sentenceDetector = new SentenceDetectorME(sentenceModel);
+
+//		InputStream tokenizerModelIn = new FileInputStream("models/en-token.bin");
+//		TokenizerModel tokenizerModel = new TokenizerModel(tokenizerModelIn);
+//		tokenizer = new TokenizerME(tokenizerModel);
+
+		int numTopics = 150;
+		/*
+		topicModel = new TopicModel(numTopics, 500, "quotes");
+		topicModel.loadInfererFromW2VFile("official_w2vec_100.txt");
+
+		interestVec = topicModel.getSentenceVector("interest rate rates hike cut");
+		inflationVec = topicModel.getSentenceVector("inflation");
+		laborVec = topicModel.getSentenceVector("unemployment employment jobs job labor");
+		growthVec = topicModel.getSentenceVector("economic growth");
+
+
+		InputStream qv = new FileInputStream("models/quote_verbs.list");
+		BufferedReader br = new BufferedReader(new InputStreamReader(qv, "UTF-8"));
+		String line;
+		Trie.TrieBuilder builder = Trie.builder().onlyWholeWords()
+				.caseInsensitive().stopOnHit();
+		while ( (line = br.readLine()) != null){
+			builder.addKeyword(line);
+		}
+		statementWords = builder.build();
+
+		qv = new FileInputStream("models/action_words.list");
+		br = new BufferedReader(new InputStreamReader(qv, "UTF-8"));
+		builder = Trie.builder().onlyWholeWords()
+				.caseInsensitive().stopOnHit();
+		while ( (line = br.readLine()) != null){
+			builder.addKeyword(line);
+		}
+		actionWords = builder.build();
+*/
+//		InputStream nerPersonmodelIn = new FileInputStream("models/en-ner-person.bin");
+//		InputStream nerOrganizationnmodelIn = new FileInputStream("models/en-ner-organization.bin");
+//		InputStream tokenizerModelIn = new FileInputStream("models/en-token.bin");
 /*		InstanceList instances   = InstanceList.load(new File("models/NewsWireTopic."+ NumOfTopics +".market.en.instance"));
 		trainingPipe = instances.getPipe();
 		ParallelTopicModel model = null;
@@ -152,6 +183,7 @@ public class ENDocumentInfo extends QTDocument {
 		}
 		br.close();
 */
+		initialized = true;
 		System.out.println("english models initiliazed");
 	}
 	
@@ -245,7 +277,7 @@ public class ENDocumentInfo extends QTDocument {
         sorted_map.putAll(tmp);
         return sorted_map;
 	}
-	
+/*
 	private void findCompanies(String t){
 		for (Company c : companyName) {
 			final String compName = c.getName();
@@ -257,7 +289,7 @@ public class ENDocumentInfo extends QTDocument {
 			}
 		}
 	}
-	
+*/
 	@Override
 	public void processDoc(){
 		englishTitle = title;
@@ -274,19 +306,29 @@ public class ENDocumentInfo extends QTDocument {
 //			addTopic(e.getKey(), e.getValue());
 //			u--;
 //		}
-			
-		String sentences[] = sentenceDetector.sentDetect(body);
-		getSentenceNER(sentences, nameFinder, null);
+
+		if (rawText != null) {
+			String sentences[] = getSentences(rawText);
+			for (String s : sentences){
+				this.sentences.add(s);
+			}
+//			getSentenceNER(sentences, null, null);
+		}
+
+//		getSentenceNER(sentences, nameFinder, null);
 	}
-	
+
+	public static String [] getSentences(String text){
+		return sentenceDetector.sentDetect(text);
+	}
+
 	@Override
 	protected boolean isStatement(String s) {
-		Matcher m = statementWords.matcher(s);
-		if (m.find()){
-			findCompanies(s);
-			return true;
-		}
-		return false;
+		return statementWords.containsMatch(s);
+	}
+
+	public boolean isAction(String s) {
+		return actionWords.containsMatch(s);
 	}
 }
 
@@ -306,3 +348,4 @@ class VC implements Comparator<Integer> {
         } // returning 0 would merge keys
     }
 }
+

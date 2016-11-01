@@ -2,6 +2,7 @@ package com.quantxt.nlp;
 
 import cc.mallet.pipe.Pipe;
 import cc.mallet.types.Instance;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -13,8 +14,14 @@ import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
 import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static java.util.Arrays.asList;
 
 /**
  * Created by u6014526 on 5/3/2016.
@@ -23,16 +30,39 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
 
     final private static Logger logger = Logger.getLogger(LinePreProcess.class);
     private TokenPreProcess tokenPreProcess;
+    private Set<String> stopwords = new HashSet<>();
 
     public LinePreProcess() {
+        String line;
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("models/stoplist.txt"));
+            while ((line = br.readLine()) != null) {
+                stopwords.add(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        logger.info("Stop list loaded");
     }
 
-    private String normalize(String string) throws IOException {
-//        org.apache.lucene.analysis.Tokenizer tokenizer  = new LowerCaseTokenizer(new StringReader(string));
+    public LinePreProcess(String stoplist) {
+        String line;
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(stoplist));
+            while ((line = br.readLine()) != null) {
+                stopwords.add(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        logger.info("Stop list loaded");
+    }
+
+    public String normalize(String string) throws IOException {
         Analyzer analyzer = new EnglishAnalyzer();
-//        TokenStream tokenStream = new PorterStemFilter(tokenizer);
         TokenStream tokenStream = analyzer.tokenStream("", string);
 
+        /*
         StringBuilder sb = new StringBuilder();
         CharTermAttribute charTermAttr = tokenStream.getAttribute(CharTermAttribute.class);
         try{
@@ -47,8 +77,17 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
         catch (IOException e){
             System.out.println(e.getMessage());
         }
-        string = string.replaceAll("[\\>\\<_'\\-\"\\/\\(\\),?;:]+", " ");
+        */
+        string = string.replaceAll("[\\“\\”\\$\\=\\>\\<_\\'\\’\\-\"\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
         string = string.replaceAll("\\b\\d+\\b", "");
+        List<String> list = asList(string.split("\\s+"));
+        ArrayList<String> postEdit = new ArrayList<>();
+        for (String l : list) {
+            if (!stopwords.contains(l.toLowerCase())) {
+                postEdit.add(l);
+            }
+        }
+        string = StringUtils.join(postEdit, " ");
         return string;
     }
 

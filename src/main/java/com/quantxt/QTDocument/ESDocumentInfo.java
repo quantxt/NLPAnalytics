@@ -43,10 +43,6 @@ public class ESDocumentInfo extends QTDocument {
 		String sentences[] = body.split("\\.");
 //		System.out.println(body);
 	    for(String sentence: sentences) {
-	    	if (isStatement(sentence))
-	    		addStatement(sentence);
-	    	else
-	    		continue;
 
 //	    	String tokens[] = tokenizer.tokenize(sentence);
 	    	String tokens[] = sentence.split("[\\s\\:\\.\\,\\)\\(\\-\"]+");
