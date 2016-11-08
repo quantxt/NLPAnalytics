@@ -7,19 +7,14 @@ import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.deeplearning4j.models.word2vec.wordstore.inmemory.AbstractCache;
-import org.deeplearning4j.models.word2vec.wordstore.inmemory.InMemoryLookupCache;
 import org.deeplearning4j.text.sentenceiterator.BasicLineIterator;
 import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
-import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+
 
 /**
  * Created by u6014526 on 5/18/2016.
@@ -37,7 +32,6 @@ public class word2vec {
             wordVectors = WordVectorSerializer.loadTxtVectors(serializedFile);
             logger.info("loaded");
         } else {
-
             logger.info("Load & Vectorize Sentences....");
             // Strip white space before and after for each line
 //            getSentenceFile(45);
@@ -73,19 +67,23 @@ public class word2vec {
             wordVectors = WordVectorSerializer.fromTableAndVocab(table, cache);
         }
 
-        double sim = wordVectors.similarity("tesla", "solar");
+        double sim = wordVectors.similarity("yellen", "fed");
+        List<String> b = wordVectors.similarWordsInVocabTo("yellen", .7);
+        for(String s : b){
+            logger.info("\t" + s);
+        }
         logger.info("Similarity between tesla and solar: " + sim);
-        sim = wordVectors.similarity("uber", "solar");
+        sim = wordVectors.similarity("carney", "fed");
         logger.info("Similarity between uber and solar: " + sim);
     }
 
     public static void main(String[] args) throws Exception {
-        int topics = 150;
+        int topics = 120;
 //        String input  = "SNPNewsBodies.list";
 //        Utilities.createSentencesfromDir(75, input, false);  //false for using the body, true for headline
  //       String output = "models" + File.separator + "word2vecSNPNewsBody2_" + topics + ".txt";
-        String input = "/Users/matin/git/quantxt/qtingestor/tech.txt";
-        String output = "/Users/matin/git/quantxt/qtingestor/snp500_w2vec_150.txt";
+        String input = "/Users/matin/git/quantxt/qtingestor/data.txt";
+        String output = "/Users/matin/git/quantxt/qtingestor/cb_120.txt";
         trainWordVev(input, output, topics);
     }
 }

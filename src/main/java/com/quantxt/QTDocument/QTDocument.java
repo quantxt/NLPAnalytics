@@ -91,6 +91,10 @@ abstract public class QTDocument {
 		excerpt = s;
 	}
 
+	public void setBody(String b){
+		body = b;
+	}
+
 	public void setCategories (String s){
 		categories = s;
 	}
