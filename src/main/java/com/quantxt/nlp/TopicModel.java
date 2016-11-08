@@ -162,6 +162,7 @@ public class TopicModel {
         List<String> tokens = s.getTokens();
 
         double [] probs = new double[numTopics];
+        double num_tokens = (double) tokens.size();
         for (String w : tokens){
             LDATopic ldatopic = getWLDATopic(w);
             if (ldatopic == null) continue;
@@ -169,6 +170,7 @@ public class TopicModel {
                 probs[i] += ldatopic.getWeights()[i];
             }
         }
+
         return probs;
     }
 
@@ -205,7 +207,7 @@ public class TopicModel {
                 continue;
             }
             for (int i=0; i < numTopics; i++){
-                double score = ldaTopic.getProb(i) * topicW[i];
+                double score = ldaTopic.getProb(i) / topicW[i];
                 probs[i] +=  score;// * topicW[i];
                 sum += score;
             }
@@ -240,6 +242,7 @@ public class TopicModel {
         }
         return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
+
 
     public void loadInfererFromW2VFile(String file) throws IOException, ClassNotFoundException {
 //        String modelName = "MostReadNews_"+numTopics;

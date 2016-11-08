@@ -30,14 +30,19 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
 
     final private static Logger logger = Logger.getLogger(LinePreProcess.class);
     private TokenPreProcess tokenPreProcess;
-    private Set<String> stopwords = new HashSet<>();
+    private static Set<String> stopwords = null;
 
     public LinePreProcess() {
+        if (stopwords != null) return;
         String line;
+        stopwords = new HashSet<>();
         try {
             BufferedReader br = new BufferedReader(new FileReader("models/stoplist.txt"));
             while ((line = br.readLine()) != null) {
-                stopwords.add(line);
+                String [] tokens = normalize(line).split("\\s+");
+                for (String t : tokens) {
+                    stopwords.add(t);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -78,6 +83,10 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
             System.out.println(e.getMessage());
         }
         */
+
+        string = string.replaceAll("\\\\\"","\"");
+        string = string.replaceAll("\\\\n","");
+        string = string.replaceAll("\\\\r","");
         string = string.replaceAll("[\\“\\”\\$\\=\\>\\<_\\'\\’\\-\"\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
         string = string.replaceAll("\\b\\d+\\b", "");
         List<String> list = asList(string.split("\\s+"));

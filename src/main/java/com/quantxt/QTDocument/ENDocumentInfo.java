@@ -3,7 +3,6 @@ package com.quantxt.QTDocument;
 import java.io.*;
 import java.util.*;
 
-import com.quantxt.helpers.ValueComparator;
 import com.quantxt.nlp.TopicModel;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.sentdetect.SentenceDetectorME;

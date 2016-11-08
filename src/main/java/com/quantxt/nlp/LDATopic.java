@@ -1,6 +1,5 @@
 package com.quantxt.nlp;
 
-import com.quantxt.helpers.ValueComparator;
 import org.apache.log4j.Logger;
 
 import java.util.Comparator;
@@ -58,6 +57,24 @@ public class LDATopic {
             sb.append(e.getKey()).append(" ");
         }
         return sb.toString().trim();
+    }
+}
+
+class ValueComparator implements Comparator<String> {
+    Map<String, Double> base;
+
+    public ValueComparator(Map<String, Double> base) {
+        this.base = base;
+    }
+
+    // Note: this comparator imposes orderings that are inconsistent with
+    // equals.
+    public int compare(String a, String b) {
+        if (base.get(a) >= base.get(b)) {
+            return -1;
+        } else {
+            return 1;
+        } // returning 0 would merge keys
     }
 }
 

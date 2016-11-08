@@ -1,15 +1,11 @@
 package com.quantxt.nlp;
 
-import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 import com.quantxt.QTDocument.ENDocumentInfo;
-import com.quantxt.helpers.ValueComparator;
 import com.quantxt.nlp.comp.TERalignment;
 import com.quantxt.nlp.comp.TERcalc;
 import com.quantxt.nlp.comp.TERcost;
 import org.apache.log4j.Logger;
-import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
-import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
