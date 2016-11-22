@@ -1,5 +1,6 @@
 package com.quantxt.nlp;
 
+import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
@@ -13,6 +14,7 @@ import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -67,14 +69,17 @@ public class word2vec {
             wordVectors = WordVectorSerializer.fromTableAndVocab(table, cache);
         }
 
-        double sim = wordVectors.similarity("yellen", "fed");
-        List<String> b = wordVectors.similarWordsInVocabTo("yellen", .7);
-        for(String s : b){
-            logger.info("\t" + s);
-        }
-        logger.info("Similarity between tesla and solar: " + sim);
-        sim = wordVectors.similarity("carney", "fed");
-        logger.info("Similarity between uber and solar: " + sim);
+//        double sim = wordVectors.similarity("yellen", "fed");
+//        List<String> b = wordVectors.similarWordsInVocabTo("yellen", .7);
+//        for(String s : b){
+//            logger.info("\t" + s);
+//        }
+//        logger.info("Similarity between tesla and solar: " + sim);
+        LinePreProcess lp = new LinePreProcess();
+        double sim = wordVectors.similarity(lp.normalize("medicaid"), lp.normalize("medicare"));
+        Gson gson = new Gson();
+        Collection<String> nearestWords = wordVectors.wordsNearest(lp.normalize("tax") , 10);
+        logger.info(gson.toJson(nearestWords));
     }
 
     public static void main(String[] args) throws Exception {
@@ -82,8 +87,8 @@ public class word2vec {
 //        String input  = "SNPNewsBodies.list";
 //        Utilities.createSentencesfromDir(75, input, false);  //false for using the body, true for headline
  //       String output = "models" + File.separator + "word2vecSNPNewsBody2_" + topics + ".txt";
-        String input = "/Users/matin/git/quantxt/qtingestor/data.txt";
-        String output = "/Users/matin/git/quantxt/qtingestor/cb_120.txt";
+        String input = "/Users/matin/git/quantxt/qtingestor/politics.txt";
+        String output = "/Users/matin/git/quantxt/qtingestor/politics.w2v";
         trainWordVev(input, output, topics);
     }
 }

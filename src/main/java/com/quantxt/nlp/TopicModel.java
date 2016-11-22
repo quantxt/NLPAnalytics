@@ -162,12 +162,16 @@ public class TopicModel {
         List<String> tokens = s.getTokens();
 
         double [] probs = new double[numTopics];
-        double num_tokens = (double) tokens.size();
         for (String w : tokens){
             LDATopic ldatopic = getWLDATopic(w);
-            if (ldatopic == null) continue;
+            if (ldatopic == null) {
+                logger.error("oov: " + w);
+                continue;
+            }
             for (int i =0; i <numTopics; i++){
-                probs[i] += ldatopic.getWeights()[i];
+                double d = ldatopic.getWeights()[i];
+//                if (d < .01) continue;
+                probs[i] += d;
             }
         }
 
@@ -318,11 +322,24 @@ public class TopicModel {
         return word2TopicW.get(w);
     }
 
+    private double cmpSentence(String s1, String s2){
+        double [] p1 = getSentenceVector(s1);
+        double [] p2 = getSentenceVector(s2);
+        double simp = cosineSimilarity(p1, p2);
+        return simp;
+    }
+
     public static void main(String[] args) throws Exception {
 
-        TopicModel tm = new TopicModel(500, 100, "cb_official");
-        tm.loadInfererFromFile("myfile.txt");
+        int numTopics = 120;
+        TopicModel tm = new TopicModel(numTopics, 500, "cb_official");
+        tm.loadInfererFromW2VFile("/Users/matin/git/quantxt/qtingestor/pharma.w2v");
 
+        String s2 = "Allergan is focused on developing, manufacturing and commercializing branded pharmaceuticals, devices and biologic products for patients around the world.";
+        String [] s =new String[] {"research development" , "acquisition" , "agreement", "collaboration"};
+        for (String s1 : s) {
+            logger.info(s1 + " : " + tm.cmpSentence(s1, s2));
+        }
 //        TopicModel tp = new TopicModel(200, 500, "yelp");
   //      tp.loadModel();
    //     tp.train("/Users/matin/git/quantxt/QTReviewxtModel/yelp_academic_dataset_review.json", "text", 50000);
