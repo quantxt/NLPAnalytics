@@ -165,7 +165,7 @@ public class TopicModel {
         for (String w : tokens){
             LDATopic ldatopic = getWLDATopic(w);
             if (ldatopic == null) {
-                logger.error("oov: " + w);
+                logger.debug("oov: " + w);
                 continue;
             }
             for (int i =0; i <numTopics; i++){
