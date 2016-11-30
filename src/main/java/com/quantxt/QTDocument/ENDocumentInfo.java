@@ -47,11 +47,11 @@ public class ENDocumentInfo extends QTDocument {
 //	private static Map<String, ArrayList<Integer>> topicWeight = null;
 //	private List<Company> companyName = new ArrayList<>();
 	
-	public ENDocumentInfo (String body, String title) throws IOException {
+	public ENDocumentInfo (String body, String title) {
 		super(body, title);
 	}
 
-	public ENDocumentInfo (Elements body, String title) throws IOException {
+	public ENDocumentInfo (Elements body, String title) {
 		super(body.html(), title);
 		rawText = body.text();
 	}

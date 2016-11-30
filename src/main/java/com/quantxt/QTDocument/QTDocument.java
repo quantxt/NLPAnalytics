@@ -68,7 +68,7 @@ abstract public class QTDocument {
 //		id = Math.abs(title.hashCode());
 	}
 	
-	protected String Translate(String text, Language inLang, Language outLang) throws Exception{
+	protected String Translate(String text, Language inLang, Language outLang){
 		return "";
 //		return Translate.execute(text, inLang, outLang);
 	}
@@ -313,7 +313,7 @@ abstract public class QTDocument {
 //	}
 
 	//interface to process document
-	public void processDoc() throws Exception{
+	public void processDoc() {
 	}
 	
 	public String toString(){

@@ -87,8 +87,8 @@ public class word2vec {
 //        String input  = "SNPNewsBodies.list";
 //        Utilities.createSentencesfromDir(75, input, false);  //false for using the body, true for headline
  //       String output = "models" + File.separator + "word2vecSNPNewsBody2_" + topics + ".txt";
-        String input = "/Users/matin/git/quantxt/qtingestor/cb.txt";
-        String output = "/Users/matin/git/quantxt/qtingestor/cb.w2v";
+        String input = "/Users/matin/git/quantxt/qtingestor/tech.txt";
+        String output = "/Users/matin/git/quantxt/qtingestor/tech.w2v";
         trainWordVev(input, output, topics);
     }
 }

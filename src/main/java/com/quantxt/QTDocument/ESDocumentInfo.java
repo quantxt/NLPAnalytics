@@ -36,7 +36,7 @@ public class ESDocumentInfo extends QTDocument {
 	}
 	
 	
-	public void processDoc() throws Exception{
+	public void processDoc() {
 		if (body == null || body.isEmpty())
 			return;		
 
@@ -67,8 +67,8 @@ public class ESDocumentInfo extends QTDocument {
  	    }
 	    nameFinder.clearAdaptiveData();
 	    organizationFinder.clearAdaptiveData();
-	    
-	    englishTitle = Translate(title, Language.SPANISH, Language.ENGLISH);
+
+		englishTitle = Translate(title, Language.SPANISH, Language.ENGLISH);
 	}
 
 	@Override

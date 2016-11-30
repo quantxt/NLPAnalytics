@@ -7,7 +7,7 @@ public class ITDocumentInfo extends QTDocument {
 		super(body, title);
 	}
 	
-	public void processDoc() throws Exception{
+	public void processDoc() {
 		englishTitle = Translate(title, Language.ITALIAN, Language.ENGLISH);
 	}
 

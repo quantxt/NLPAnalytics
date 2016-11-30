@@ -46,7 +46,7 @@ public class NLDocumentInfo extends QTDocument {
 		
 	}
 	
-	public void processDoc() throws Exception{
+	public void processDoc() {
 	    englishTitle = Translate(title, Language.DUTCH, Language.ENGLISH);
 	    if (body == null || body.isEmpty())
 			return;		
