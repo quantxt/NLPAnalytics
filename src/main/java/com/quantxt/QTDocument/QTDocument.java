@@ -58,7 +58,7 @@ abstract public class QTDocument {
 	private static CategoryDetection categoryDetection = null;
 	
 	public QTDocument(String b, String t){
-		body = b;
+		body = b.replaceAll("([\\\n\\\r])"," $1");
 		title = t;
 		title = title.replaceAll("[\\\n\\\r\\\t]","");
 //		date = dateFormat.format(Calendar.getInstance().getTime());

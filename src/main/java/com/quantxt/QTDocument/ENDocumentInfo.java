@@ -305,19 +305,29 @@ public class ENDocumentInfo extends QTDocument {
 //			addTopic(e.getKey(), e.getValue());
 //			u--;
 //		}
+		String sentences[] = rawText == null ? getSentences(body) : getSentences(rawText);
 
-		if (rawText != null) {
-			String sentences[] = getSentences(rawText);
-			for (String s : sentences){
-				this.sentences.add(s);
-			}
-//			getSentenceNER(sentences, null, null);
+		for (String s : sentences){
+			this.sentences.add(s);
 		}
+//			getSentenceNER(sentences, null, null);
+
 
 //		getSentenceNER(sentences, nameFinder, null);
 	}
 
 	public static String [] getSentences(String text){
+/*		Span[] spans = sentenceDetector.sentPosDetect(text);
+		ArrayList<String> sents = new ArrayList<>();
+		for (Span sp : spans){
+			int b = sp.getStart();
+			int e = sp.getEnd();
+			String ss = text.substring(b, e);
+			logger.info(ss);
+			sents.add(ss);
+		}
+		return sents.toArray(new String[sents.size()]);
+		*/
 		return sentenceDetector.sentDetect(text);
 	}
 
