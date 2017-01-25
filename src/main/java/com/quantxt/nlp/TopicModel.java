@@ -383,6 +383,38 @@ public class TopicModel {
             br.close();
         }
 
+
+        String moat = "Simon is a tool that transforms your data into clear insights that let you get more out of your marketing.";
+
+        double [] vec1 = tm.getSentenceVector(moat);
+        HashMap<String, Double> sims = new HashMap<>();
+        for (Map.Entry<String, double[]> ee : all.entrySet()){
+            String cmp2 = ee.getKey();
+            double [] vec2 = ee.getValue();
+            double sim = TopicModel.cosineSimilarity(vec1, vec2);
+            if (!Double.isFinite(sim))continue;
+            sims.put(cmp2, sim);
+        }
+
+        ValueComparator bvc = new ValueComparator(sims);
+        TreeMap<String, Double> sorted_map = new TreeMap<>(bvc);
+        sorted_map.putAll(sims);
+
+        int top = 5;
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, Double> s1 : sorted_map.entrySet()){
+            if (top-- < 0) break;
+            sb.append("(").append(s1.getKey()).append(":").append(s1.getValue()).append(") ");
+        }
+
+        logger.info(sb.toString());
+
+        /*
+
+
+
+
+
         for (Map.Entry<String, double[]> e : all.entrySet()){
             String cmp1 = e.getKey();
             double [] vec1 = e.getValue();
@@ -408,15 +440,17 @@ public class TopicModel {
                 if (top-- < 0) break;
                 sb.append("(").append(s1.getKey()).append(":").append(s1.getValue()).append(") ");
             }
+            sb.append(" |==| ");
             int bot = 4;
             for (Map.Entry<String, Double> s2 : sorted_map.descendingMap().entrySet()){
                 if (bot-- < 0) break;
                 sb.append("(").append(s2.getKey()).append(":").append(s2.getValue()).append(")");
             }
 
+            Files.write(Paths.get("comp.scores"), (sb.toString() + "\n").getBytes() , StandardOpenOption.APPEND);
             logger.info(sb.toString());
         }
-
+        */
 
 
 //        TopicModel tp = new TopicModel(200, 500, "yelp");
