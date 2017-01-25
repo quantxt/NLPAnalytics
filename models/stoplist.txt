@@ -9,6 +9,7 @@
 8
 9
 a
+&
 about
 above
 across
@@ -80,6 +81,9 @@ certain
 certainly
 clear
 clearly
+co
+corp
+com
 come
 could
 couldn't
@@ -161,10 +165,13 @@ groups
 h
 had
 hadn't
+hadn
 has
 hasn't
+hasn
 have
 haven't
+haven
 having
 he
 he'd
@@ -188,6 +195,7 @@ i
 i'd
 if
 i'll
+ll
 i'm
 important
 in
@@ -198,11 +206,13 @@ interests
 into
 is
 isn't
+isn
 it
 its
 it's
 itself
 i've
+ve
 j
 just
 k
@@ -226,9 +236,11 @@ lets
 let's
 like
 likely
+llc
 long
 longer
 longest
+ltd
 m
 made
 make
@@ -310,6 +322,7 @@ parts
 per
 perhaps
 place
+plc
 places
 point
 pointed
@@ -333,7 +346,6 @@ right
 room
 rooms
 s
-said
 same
 saw
 say
@@ -495,3 +507,14 @@ yourself
 yourselves
 you've
 z
+monday
+tuesday
+wednesday
+thursday
+friday
+saturday
+sunday
+month
+week
+inc
+significantly
