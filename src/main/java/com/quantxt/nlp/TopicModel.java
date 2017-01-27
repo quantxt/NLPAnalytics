@@ -156,18 +156,27 @@ public class TopicModel {
         return probs;
     }
 
+    public List<String> getTokens(String str){
+        Tokenizer s = tokenFactor.create(str);
+        return s.getTokens();
+    }
+
     public double [] getSentenceVector(String line){
 
         Tokenizer s = tokenFactor.create(line);
         List<String> tokens = s.getTokens();
 
         double [] probs = new double[numTopics];
-        double num_tokens = (double) tokens.size();
         for (String w : tokens){
             LDATopic ldatopic = getWLDATopic(w);
-            if (ldatopic == null) continue;
+            if (ldatopic == null) {
+                logger.debug("oov: " + w);
+                continue;
+            }
             for (int i =0; i <numTopics; i++){
-                probs[i] += ldatopic.getWeights()[i];
+                double d = ldatopic.getWeights()[i];
+//                if (d < .01) continue;
+                probs[i] += d;
             }
         }
 
@@ -229,6 +238,12 @@ public class TopicModel {
     public double getTopicWeight(int t){
         return topicW[t];
 
+    }
+
+    public double cosineSimilarity(String s1, String s2) {
+        double [] p1 = getSentenceVector(s1);
+        double [] p2 = getSentenceVector(s2);
+        return cosineSimilarity(p1, p2);
     }
 
     public static double cosineSimilarity(double[] vectorA, double[] vectorB) {
@@ -318,13 +333,129 @@ public class TopicModel {
         return word2TopicW.get(w);
     }
 
+    private double cmpSentence(String s1, String s2){
+        double [] p1 = getSentenceVector(s1);
+        double [] p2 = getSentenceVector(s2);
+        double simp = cosineSimilarity(p1, p2);
+        return simp;
+    }
+
     public static void main(String[] args) throws Exception {
 
-        TopicModel tm = new TopicModel(500, 100, "cb_official");
-        tm.loadInfererFromFile("myfile.txt");
+        int numTopics = 50;
+        TopicModel tm = new TopicModel(numTopics, 500, "cb_official");
+        tm.loadInfererFromW2VFile("/Users/matin/git/quantxt/NLPAnalytics/crunchbase_50k_50.w2v");
+        HashMap<String, double[]> all = new HashMap<>();
+
+        BufferedReader br = new BufferedReader(new FileReader("/Users/matin/Downloads/all_clean.csv"));
+        try {
+
+            String line;
+
+            while ((line =br.readLine()) != null) {
+                String [] parts = line.split(",");
+                String p = "";
+                List<String> partPro = new ArrayList<>();
+                for (String part : parts){
+                    if (part.endsWith("\"")){
+                        p += "," + part;
+                        partPro.add(p);
+                        p = "";
+                        continue;
+                    }
+                    if (! part.startsWith("\"")) {
+                        if (p.isEmpty()) {
+                            partPro.add(part);
+                        } else {
+                            p += "," + part;
+                        }
+                    } else {
+                        p = part;
+                    }
+                }
+
+                if (partPro.size() < 5) continue;
+                String content = partPro.get(4).replaceAll("^\"|\"$", "");
+                double [] vec1 = tm.getSentenceVector(content);
+                all.put(partPro.get(0).replaceAll("^\"|\"$", ""), vec1);
+            }
+        } finally {
+            br.close();
+        }
+
+
+        String moat = "Simon is a tool that transforms your data into clear insights that let you get more out of your marketing.";
+
+        double [] vec1 = tm.getSentenceVector(moat);
+        HashMap<String, Double> sims = new HashMap<>();
+        for (Map.Entry<String, double[]> ee : all.entrySet()){
+            String cmp2 = ee.getKey();
+            double [] vec2 = ee.getValue();
+            double sim = TopicModel.cosineSimilarity(vec1, vec2);
+            if (!Double.isFinite(sim))continue;
+            sims.put(cmp2, sim);
+        }
+
+        ValueComparator bvc = new ValueComparator(sims);
+        TreeMap<String, Double> sorted_map = new TreeMap<>(bvc);
+        sorted_map.putAll(sims);
+
+        int top = 5;
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, Double> s1 : sorted_map.entrySet()){
+            if (top-- < 0) break;
+            sb.append("(").append(s1.getKey()).append(":").append(s1.getValue()).append(") ");
+        }
+
+        logger.info(sb.toString());
+
+        /*
+
+
+
+
+
+        for (Map.Entry<String, double[]> e : all.entrySet()){
+            String cmp1 = e.getKey();
+            double [] vec1 = e.getValue();
+            HashMap<String, Double> sims = new HashMap<>();
+            for (Map.Entry<String, double[]> ee : all.entrySet()){
+                String cmp2 = ee.getKey();
+                if (cmp1.equals(cmp2))continue;
+                double [] vec2 = ee.getValue();
+                double sim = TopicModel.cosineSimilarity(vec1, vec2);
+                if (!Double.isFinite(sim))continue;
+                sims.put(cmp2, sim);
+  //              all.put(cmp1 + "_" + cmp2, sim);
+            }
+
+            ValueComparator bvc = new ValueComparator(sims);
+            TreeMap<String, Double> sorted_map = new TreeMap<>(bvc);
+            sorted_map.putAll(sims);
+
+            int top = 4;
+            StringBuilder sb = new StringBuilder();
+            sb.append(cmp1+ ": ");
+            for (Map.Entry<String, Double> s1 : sorted_map.entrySet()){
+                if (top-- < 0) break;
+                sb.append("(").append(s1.getKey()).append(":").append(s1.getValue()).append(") ");
+            }
+            sb.append(" |==| ");
+            int bot = 4;
+            for (Map.Entry<String, Double> s2 : sorted_map.descendingMap().entrySet()){
+                if (bot-- < 0) break;
+                sb.append("(").append(s2.getKey()).append(":").append(s2.getValue()).append(")");
+            }
+
+            Files.write(Paths.get("comp.scores"), (sb.toString() + "\n").getBytes() , StandardOpenOption.APPEND);
+            logger.info(sb.toString());
+        }
+        */
+
 
 //        TopicModel tp = new TopicModel(200, 500, "yelp");
   //      tp.loadModel();
    //     tp.train("/Users/matin/git/quantxt/QTReviewxtModel/yelp_academic_dataset_review.json", "text", 50000);
     }
 }
+

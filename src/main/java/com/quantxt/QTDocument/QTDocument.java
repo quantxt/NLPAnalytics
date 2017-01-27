@@ -24,13 +24,14 @@ abstract public class QTDocument {
 	private static Logger logger = Logger.getLogger(QTDocument.class);
 
 	protected String body;
+	protected String entity;
 	protected Set<String> persons;
 	protected List<String> organizations = null;
 	private List<String> ticker = null;
 	protected List<String> sentences = new ArrayList<>();
 //	protected List<String> statements = new ArrayList<>();
 //	protected List<String> actions = new ArrayList<>();
-	protected Map<Integer, Integer> topics;
+//	protected Map<Integer, Integer> topics;
 	protected String sector;
 	protected String industry;
 //	protected List<Integer> topics;
@@ -43,9 +44,10 @@ abstract public class QTDocument {
 	private String date;
 	private String language;
 	private String region;
-	private String sourceName;
 	private String categories;
 	private String author;
+	protected String label;
+	protected String source;
 	private Set<String> tags = new HashSet<>();
 	private String excerpt;
 	private String logo;
@@ -56,19 +58,20 @@ abstract public class QTDocument {
 	private static CategoryDetection categoryDetection = null;
 	
 	public QTDocument(String b, String t){
-		body = b;
+		body = b.replaceAll("([\\\n\\\r])"," $1");
 		title = t;
+		title = title.replaceAll("[\\\n\\\r\\\t]","");
 //		date = dateFormat.format(Calendar.getInstance().getTime());
-		persons 		= new HashSet<>();
+//		persons 		= new HashSet<>();
 //		organizations 	= new ArrayList<String>();
 //		ticker			= new ArrayList<String>();
 //		statements		= new ArrayList<>();
-		topics          = new HashMap<>();
+//		topics          = new HashMap<>();
 //		topics          = new ArrayList<Integer>();
 //		id = Math.abs(title.hashCode());
 	}
 	
-	protected String Translate(String text, Language inLang, Language outLang) throws Exception{
+	protected String Translate(String text, Language inLang, Language outLang){
 		return "";
 //		return Translate.execute(text, inLang, outLang);
 	}
@@ -113,6 +116,10 @@ abstract public class QTDocument {
 
 	public void setLogo(String s){
 		logo = s;
+	}
+
+	public void setSource(String s){
+		source = s;
 	}
 	
 	protected void getSentenceNER(final String[] sentences,
@@ -211,7 +218,7 @@ abstract public class QTDocument {
 
 //		Integer val = 10 * t + (int)(10 * v);
 //		topics.put(topics.size(), val);
-		topics.put(topics.size(), t);
+//		topics.put(topics.size(), t);
 	}	
 	
 	public void setOrigLink (String l){
@@ -233,11 +240,14 @@ abstract public class QTDocument {
 	public void setLanguage(String l){
 		language = l;
 	}
-	
-	public void setSource(String s) {
-		sourceName = s;
+
+	public void setLabel(String l){
+		label = l;
 	}
 
+	public void setEntity(String e){
+		entity = e;
+	}
 	
 	public String getTokenizedBody(){
 		String b = body;
@@ -284,6 +294,8 @@ abstract public class QTDocument {
 
 	public String getLogo(){return logo;}
 
+	public String getSource(){return source;}
+
 //	public int getID() {return id;}
 
 	public String getCategories() {
@@ -313,7 +325,7 @@ abstract public class QTDocument {
 //	}
 
 	//interface to process document
-	public void processDoc() throws Exception{
+	public void processDoc() {
 	}
 	
 	public String toString(){

@@ -4,10 +4,6 @@ import cc.mallet.pipe.Pipe;
 import cc.mallet.types.Instance;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultStreamTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
@@ -15,7 +11,6 @@ import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +26,7 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
     final private static Logger logger = Logger.getLogger(LinePreProcess.class);
     private TokenPreProcess tokenPreProcess;
     private static Set<String> stopwords = null;
+    private final static opennlp.tools.stemmer.PorterStemmer porterStemmer = new opennlp.tools.stemmer.PorterStemmer();
 
     public LinePreProcess() {
         if (stopwords != null) return;
@@ -64,8 +60,11 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
     }
 
     public String normalize(String string) throws IOException {
-        Analyzer analyzer = new EnglishAnalyzer();
-        TokenStream tokenStream = analyzer.tokenStream("", string);
+//        Analyzer analyzer = new EnglishAnalyzer();
+
+ //       TokenStream tokenStream = analyzer.tokenStream("", string);
+//        string = porterStemmer.stem(string);
+
 
         /*
         StringBuilder sb = new StringBuilder();
@@ -87,12 +86,16 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
         string = string.replaceAll("\\\\\"","\"");
         string = string.replaceAll("\\\\n","");
         string = string.replaceAll("\\\\r","");
-        string = string.replaceAll("[\\“\\”\\$\\=\\>\\<_\\'\\’\\-\"\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
+        string = string.replaceAll("\\\\t","");
+        string = string.replaceAll("[\\“\\”\\$\\=\\>\\<_\\'\\’\\-\\—\"\\‘\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
         string = string.replaceAll("\\b\\d+\\b", "");
+        string = string.toLowerCase();
         List<String> list = asList(string.split("\\s+"));
         ArrayList<String> postEdit = new ArrayList<>();
+
         for (String l : list) {
-            if (!stopwords.contains(l.toLowerCase())) {
+            if (!stopwords.contains(l)) {
+                l = porterStemmer.stem(l);
                 postEdit.add(l);
             }
         }
@@ -137,5 +140,13 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
     @Override
     public TokenPreProcess getTokenPreProcessor() {
         return null;
+    }
+
+
+    public static void main(String[] args) throws Exception {
+
+        LinePreProcess lp = new LinePreProcess();
+        logger.info(lp.normalize("health care obamacare"));
+
     }
 }

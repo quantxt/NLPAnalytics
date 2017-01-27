@@ -48,7 +48,7 @@ public class FRDocumentInfo extends QTDocument {
 		return inferencer.getSampledDistribution(testing.get(0), 200, 10, 5);
 	}
 	
-	public void processDoc() throws Exception{
+	public void processDoc() {
 		englishTitle = Translate(title, Language.FRENCH, Language.ENGLISH);
 		/*
 		double[] bodyProbabilities  = getTopicVec(body);
