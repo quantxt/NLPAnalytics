@@ -4,9 +4,58 @@
     <groupId>com.quantxt.nlp</groupId>
     <artifactId>doc-analytics</artifactId>
     <version>1.2.0</version>
+
+    <name>Quantxt Core NLP</name>
+    <description>Quantxt core nlp module for text and document analysis.</description>
+    <url>http://wwww.quantxt.com</url>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Quantxt</name>
+            <email>matin@quantxt.com</email>
+            <url>https://github.com/quantxt/NLPAnalytics</url>
+            <organizationUrl>https://www.quantxt.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git@github.com:quantxt/NLPAnalytics.git</connection>
+        <developerConnection>scm:git:git@github.com:quantxt/NLPAnalytics.git</developerConnection>
+        <url>http://github.com/quantxt/NLPAnalytics</url>
+    </scm>
+
+    <repositories>
+        <repository>
+            <id>oss-snapshots</id>
+            <name>Sonatype OSS Snapshots</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </repository>
+    </repositories>
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>

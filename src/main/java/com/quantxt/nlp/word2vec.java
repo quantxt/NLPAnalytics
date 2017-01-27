@@ -132,13 +132,13 @@ public class word2vec {
     }
 
     public static void main(String[] args) throws Exception {
-        int topics = 50;
+        int topics = 150;
 
 //        String input  = "SNPNewsBodies.list";
 //        Utilities.createSentencesfromDir(75, input, false);  //false for using the body, true for headline
  //       String output = "models" + File.separator + "word2vecSNPNewsBody2_" + topics + ".txt";
-        String input = "/Users/matin/git/quantxt/NLPAnalytics/crunchbase.data";
-        String output = "/Users/matin/git/quantxt/NLPAnalytics/crunchbase_50k_50.w2v";
+        String input = "/Users/matin/git/quantxt/qtingestor/snp500.txt";
+        String output = "/Users/matin/git/quantxt/qtingestor/snp500.w2v";
         trainWordVev(input, output, topics);
 
     }
