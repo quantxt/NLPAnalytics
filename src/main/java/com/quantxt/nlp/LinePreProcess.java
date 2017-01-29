@@ -2,8 +2,10 @@ package com.quantxt.nlp;
 
 import cc.mallet.pipe.Pipe;
 import cc.mallet.types.Instance;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultStreamTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
@@ -32,16 +34,17 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
         if (stopwords != null) return;
         String line;
         stopwords = new HashSet<>();
+        List<String> sl = null;
         try {
-            BufferedReader br = new BufferedReader(new FileReader("models/stoplist.txt"));
-            while ((line = br.readLine()) != null) {
-                String [] tokens = normalize(line).split("\\s+");
+            sl = IOUtils.readLines(new ClassPathResource("/stopwords.txt").getInputStream());
+            for (String s : sl){
+                String [] tokens = normalize(s).split("\\s+");
                 for (String t : tokens) {
                     stopwords.add(t);
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.equals(e.getMessage());
         }
         logger.info("Stop list loaded");
     }

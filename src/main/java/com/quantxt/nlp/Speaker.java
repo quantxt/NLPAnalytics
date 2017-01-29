@@ -10,10 +10,13 @@ import com.quantxt.types.StringDouble;
 import com.quantxt.types.StringDoubleComparator;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
+import org.apache.commons.io.IOUtils;
+import org.datavec.api.util.ClassPathResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -36,7 +39,7 @@ public class Speaker {
     private static Trie titleTree = null;
 
     private static Map<String, Speaker> keyword2speaker = new HashMap<>();
-    private static Map<String, String>  verb2context = new HashMap<>();
+    private static Map<String, String> verb2context = new HashMap<>();
     private static Map<String, double[]> TOPIC_MAP = new HashMap<>();
 
 
@@ -186,7 +189,7 @@ public class Speaker {
                 }
                 if (keyword != null) {
                     QTDocument newQuote = getQuoteDoc(doc, orig, keyword);
-                    Emit firstVerbEmit = (Emit)verb_emit.toArray()[0];
+                    Emit firstVerbEmit = (Emit) verb_emit.toArray()[0];
                     newQuote.addTag(verb2context.get(firstVerbEmit.getKeyword()));
                     quotes.add(newQuote);
                 }
@@ -245,7 +248,7 @@ public class Speaker {
         BufferedReader br;
         String line;
         int num = 0;
-  //      Trie ww = getTirefromFile("/Users/matin/git/quantxt/qtingestor/w");
+        //      Trie ww = getTirefromFile("/Users/matin/git/quantxt/qtingestor/w");
         br = new BufferedReader(new FileReader("/Users/matin/Downloads/enwiki-20161201-all-titles-in-ns0"));
 
         int num2 = 0;
@@ -282,10 +285,8 @@ public class Speaker {
                             String speakerFile,
                             String ruleTagFile,
                             String word2vec,
-                            String[] categories,
-                            String articleContext) throws IOException, ClassNotFoundException
-    {
-        if (ruleTagFile != null){
+                            String[] categories) throws IOException, ClassNotFoundException {
+        if (ruleTagFile != null) {
             Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().caseInsensitive().removeOverlaps();
             String line;
             int num = 0;
@@ -302,16 +303,17 @@ public class Speaker {
             phraseTree = phrase.build();
         }
 
-        QUOTE_CATEGORY   = categories[1];
-        ARTICLE_CATEGORY = categories[0];
-        topic_model = new TopicModel(numTopics, 500, "cb_official");
+        if (categories != null) {
+            QUOTE_CATEGORY = categories[1];
+            ARTICLE_CATEGORY = categories[0];
+        }
 
         JsonParser parser = new JsonParser();
 
-
         //verbs
         Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().caseInsensitive();
-        JsonElement jsonElement = parser.parse(new FileReader(articleContext));
+        byte[] contextArr = IOUtils.toByteArray(new ClassPathResource("/context.json").getInputStream());
+        JsonElement jsonElement = parser.parse(new String(contextArr, "UTF-8"));
         JsonObject contextJson = jsonElement.getAsJsonObject();
         for (Map.Entry<String, JsonElement> entry : contextJson.entrySet()) {
             String context_key = entry.getKey();
@@ -319,7 +321,7 @@ public class Speaker {
             for (JsonElement e : context_arr) {
                 String verb = e.getAsString();
                 verbs.addKeyword(verb);
-                verb2context.put(verb,context_key);
+                verb2context.put(verb, context_key);
             }
         }
         verbTree = verbs.build();
@@ -327,7 +329,8 @@ public class Speaker {
 
         //titles
         Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().caseInsensitive();
-        JsonElement commonosnElement = parser.parse(new FileReader("models/common.json"));
+        byte[] commonArr = IOUtils.toByteArray(new ClassPathResource("/common.json").getInputStream());
+        JsonElement commonosnElement = parser.parse(new String(commonArr, "UTF-8"));
         JsonObject commonosnObject = commonosnElement.getAsJsonObject();
         JsonElement titles_elems = commonosnObject.get("titles");
         if (titles_elems != null) {
@@ -382,10 +385,13 @@ public class Speaker {
 
         nameTree = names.build();
 
+        topic_model = new TopicModel(numTopics, 500, "cb_official");
+        if (word2vec != null) {
+            topic_model.loadInfererFromW2VFile(word2vec);
+        }
 
-        topic_model.loadInfererFromW2VFile(word2vec);
-
-        jsonElement = parser.parse(new FileReader("models/topics.json"));
+        byte[] topicArr = IOUtils.toByteArray(new ClassPathResource("/topics.json").getInputStream());
+        jsonElement = parser.parse(new String(topicArr, "UTF-8"));
         JsonObject topicJson = jsonElement.getAsJsonObject();
         for (Map.Entry<String, JsonElement> entry : topicJson.entrySet()) {
             String topic = entry.getKey();
@@ -410,7 +416,7 @@ public class Speaker {
 
             //         logger.info(r.getKey() + " " + sim);
         }
-  //      if (avg < .1) return null;
+        //      if (avg < .1) return null;
 
         StringDoubleComparator bvc = new StringDoubleComparator(vals);
         TreeMap<String, Double> sorted_map = new TreeMap<>(bvc);
@@ -424,6 +430,7 @@ public class Speaker {
     private boolean isNo_search() {
         return no_search;
     }
+
 }
 
 

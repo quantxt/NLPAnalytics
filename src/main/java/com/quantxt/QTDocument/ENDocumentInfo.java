@@ -11,6 +11,8 @@ import opennlp.tools.tokenize.Tokenizer;
 
 import opennlp.tools.util.Span;
 import org.ahocorasick.trie.Trie;
+import org.apache.commons.io.IOUtils;
+import org.datavec.api.util.ClassPathResource;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +57,7 @@ public class ENDocumentInfo extends QTDocument {
 //		wordTopicList = "topWords." + NumOfTopics + ".en.txt";
 //		private static InstanceList instances;
 //		private static cc.mallet.topics.TopicInferencer inferencer;
-		InputStream sentenceModellIn = new FileInputStream("models/en-sent.bin");
+		InputStream sentenceModellIn = new ClassPathResource("/en-sent.bin").getInputStream();
 		SentenceModel sentenceModel = new SentenceModel(sentenceModellIn);
 		sentenceDetector = new SentenceDetectorME(sentenceModel);
 

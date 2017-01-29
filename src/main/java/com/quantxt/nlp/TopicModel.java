@@ -9,6 +9,7 @@ import com.google.gson.JsonParser;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
 import org.apache.log4j.Logger;
+import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
@@ -56,7 +57,12 @@ public class TopicModel {
         pipeList.add(new LinePreProcess() );
         pipeList.add(new CharSequence2TokenSequence(Pattern.compile("[\\p{L}\\p{N}_]+")));
         //      pipeList.add( new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")) );
-        pipeList.add( new TokenSequenceRemoveStopwords(new File("models/stoplist.txt"), "UTF-8", false, false, false) );
+
+        try {
+            pipeList.add( new TokenSequenceRemoveStopwords(new ClassPathResource("/stoplist.txt").getFile(), "UTF-8", false, false, false) );
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
         pipeList.add( new TokenSequence2FeatureSequence() );
 
         return new SerialPipes(pipeList);
@@ -258,9 +264,7 @@ public class TopicModel {
         return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
-
     public void loadInfererFromW2VFile(String file) throws IOException, ClassNotFoundException {
-//        String modelName = "MostReadNews_"+numTopics;
 
         BufferedReader br = new BufferedReader(new FileReader(file));
         try {
