@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.quantxt.nlp</groupId>
     <artifactId>doc-analytics</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
+    <version>1.3.2</version>
     <packaging>jar</packaging>
 
     <name>Quantxt Core NLP</name>
@@ -127,15 +127,9 @@
 
         <resources>
             <resource>
-                <directory>src/main/resources</directory>
-                <includes>
-                    <include>src/main/resources/log4j.properties</include>
-                </includes>
-            </resource>
-            <resource>
                 <directory>models/</directory>
                 <includes>
-                    <include>**/*</include>
+                    <include>**/*.*</include>
                 </includes>
             </resource>
         </resources>
