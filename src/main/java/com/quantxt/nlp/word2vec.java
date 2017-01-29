@@ -16,9 +16,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -41,8 +38,7 @@ public class word2vec {
             logger.info("loaded");
         } else {
             logger.info("Load & Vectorize Sentences....");
-            // Strip white space before and after for each line
-//            getSentenceFile(45);
+
             SentenceIterator iter = new BasicLineIterator(new File(inputFilename));
             // Split on white spaces in the line to get words
             TokenizerFactory t = new LinePreProcess();
@@ -75,13 +71,7 @@ public class word2vec {
             wordVectors = WordVectorSerializer.fromTableAndVocab(table, cache);
         }
 
-
-//        double sim = wordVectors.similarity("yellen", "fed");
-//        List<String> b = wordVectors.similarWordsInVocabTo("yellen", .7);
-//        for(String s : b){
-//            logger.info("\t" + s);
-//        }
-//        logger.info("Similarity between tesla and solar: " + sim);
+        //some denugs
         LinePreProcess lp = new LinePreProcess();
         double sim = wordVectors.similarity(lp.normalize("mobile"), lp.normalize("ios"));
         logger.info("Sim is " + sim);
@@ -90,55 +80,10 @@ public class word2vec {
         logger.info(gson.toJson(nearestWords));
     }
 
-    private static void readCSV() throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader("/Users/matin/Downloads/all_clean.csv"));
-        try {
-
-            String line;
-
-            while ((line =br.readLine()) != null) {
-                String [] parts = line.split(",");
-                String p = "";
-                List<String> partPro = new ArrayList<>();
-                for (String part : parts){
-                    if (part.endsWith("\"")){
-                        p += "," + part;
-                        partPro.add(p);
-                        p = "";
-                        continue;
-                    }
-                    if (! part.startsWith("\"")) {
-                        if (p.isEmpty()) {
-                            partPro.add(part);
-                        } else {
-                            p += "," + part;
-                        }
-                    } else {
-                        p = part;
-                    }
-                }
-
-                if (partPro.size() < 5) continue;
-                String content = partPro.get(4).replaceAll("^\"|\"$", "");
-                try {
-                    Files.write(Paths.get("crunchbase.data"), (content + "\n").getBytes(), StandardOpenOption.APPEND);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        } finally {
-            br.close();
-        }
-    }
-
     public static void main(String[] args) throws Exception {
         int topics = 150;
-
-//        String input  = "SNPNewsBodies.list";
-//        Utilities.createSentencesfromDir(75, input, false);  //false for using the body, true for headline
- //       String output = "models" + File.separator + "word2vecSNPNewsBody2_" + topics + ".txt";
-        String input = "/Users/matin/git/quantxt/qtingestor/snp500.txt";
-        String output = "/Users/matin/git/quantxt/qtingestor/snp500.w2v";
+        String input = "input_text_for_word2vec_modeling";
+        String output = "output_text_for_word2vec_modeling";
         trainWordVev(input, output, topics);
 
     }

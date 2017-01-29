@@ -298,14 +298,6 @@ abstract public class QTDocument {
 
 //	public int getID() {return id;}
 
-	public String getCategories() {
-		if (categories == null) {
-			return String.valueOf(categoryDetection.detectCategory(title));
-//		logger.info("Get categories.. " + );
-		}
-		return categories;
-	}
-
 	public Set<String> getTags(){ return tags;}
 
 	public String getDate() {return date;}

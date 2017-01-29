@@ -83,38 +83,4 @@ public class CategoryDetection {
             }
         }
     }
-
-    public int detectCategory(String text){
-/*        InstanceList instantList = new InstanceList(pipe);
-        Instance ins = new Instance(body, "null" , "no", "no");
-        instantList.addThruPipe(ins);
-        Classification res = classifier.classify(instantList.get(0));
-        Labeling labeling = res.getLabeling();
-        logger.info(labeling.getBestLabel());
-        return 11;
-        */
-
-        text = text.toLowerCase();
-        if (text.contains("open market committee") ||
-                text.contains("monetary policy decisions") ||
-                text.contains("statement on monetary policy")){
-            return 98;
-        }
-        if (text.contains("approval of the application")){
-            return 106;
-        }
-        if (text.contains("discount rate")){
-            return 98;
-        }
-        if (text.contains("corporate sector purchase") || text.contains("purchas")){
-            return 98;
-        }
-        if (text.contains("Federal Reserve issues FOMC statement")) {
-            return 120;
-        }
-        if (text.contains("appoint")) {
-            return 104;
-        }
-        return 113;
-    }
 }

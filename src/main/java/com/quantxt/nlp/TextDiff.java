@@ -177,15 +177,6 @@ public class TextDiff {
     }
 
     public static void main(String[] args) throws Exception {
-        int numTopics = 150;
-        TopicModel tm = new TopicModel(numTopics, 500, "quotes");
-     //   tm.loadInfererFromFile("myfile.txt");
-        tm.loadInfererFromW2VFile("official_w2vec_100.txt");
-
-        List<double []> allProbs = new ArrayList<>();
-        List<String> allSents = new ArrayList<>();
-        List<String> allTopicSents = new ArrayList<>();
-        InstanceList instantList = new InstanceList(tm.getPipe());
 
 //        TERcalc.setCase(true);
 //        TERcost costfunc = new TERcost();
@@ -195,81 +186,6 @@ public class TextDiff {
 //        costfunc._match_cost = 0;
 //        costfunc._substitute_cost = 1;
 
-        BufferedReader br = new BufferedReader(new FileReader("quotes.csv"));
-        try {
-            String line;
-            while ((line = br.readLine()) != null) {
-                allSents.add(line);
-
-//                String [] words = line.toLowerCase().split("\\s+");
-//                StringBuilder sb = new StringBuilder();
-//                for (String w : words){
-//                    LDATopic ldaTopic = tm.getWLDATopic(w);
-//                    if (ldaTopic == null){
-               //         logger.info("Null " + w);
-//                    } else {
-//                        sb.append(ldaTopic.getBestTopic()).append(" ");
-                 //       logger.info(w + " " + ldaTopic.getBestTopic());
-//                    }
-//                }
-
-//                logger.info(sb.toString());
-//                allTopicSents.add(sb.toString().trim());
-
-                double[] p = tm.getSentenceVector(line);
-
-//                double[] probs = tm.getProbs(instantList.get(instantList.size() - 1));
-                allProbs.add(p);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (br != null)br.close();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-
-        double [] interestVec  = tm.getSentenceVector("interest rate rates hike cut");
-        double [] inflation    = tm.getSentenceVector("inflation");
-        double [] unemployment = tm.getSentenceVector("unemployment employment jobs job");
-        double [] growth       = tm.getSentenceVector("economic growth");
-
-        for (int i = 0; i <allSents.size(); i++){
-            HashMap<String, Double> allprobs = new HashMap<>();
-            double[] prob1 = allProbs.get(i);
-            double fed = TopicModel.cosineSimilarity(prob1, interestVec);
-            double ecb = TopicModel.cosineSimilarity(prob1, inflation);
-            double boe = TopicModel.cosineSimilarity(prob1, unemployment);
-            double boj = TopicModel.cosineSimilarity(prob1, growth);
-            allprobs.put("rate", fed);
-            allprobs.put("inflation", ecb);
-            allprobs.put("unemployment", boe);
-            allprobs.put("growth", boj);
-
-/*
-            for (int j = 0; j < instantList.size(); j++){
-                double[] prob2 = allProbs.get(j);
-                double d = TopicModel.cosineSimilarity(prob1, prob2);
-                allprobs.put(j, d);
-            }
-*/
-            ValueComparator bvc = new ValueComparator(allprobs);
-            TreeMap<String, Double> sorted_map = new TreeMap<>(bvc);
-            sorted_map.putAll(allprobs);
-            StringBuilder sb = new StringBuilder();
-            sb.append(allSents.get(i)).append("\t");
-            ArrayList<String> keys = new ArrayList<>(sorted_map.keySet());
-
-            for(int k=0; k < keys.size(); k++){
-                String tag = keys.get(k);
-                double s   = allprobs.get(tag);
-                if (s < 0) break;
-                sb.append("(").append(tag).append(":").append(s).append(")\t");
-            }
-            logger.info(sb.toString().trim());
-        }
  //       TextDiff td = new TextDiff(1, 1, 1, 10);
  //       String res = td.getTextComp(file2str("hyp"), file2str("ref"));
  //       logger.info(res);

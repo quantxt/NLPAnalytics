@@ -20,19 +20,12 @@ public class ENDocumentInfo extends QTDocument {
 
 	protected static final Logger logger = LoggerFactory.getLogger(ENDocumentInfo.class);
 
-//	final private static Pattern statementWords = Pattern.compile("(?i)\\bsaid|told|stated|announced|tells|says|mentioned|indicated|pointed|says|added\\b");
 	private static Trie statementWords = null;
 	private static Trie actionWords = null;
 	final private static int NumOfTopics = 100;
 	final private static double bodyWeight  = .3;
 	final private static double titleWeight = .7;
 	private static boolean initialized = false;
-	private static TopicModel topicModel;
-
-	private static double [] interestVec;
-	private static double [] inflationVec;
-	private static double [] growthVec;
-	private static double [] laborVec;
 
 	private String rawText;
 
@@ -71,119 +64,13 @@ public class ENDocumentInfo extends QTDocument {
 //		tokenizer = new TokenizerME(tokenizerModel);
 
 		int numTopics = 150;
-		/*
-		topicModel = new TopicModel(numTopics, 500, "quotes");
-		topicModel.loadInfererFromW2VFile("official_w2vec_100.txt");
 
-		interestVec = topicModel.getSentenceVector("interest rate rates hike cut");
-		inflationVec = topicModel.getSentenceVector("inflation");
-		laborVec = topicModel.getSentenceVector("unemployment employment jobs job labor");
-		growthVec = topicModel.getSentenceVector("economic growth");
-
-
-		InputStream qv = new FileInputStream("models/quote_verbs.list");
-		BufferedReader br = new BufferedReader(new InputStreamReader(qv, "UTF-8"));
-		String line;
-		Trie.TrieBuilder builder = Trie.builder().onlyWholeWords()
-				.caseInsensitive().stopOnHit();
-		while ( (line = br.readLine()) != null){
-			builder.addKeyword(line);
-		}
-		statementWords = builder.build();
-
-		qv = new FileInputStream("models/action_words.list");
-		br = new BufferedReader(new InputStreamReader(qv, "UTF-8"));
-		builder = Trie.builder().onlyWholeWords()
-				.caseInsensitive().stopOnHit();
-		while ( (line = br.readLine()) != null){
-			builder.addKeyword(line);
-		}
-		actionWords = builder.build();
-*/
 //		InputStream nerPersonmodelIn = new FileInputStream("models/en-ner-person.bin");
 //		InputStream nerOrganizationnmodelIn = new FileInputStream("models/en-ner-organization.bin");
 //		InputStream tokenizerModelIn = new FileInputStream("models/en-token.bin");
-/*		InstanceList instances   = InstanceList.load(new File("models/NewsWireTopic."+ NumOfTopics +".market.en.instance"));
-		trainingPipe = instances.getPipe();
-		ParallelTopicModel model = null;
-		model = new cc.mallet.topics.ParallelTopicModel(NumOfTopics);
-		model = ParallelTopicModel.read(new File("models/NewsWireTopic." + NumOfTopics + ".market.en.state.gz"));
-		File writer = new File(wordTopicList);
-		model.printTopWords(writer, 30, false);
-		inferencer = model.getInferencer();
 
-	
-		String line;
-		topicWeight = new HashMap<>();
-		BufferedReader br = new BufferedReader(new FileReader("/home/matin/Downloads/dictionary-builder-master/output/stoplist.txt.top1000.fromCorpus.en"));
-		//do stop words
-		while ( (line = br.readLine()) != null)
-		{
-			ArrayList<Integer> tList = topicWeight.get(line);
-			if (tList == null)
-			{
-				topicWeight.put(line, new ArrayList<Integer>());
-				tList = topicWeight.get(line);
-			}
-			tList.add(NumOfTopics);
-		//	stopWordList.add(line);
-		}
-		br.close();
-*/		/*
-		br = new BufferedReader(new FileReader(wordTopicList));
-		//do stop words
-		while ( (line = br.readLine()) != null)
-		{
-			String [] parts = line.split("\\s+");
-			for (int i = 2; i<parts.length; i++){
-				final String w = parts[i];
-				ArrayList<Integer> tList = topicWeight.get(w);
-				if (tList == null)
-				{
-					topicWeight.put(w, new ArrayList<Integer>());
-					tList = topicWeight.get(w);
-				}
-				tList.add(Integer.parseInt(parts[0]));
-			}
-		//	stopWordList.add(line);
-		}
-		br.close();
-		*/
-/*		SentenceModel sentenceModel = new SentenceModel(sentenceModellIn);
-		sentenceDetector = new SentenceDetectorME(sentenceModel);
-		TokenNameFinderModel nerPersonModel = new TokenNameFinderModel(nerPersonmodelIn);
-		nameFinder = new NameFinderME(nerPersonModel);
-		TokenNameFinderModel nerOrganizationModel = new TokenNameFinderModel(nerOrganizationnmodelIn);
-		organizationFinder = new NameFinderME(nerOrganizationModel);
-		TokenizerModel tokenizerModel = new TokenizerModel(tokenizerModelIn);
-		tokenizer = new TokenizerME(tokenizerModel);
-*/
-		// Company List
-		/*
-		
-		br = new BufferedReader(new FileReader("models/Companies.list"));
-		while ( (line = br.readLine()) != null)
-		{
-			String [] parts = line.split("\",\"");
-			String ticker   = parts[0].replaceAll("^\"", "");
-			String name 	= parts[1].replaceAll("&#39;", "'");
-			String sector 	= parts[6];
-			String industry = parts[7];
-		
-			try {
-				Double mktCap = Double.parseDouble(parts[3]);
-				if (mktCap < 1500000000)
-					continue;
-				Company c = new Company(name, ticker, mktCap, sector, industry);
-				companyName.add(c);
-			} catch (NumberFormatException nfe) {
-		         System.out.println("NumberFormatException: " + nfe.getMessage());
-		    }
-		}
-		br.close();
-*/
 		initialized = true;
-		System.out.println("english models initiliazed");
+		logger.info("english models initiliazed");
 	}
 	
 	private String _tokenizedText(String text){
@@ -276,19 +163,7 @@ public class ENDocumentInfo extends QTDocument {
         sorted_map.putAll(tmp);
         return sorted_map;
 	}
-/*
-	private void findCompanies(String t){
-		for (Company c : companyName) {
-			final String compName = c.getName();
-			if (c.isMatch(t)){
-				this.addOrganization(compName);
-				this.setSector(c.getSector());
-				this.setIndustry(c.getIndustry());
-				this.addTicker(c.getTicker());
-			}
-		}
-	}
-*/
+
 	@Override
 	public void processDoc(){
 		englishTitle = title;
@@ -297,14 +172,7 @@ public class ENDocumentInfo extends QTDocument {
 //		findCompanies(title);
 		if (body == null || body.isEmpty())
 			return;	
-//		Map<Integer, Double> sorted_map = getSortedTopics(body, title, bodyWeight, titleWeight);
-//        int u = 3;
-//		for (Map.Entry<Integer, Double> e : sorted_map.entrySet()){
-//			if ( u <= 0)
-//				break;
-//			addTopic(e.getKey(), e.getValue());
-//			u--;
-//		}
+
 		String sentences[] = rawText == null ? getSentences(body) : getSentences(rawText);
 
 		for (String s : sentences){
@@ -317,17 +185,6 @@ public class ENDocumentInfo extends QTDocument {
 	}
 
 	public static String [] getSentences(String text){
-/*		Span[] spans = sentenceDetector.sentPosDetect(text);
-		ArrayList<String> sents = new ArrayList<>();
-		for (Span sp : spans){
-			int b = sp.getStart();
-			int e = sp.getEnd();
-			String ss = text.substring(b, e);
-			logger.info(ss);
-			sents.add(ss);
-		}
-		return sents.toArray(new String[sents.size()]);
-		*/
 		return sentenceDetector.sentDetect(text);
 	}
 
@@ -336,9 +193,6 @@ public class ENDocumentInfo extends QTDocument {
 		return statementWords.containsMatch(s);
 	}
 
-	public boolean isAction(String s) {
-		return actionWords.containsMatch(s);
-	}
 }
 
 class VC implements Comparator<Integer> {

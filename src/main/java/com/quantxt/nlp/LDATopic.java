@@ -1,5 +1,6 @@
 package com.quantxt.nlp;
 
+import com.quantxt.types.StringDoubleComparator;
 import org.apache.log4j.Logger;
 
 import java.util.Comparator;
@@ -8,7 +9,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Created by u6014526 on 4/21/2016.
+ * Created by matin on 4/21/2016.
  */
 public class LDATopic {
 
@@ -30,7 +31,6 @@ public class LDATopic {
 
     public double getProb(int N){
         return weights[N] / totalWight;
-//        return weights[N];
     }
 
     public double [] getWeights(){
@@ -45,7 +45,7 @@ public class LDATopic {
             weightMap.put(String.valueOf(i), weight);
         }
 
-        ValueComparator bvc = new ValueComparator(weightMap);
+        StringDoubleComparator bvc = new StringDoubleComparator(weightMap);
         TreeMap<String, Double> sorted_map = new TreeMap<>(bvc);
         sorted_map.putAll(weightMap);
         StringBuilder sb = new StringBuilder();
@@ -57,24 +57,6 @@ public class LDATopic {
             sb.append(e.getKey()).append(" ");
         }
         return sb.toString().trim();
-    }
-}
-
-class ValueComparator implements Comparator<String> {
-    Map<String, Double> base;
-
-    public ValueComparator(Map<String, Double> base) {
-        this.base = base;
-    }
-
-    // Note: this comparator imposes orderings that are inconsistent with
-    // equals.
-    public int compare(String a, String b) {
-        if (base.get(a) >= base.get(b)) {
-            return -1;
-        } else {
-            return 1;
-        } // returning 0 would merge keys
     }
 }
 

@@ -4,7 +4,7 @@ import org.apache.log4j.Logger;
 import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
 
 /**
- * Created by u6014526 on 5/3/2016.
+ * Created by matin on 5/3/2016.
  */
 public class TextPreProcessor implements TokenPreProcess {
 
