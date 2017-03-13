@@ -28,13 +28,19 @@ public class TopicModel {
     final private static Logger logger = Logger.getLogger(TopicModel.class);
 
     final private static int RANDOM_SEED = 5;
-    final private int numTopics;
-    final private int numIterations;
-    final private String modelName;
+    private int numTopics;
+    private int numIterations;
+    private String modelName;
     private Pipe pipe;
     private HashMap<String, LDATopic> word2TopicW = new HashMap<>();
     private double[] topicW;
     private TokenizerFactory tokenFactor;
+
+    public TopicModel(){
+        tokenFactor = new LinePreProcess();
+        tokenFactor.setTokenPreProcessor(new TextPreProcessor());
+        pipe = getPipe();
+    }
 
     public TopicModel(int n, int iter, String m){
         numTopics = n;
@@ -264,13 +270,15 @@ public class TopicModel {
         return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
-    public void loadInfererFromW2VFile(String file) throws IOException, ClassNotFoundException {
-
-        BufferedReader br = new BufferedReader(new FileReader(file));
+    private void loadInfererFromW2VFile(BufferedReader br){
         try {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String [] parts = line.split("\\s+");
+            //find number of topics/diemsions
+            String line = br.readLine();
+            String [] parts = line.split("\\s+");
+            numTopics = parts.length - 1;
+            topicW = new double[numTopics];
+            do  {
+                parts = line.split("\\s+");
                 String w = parts[0];
                 LDATopic ldaTopic = word2TopicW.get(w);
                 if (ldaTopic == null){
@@ -280,11 +288,11 @@ public class TopicModel {
                 for (int topic = 0; topic < numTopics; topic++) {
                     double weight = Double.parseDouble(parts[topic+1]);
 //                    if (weight > 0) {
-                        ldaTopic.add(topic, weight);
-                        topicW[topic] += weight;
+                    ldaTopic.add(topic, weight);
+                    topicW[topic] += weight;
 //                    }
                 }
-            }
+            } while ((line = br.readLine()) != null);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -294,6 +302,17 @@ public class TopicModel {
                 ex.printStackTrace();
             }
         }
+    }
+
+    public void loadInfererFromW2VFile(InputStream is) throws IOException, ClassNotFoundException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+        loadInfererFromW2VFile(br);
+    }
+
+    public void loadInfererFromW2VFile(String file) throws IOException, ClassNotFoundException {
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        loadInfererFromW2VFile(br);
+
     }
 
     private void populateWord2ProbMap(ParallelTopicModel model) throws IOException {

@@ -174,7 +174,10 @@ abstract public class QTDocument {
 	public void addPerson(String p){
 		persons.add(p);
 	}
-	
+	public String getCategories (){
+		return categories;
+	}
+
 	public static void resetTranslatCred(){
 		Translate.setClientId("2b70575a-116a-40db-9cc8-4b5192659506");
 		Translate.setClientSecret("g184U2+B7fwftaoGzBDyb59KzYEKtulZZQZsnW71wj4=");
@@ -256,6 +259,10 @@ abstract public class QTDocument {
 		return b;
 	}
 	
+	public String getLabel(){
+		return label;
+	}
+
 	public String getBody(){
 		return body;
 	}

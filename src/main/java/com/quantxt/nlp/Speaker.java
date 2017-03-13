@@ -12,13 +12,13 @@ import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.io.IOUtils;
 import org.datavec.api.util.ClassPathResource;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -217,8 +217,9 @@ public class Speaker {
     }
 
     public static ArrayList<String> phraseMatch(String str) {
-        Collection<Emit> emits = phraseTree.parseText(str);
+        if (phraseTree == null) return null;
         ArrayList<String> matches = new ArrayList<>();
+        Collection<Emit> emits = phraseTree.parseText(str);
         for (Emit e : emits) {
             matches.add(e.getKeyword());
         }
@@ -243,13 +244,76 @@ public class Speaker {
         return w.build();
     }
 
+    public static void getPhsFromw(String input, String output) throws IOException {
+        Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().caseInsensitive().removeOverlaps();
+        String line;
+        int num = 0;
+        Trie ww = getTirefromFile(input);
+        BufferedReader br = new BufferedReader(new FileReader("/Users/matin/Downloads/enwiki-20161201-all-titles-in-ns0"));
+
+        int num2 = 0;
+        try {
+            while ((line = br.readLine()) != null) {
+                if ((num++ % 100000) == 0) {
+                    logger.info(num + " " + " " + num2 + " loaded");
+                }
+                //      if (num > 10500000) break;
+                if (!line.matches("^([A-Z]).*")) continue;
+                if (line.length() > 50) continue;
+                String[] parts = line.replaceAll("[_\\-]+", " ").split("\\s+");
+
+                Collection<Emit> matches = ww.parseText(line);
+                if ((matches.size() == parts.length) || (matches.size() > 1)) {
+                    String link = "https://en.wikipedia.org/wiki/" + line;
+                    try {
+                        byte[] cont = Jsoup.connect(link)
+                                .userAgent("Mozilla")
+                                .ignoreContentType(true).execute().bodyAsBytes();
+                        Document jsoupDoc = Jsoup.parse(new String(cont), "UTF-8");
+                        String content = jsoupDoc.body().text();
+                        QTDocument qt = new ENDocumentInfo(content, jsoupDoc.title());
+                        qt.processDoc();
+                        List<String> sents = qt.getSentences();
+                        for (String s : sents) {
+                            Files.write(Paths.get(output), (s + "\n").getBytes(), StandardOpenOption.APPEND);
+                        }
+                    } catch ( Exception  e) {
+                        logger.error(e.getMessage());
+                    }
+                    logger.info(line);
+                } else {
+                    continue;
+                }
+
+//
+//                if (parts.length > 4) continue;
+
+/*
+                Files.write(Paths.get(phraseFileName), (line + "\n").getBytes(), StandardOpenOption.APPEND);
+                line = line.replaceAll("[_\\-]+", " ");
+                line = line.replaceAll("[^A-Za-z\\s]+", "").trim();
+                String[] parts = line.split("\\s+");
+                if (parts.length > 4) continue;
+                //             logger.info(bb + " --> " + line + " --> " + tag);
+
+
+                phrase.addKeyword(line);
+*/                num2++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        phraseTree = phrase.build();
+        logger.info("Phrases loaded");
+    }
+
     public static void getPhs(String phraseFileName) throws IOException {
         Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().caseInsensitive().removeOverlaps();
-        BufferedReader br;
         String line;
         int num = 0;
         //      Trie ww = getTirefromFile("/Users/matin/git/quantxt/qtingestor/w");
-        br = new BufferedReader(new FileReader("/Users/matin/Downloads/enwiki-20161201-all-titles-in-ns0"));
+        BufferedReader br = new BufferedReader(new FileReader("/Users/matin/Downloads/enwiki-20161201-all-titles-in-ns0"));
 
         int num2 = 0;
         try {
@@ -281,8 +345,7 @@ public class Speaker {
         logger.info("Phrases loaded");
     }
 
-    public static void init(int numTopics,
-                            String speakerFile,
+    public static void init(String speakerFile,
                             String ruleTagFile,
                             String word2vec,
                             String[] categories) throws IOException, ClassNotFoundException {
@@ -326,7 +389,6 @@ public class Speaker {
         }
         verbTree = verbs.build();
 
-
         //titles
         Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().caseInsensitive();
         byte[] commonArr = IOUtils.toByteArray(new ClassPathResource("/common.json").getInputStream());
@@ -341,11 +403,15 @@ public class Speaker {
         }
         titleTree = titles.build();
 
-
         //names
-        jsonElement = parser.parse(new FileReader(speakerFile));
+        if (speakerFile == null){
+            byte[] subjectArr = IOUtils.toByteArray(new ClassPathResource("/subject.json").getInputStream());
+            jsonElement = parser.parse(new String(subjectArr, "UTF-8"));
+        } else {
+            jsonElement = parser.parse(new FileReader(speakerFile));
+        }
+
         JsonArray speakerJson = jsonElement.getAsJsonArray();
-//        Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().caseInsensitive();
         Trie.TrieBuilder names = Trie.builder().onlyWholeWords().caseInsensitive();
 
 
@@ -379,19 +445,30 @@ public class Speaker {
                 names.addKeyword(last_name);
                 keyword2speaker.put(last_name.toLowerCase(), speaker);
             }
-//            JsonElement more_search_terms = jsonObject.get("search_terms");
-//            JsonElement searchTerms = jsonObject.get("addTerms");
         }
 
         nameTree = names.build();
 
-        topic_model = new TopicModel(numTopics, 500, "cb_official");
+        topic_model = new TopicModel();
         if (word2vec != null) {
             topic_model.loadInfererFromW2VFile(word2vec);
         }
 
         byte[] topicArr = IOUtils.toByteArray(new ClassPathResource("/topics.json").getInputStream());
         jsonElement = parser.parse(new String(topicArr, "UTF-8"));
+        JsonObject topicJson = jsonElement.getAsJsonObject();
+        for (Map.Entry<String, JsonElement> entry : topicJson.entrySet()) {
+            String topic = entry.getKey();
+            String str = entry.getValue().getAsString();
+            double[] tVector = topic_model.getSentenceVector(str);
+            TOPIC_MAP.put(topic, tVector);
+        }
+    }
+
+    public static void loadCategories(File file) throws FileNotFoundException {
+        TOPIC_MAP.clear();
+        JsonParser parser = new JsonParser();
+        JsonElement jsonElement = parser.parse(new FileReader(file));
         JsonObject topicJson = jsonElement.getAsJsonObject();
         for (Map.Entry<String, JsonElement> entry : topicJson.entrySet()) {
             String topic = entry.getKey();
@@ -423,7 +500,9 @@ public class Speaker {
         sorted_map.putAll(vals);
 
         double max = sorted_map.firstEntry().getValue();
-        if (max < .3 || max / avg < 1.3) return null;
+        if (max < .1 || max / avg < 1.3){
+            logger.warn("All tags are likely!.. model is not sharp enough");
+        }
         return new StringDouble(sorted_map.firstEntry().getKey(), sorted_map.firstEntry().getValue());
     }
 
@@ -431,6 +510,23 @@ public class Speaker {
         return no_search;
     }
 
+    public static List<String> getAllSearchableTerms(){
+        List<String> list = new ArrayList<>();
+        for (Map.Entry<String, Speaker> e : keyword2speaker.entrySet()) {
+            Speaker spk = e.getValue();
+            if (spk.isNo_search()) continue;
+            List<String> search_terms = spk.getSearhTerm();
+            list.addAll(search_terms);
+        }
+        return list;
+    }
+
+    public static void main(String[] args) throws Exception {
+        ENDocumentInfo.init();
+        Speaker.getPhsFromw("/Users/matin/git/quantxt/qtingestor/models/ww.phtags", "wadaewandy.txt");
+ //      Speaker.init(150, "/Users/matin/git/quantxt/qtingestor/models/Casual.json", "/Users/matin/git/quantxt/qtingestor/models/ww.phtags", "/Users/matin/git/quantxt/qtingestor/snp500.w2v", null);
+
+    }
 }
 
 

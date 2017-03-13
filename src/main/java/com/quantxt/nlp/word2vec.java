@@ -12,18 +12,15 @@ import org.deeplearning4j.text.sentenceiterator.BasicLineIterator;
 import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 
 /**
- * Created by u6014526 on 5/18/2016.
+ * Created by matin on 5/18/2016.
  */
+
 public class word2vec {
     final private static Logger logger = Logger.getLogger(word2vec.class);
 
@@ -53,7 +50,7 @@ public class word2vec {
                     .build();
 
             Word2Vec vec = new Word2Vec.Builder()
-                    .minWordFrequency(2)
+                    .minWordFrequency(3)
                     .iterations(1)
                     .layerSize(dim)
                     .seed(42)
@@ -81,9 +78,9 @@ public class word2vec {
     }
 
     public static void main(String[] args) throws Exception {
-        int topics = 150;
-        String input = "input_text_for_word2vec_modeling";
-        String output = "output_text_for_word2vec_modeling";
+        int topics = 40;
+        String input = "/Users/matin/git/quantxt/qtingestor/mohsen.txt";
+        String output = "/Users/matin/git/quantxt/qtingestor/mohsen.w2v";
         trainWordVev(input, output, topics);
 
     }

@@ -21,7 +21,6 @@
   "Margin" : "margin",
   "Rev" : "Revenue",
 */
-
   "Growth" : "growth",
   "Revenue" : "revenue",
   "Return" : "return",
@@ -35,5 +34,8 @@
   "Inovation" : "Inovation patent",
   "Customer" : "Customer",
   "Privacy" : "Privacy",
-  "Sales and Marketing" : "Sales Marketing advertisment"
+  "Sales and Marketing" : "Sales Marketing advertisment",
+  "Software Engineering" : "c++ java software code python",
+  "Data Science" : "machine learning natural language processing advanced analytics",
+  "Project Management" : "Project Management agile scrum"
  }

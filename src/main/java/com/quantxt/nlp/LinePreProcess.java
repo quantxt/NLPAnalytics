@@ -21,7 +21,7 @@ import java.util.Set;
 import static java.util.Arrays.asList;
 
 /**
- * Created by u6014526 on 5/3/2016.
+ * Created by matin on 5/3/2016.
  */
 public class LinePreProcess extends Pipe implements TokenizerFactory {
 
@@ -90,7 +90,7 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
         string = string.replaceAll("\\\\n","");
         string = string.replaceAll("\\\\r","");
         string = string.replaceAll("\\\\t","");
-        string = string.replaceAll("[\\“\\”\\$\\=\\>\\<_\\'\\’\\-\\—\"\\‘\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
+        string = string.replaceAll("[\\&\\!\\“\\”\\$\\=\\>\\<_\\'\\’\\-\\—\"\\‘\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
         string = string.replaceAll("\\b\\d+\\b", "");
         string = string.toLowerCase();
         List<String> list = asList(string.split("\\s+"));
