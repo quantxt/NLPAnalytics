@@ -1,11 +1,6 @@
 package com.quantxt.nlp;
 
-import cc.mallet.classify.Classifier;
-import cc.mallet.classify.ClassifierTrainer;
-import cc.mallet.classify.MaxEntTrainer;
-import cc.mallet.pipe.*;
-import cc.mallet.types.Instance;
-import cc.mallet.types.InstanceList;
+
 import org.apache.log4j.Logger;
 
 import java.io.*;
@@ -17,7 +12,7 @@ import java.util.regex.Pattern;
  * Created by matin on 8/16/16.
  */
 public class CategoryDetection {
-
+/*
     final private static String classifierFile = "mallet_document_classifier.maxent";
     private static Logger logger = Logger.getLogger(CategoryDetection.class);
 
@@ -83,4 +78,5 @@ public class CategoryDetection {
             }
         }
     }
+    */
 }

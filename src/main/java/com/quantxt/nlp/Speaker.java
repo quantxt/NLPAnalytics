@@ -18,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -40,10 +39,9 @@ public class Speaker {
 
     private static Map<String, Speaker> keyword2speaker = new HashMap<>();
     private static Map<String, String> verb2context = new HashMap<>();
-    private static Map<String, double[]> TOPIC_MAP = new HashMap<>();
 
-
-    private static TopicModel topic_model = null;
+//    private static Map<String, double[]> TOPIC_MAP = new HashMap<>();
+//    private static TopicModel topic_model = null;
 
     private String name;
     private String affiliation;
@@ -63,9 +61,9 @@ public class Speaker {
         tags.add(t);
     }
 
-    public static TopicModel getTM() {
-        return topic_model;
-    }
+//    public static TopicModel getTM() {
+//        return topic_model;
+//    }
 
     private List<String> getSearhTerm() {
         ArrayList<String> search_terms = new ArrayList<>();
@@ -105,7 +103,6 @@ public class Speaker {
         Speaker speaker = keyword2speaker.get(keyword);
         if (speaker != null) {
             sDoc.setAuthor(speaker.name);
-//            sDoc.addTags(new ArrayList<>(speaker.getTags()));
             sDoc.setEntity(speaker.affiliation.replace("\"", ""));
             doc.addTag(speaker.name.replace("\"", ""));
             sDoc.addTag(speaker.name.replace("\"", ""));
@@ -449,6 +446,7 @@ public class Speaker {
 
         nameTree = names.build();
 
+        /*
         topic_model = new TopicModel();
         if (word2vec != null) {
             topic_model.loadInfererFromW2VFile(word2vec);
@@ -463,8 +461,10 @@ public class Speaker {
             double[] tVector = topic_model.getSentenceVector(str);
             TOPIC_MAP.put(topic, tVector);
         }
+        */
     }
 
+    /*
     public static void loadCategories(File file) throws FileNotFoundException {
         TOPIC_MAP.clear();
         JsonParser parser = new JsonParser();
@@ -477,6 +477,8 @@ public class Speaker {
             TOPIC_MAP.put(topic, tVector);
         }
     }
+    */
+    /*
 
     public static StringDouble getBestTag(String str) {
         double[] tvec = topic_model.getSentenceVector(str);
@@ -505,6 +507,7 @@ public class Speaker {
         }
         return new StringDouble(sorted_map.firstEntry().getKey(), sorted_map.firstEntry().getValue());
     }
+    */
 
     private boolean isNo_search() {
         return no_search;

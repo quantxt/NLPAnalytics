@@ -3,7 +3,6 @@ package com.quantxt.QTDocument;
 import java.io.*;
 import java.util.*;
 
-import com.quantxt.nlp.TopicModel;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
@@ -11,7 +10,6 @@ import opennlp.tools.tokenize.Tokenizer;
 
 import opennlp.tools.util.Span;
 import org.ahocorasick.trie.Trie;
-import org.apache.commons.io.IOUtils;
 import org.datavec.api.util.ClassPathResource;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
