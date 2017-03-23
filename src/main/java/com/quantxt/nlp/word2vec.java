@@ -2,7 +2,6 @@ package com.quantxt.nlp;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -10,7 +9,6 @@ import com.amazonaws.services.s3.model.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.reflect.TypeToken;
 import org.apache.log4j.Logger;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
@@ -23,7 +21,6 @@ import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
 import java.io.*;
-import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -127,7 +124,7 @@ public class word2vec {
     private static void getS3InputStream(String bucketName
     , HashSet<String> keys) throws IOException {
         final BasicAWSCredentials awsCreds = new BasicAWSCredentials(
-                "AKIAITIPWJ26NCITRYVA", "JQeaZT8br/3dghGgMVYDlPXOEy+3cz1u703l/F/M");
+                "XXXX", "XXXX");
         ClientConfiguration clientConfig = new ClientConfiguration();
         clientConfig.setProtocol(Protocol.HTTP);
         clientConfig.setConnectionTimeout(100000);
