@@ -1,9 +1,8 @@
 package com.quantxt.nlp;
 
-import com.quantxt.types.StringDoubleComparator;
+import com.quantxt.types.MapSort;
 import org.apache.log4j.Logger;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -45,12 +44,12 @@ public class LDATopic {
             weightMap.put(String.valueOf(i), weight);
         }
 
-        StringDoubleComparator bvc = new StringDoubleComparator(weightMap);
-        TreeMap<String, Double> sorted_map = new TreeMap<>(bvc);
-        sorted_map.putAll(weightMap);
+        Map<String, Double> sorted_map = MapSort.sortByValue(weightMap);
+        Map.Entry<String, Double> firstEntry = sorted_map.entrySet().iterator().next();
+
         StringBuilder sb = new StringBuilder();
 
-        double max = sorted_map.firstEntry().getValue();
+        double max = firstEntry.getValue();
         for (Map.Entry<String, Double> e : sorted_map.entrySet()){
             double v = e.getValue();
             if (v / max < .25) break;

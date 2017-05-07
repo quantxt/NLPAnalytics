@@ -1,23 +1,21 @@
 package com.quantxt.nlp;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.quantxt.QTDocument.ENDocumentInfo;
-import com.quantxt.QTDocument.QTDocument;
-import com.quantxt.types.StringDouble;
-import com.quantxt.types.StringDoubleComparator;
+import com.quantxt.SearchConcepts.Entity;
+import com.quantxt.SearchConcepts.NamedEntity;
+import com.quantxt.doc.QTDocument;
+import com.quantxt.nlp.types.TextNormalizer;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.apache.commons.io.IOUtils;
-import org.datavec.api.util.ClassPathResource;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -26,89 +24,44 @@ import java.util.*;
 /**
  * Created by matin on 10/9/16.
  */
+
 public class Speaker {
     final private static Logger logger = LoggerFactory.getLogger(Speaker.class);
 
-    private static String QUOTE_CATEGORY;
-    public static String ARTICLE_CATEGORY;
-
     private static Trie phraseTree = null;
-    private static Trie nameTree = null;
-    private static Trie verbTree = null;
-    private static Trie titleTree = null;
+    private static Trie nameTree   = null;
+    private static Trie verbTree   = null;
+    private static Trie titleTree  = null;
 
-    private static Map<String, Speaker> keyword2speaker = new HashMap<>();
-    private static Map<String, String> verb2context = new HashMap<>();
-
-//    private static Map<String, double[]> TOPIC_MAP = new HashMap<>();
-//    private static TopicModel topic_model = null;
-
-    private String name;
-    private String affiliation;
-    private boolean no_search;
-    private List<String> search_phs = new ArrayList<>();
-    private Set<String> tags = new HashSet<>();
-
-    private Speaker(String entity, String affiliation, boolean ns) {
-        this.name = entity;
-        this.affiliation = affiliation;
-        tags.add(name.replace("\"", ""));
-        tags.add(affiliation.replace("\"", ""));
-        no_search = ns;
-    }
-
-    public void addTag(String t) {
-        tags.add(t);
-    }
-
-//    public static TopicModel getTM() {
-//        return topic_model;
-//    }
-
-    private List<String> getSearhTerm() {
-        ArrayList<String> search_terms = new ArrayList<>();
-        search_terms.add(affiliation);
-        search_terms.addAll(search_phs);
-        return search_terms;
-    }
-
-    public String getContextSearhTerm() {
-        StringBuilder sb = new StringBuilder();
-        for (String t : tags) {
-            sb.append(t).append(" ");
-        }
-        sb.append(affiliation);
-        return sb.toString();
-    }
+    private static List<String> SEARH_TEMRS = new ArrayList<>();
 
     private static QTDocument getQuoteDoc(QTDocument doc,
                                           String quote,
-                                          String keyword) {
+                                          NamedEntity namedEntity)
+    {
         quote = quote.replaceAll("^Advertisement\\s+", "").trim();
-
-        QTDocument sDoc = new ENDocumentInfo("", quote);
+        ENDocumentInfo sDoc = new ENDocumentInfo("", quote);
         sDoc.setDate(doc.getDate());
-        sDoc.setCategories(QUOTE_CATEGORY);
-        sDoc.setDirectLink(doc.getDirectLink());
+//        sDoc.setCategories(QUOTE_CATEGORY);
+        sDoc.setLink(doc.getLink());
         sDoc.setLogo(doc.getLogo());
         sDoc.setSource(doc.getSource());
-        StringDouble bt = getBestTag(quote);
 
+        /*
+        StringDouble bt = getBestTag(quote);
         if (bt != null && bt.getVal() > .1) {
             sDoc.addTag(bt.getStr());
-            sDoc.setLabel(bt.getStr());
             doc.addTag(bt.getStr());
         }
+        */
 
-        Speaker speaker = keyword2speaker.get(keyword);
-        if (speaker != null) {
-            sDoc.setAuthor(speaker.name);
-            sDoc.setEntity(speaker.affiliation.replace("\"", ""));
-            doc.addTag(speaker.name.replace("\"", ""));
-            sDoc.addTag(speaker.name.replace("\"", ""));
-            doc.addTag(speaker.affiliation.replace("\"", ""));
-            sDoc.addTag(speaker.affiliation.replace("\"", ""));
-        }
+        sDoc.setAuthor(namedEntity.getName());
+        sDoc.setEntity(namedEntity.getEntity().getName());
+        doc.addTag(namedEntity.getName());
+        sDoc.addTag(namedEntity.getName());
+        doc.addTag(namedEntity.getEntity().getName());
+        sDoc.addTag(namedEntity.getEntity().getName());
+
         return sDoc;
     }
 
@@ -120,7 +73,7 @@ public class Speaker {
         int diff = (e2_b - e1_e);
         // e1  e2
         //   if (e1_e < e2_b)
-        return (diff >= 0 && diff < 10);
+        return (diff >= 0 && diff < 5);
         // e2 e1
 //        return ((e1_b - e2_e) < 10);
     }
@@ -134,6 +87,126 @@ public class Speaker {
             return f;
         }
         return null;
+    }
+
+    public static List<String> getSummary(QTDocument doc){
+        List<String> sents = doc.getSentences();
+        int numSent = sents.size();
+        ArrayList<String> summaries = new ArrayList<>();
+        for (int i = 1; i < numSent; i++) {
+            final String orig = sents.get(i);
+            String normalized = TextNormalizer.normalize(orig);
+            int numTokens = normalized.split("\\s+").length;
+            if (numTokens < 6 || numTokens > 50) continue;
+            Collection<Emit> verb_emit = verbTree.parseText(normalized);
+            if (verb_emit.size() == 0) continue;
+            summaries.add(normalized);
+        }
+        return summaries;
+    }
+
+    public static ArrayList<QTDocument> extractEntityMentions(QTDocument doc) {
+        ArrayList<QTDocument> quotes = new ArrayList<>();
+        List<String> sents = doc.getSentences();
+        int numSent = sents.size();
+        Set<String> entitiesFromNamedFound = new HashSet<>();
+        Set<String> topEntitiesFound = new HashSet<>();
+
+        Collection<Emit> ttl_names = nameTree.parseText(doc.getTitle());
+        for (Emit emt : ttl_names){
+            NamedEntity ne = (NamedEntity) emt.getCustomeData();
+            if (ne.isParent()){
+                topEntitiesFound.add(ne.getName());
+            }
+        }
+
+        for (int i = 1; i < numSent; i++) {
+            final String orig = sents.get(i);
+            final String origBefore = sents.get(i - 1);
+    //        String rawSent_before = TextNormalizer.normalize(origBefore);
+            String rawSent_curr = TextNormalizer.normalize(orig);
+           int numTokens = rawSent_curr.split("\\s+").length;
+            if (numTokens < 6 || numTokens > 50) continue;
+/*
+            try {
+                Files.write(Paths.get("snp500.txt"), (orig  +"\n").getBytes(), StandardOpenOption.APPEND);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+*/
+
+            Collection<Emit> name_match_curr = nameTree.parseText(orig);
+            Collection<Emit> name_match_befr = nameTree.parseText(origBefore);
+
+            if (name_match_curr.size() == 0 && name_match_befr.size() == 0) continue;
+
+            Collection<Emit> titles_emet = titleTree.parseText(orig);
+
+ //           int importance = 0;
+ //           if (name_match_befr.size() > 0) importance++;
+
+//            if (name_match_curr.size() > 1) continue;
+
+            List<Emit> allemits = new ArrayList<>();
+            allemits.addAll(name_match_curr);
+            allemits.addAll(name_match_befr);
+            for (Emit emt : allemits){
+                NamedEntity ne = (NamedEntity) emt.getCustomeData();
+                if (ne.isParent()){
+                    topEntitiesFound.add(ne.getName());
+                }
+            }
+
+            NamedEntity entity = null;
+
+            if (name_match_curr.size() > 1) {
+                Collection<Emit> verb_emit = verbTree.parseText(rawSent_curr);
+                if (verb_emit.size() == 0) {
+                    logger.debug("There are more than one entity and no verb: " + orig);
+                    for (Emit e_n : name_match_curr) {
+                        logger.debug(" --> " + e_n.getKeyword());
+                    }
+                    continue;
+                } else {
+                    for (Emit e_n : name_match_curr) {
+                        for (Emit e_v : verb_emit) {
+                            if (dist(e_n, e_v)) {
+                                entity = (NamedEntity) e_n.getCustomeData();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (name_match_curr.size() == 1) {
+                entity = (NamedEntity) name_match_curr.iterator().next().getCustomeData();
+            }
+
+            if (entity == null) {
+                logger.debug("Entity is still null : " + orig);
+                continue;
+            }
+
+            entitiesFromNamedFound.add(entity.getEntity().getName());
+
+            // if this entity is a child and parent hasn't been found then this entity should not be added
+            if (!topEntitiesFound.contains(entity.getEntity().getName())){
+                continue;
+            }
+
+            QTDocument newQuote = getQuoteDoc(doc, orig, entity);
+            newQuote.setDocType(QTDocument.DOCTYPE.Phrase);
+            newQuote.setBody(origBefore + " " + orig);
+            quotes.add(newQuote);
+
+            if (titles_emet.size()  == 0) continue;
+            Iterator<Emit> it = titles_emet.iterator();
+            while(it.hasNext()) {
+                newQuote.addFacts("Title", it.next().getKeyword());
+            }
+        }
+        return quotes;
     }
 
     public static ArrayList<QTDocument> extractQuotes(QTDocument doc) {
@@ -160,7 +233,6 @@ public class Speaker {
 
             if (verb_emit.size() == 0) continue;
 
-
             Collection<Emit> name_match_curr = nameTree.parseText(rawSent_curr);
             Collection<Emit> name_match_befr = nameTree.parseText(rawSent_before);
 
@@ -171,7 +243,7 @@ public class Speaker {
 
 //            if (name_match_curr.size() > 1) continue;
 
-            String keyword = null;
+            NamedEntity entity = null;
             if (name_match_curr.size() > 0) {
                 importance += 2;
                 int name_verb_pair = 0;
@@ -179,15 +251,15 @@ public class Speaker {
                     for (Emit e_v : verb_emit) {
                         if (dist(e_n, e_v)) {
                             name_verb_pair++;
-                            keyword = e_n.getKeyword();
+                            entity = (NamedEntity) e_n.getCustomeData();
                             break;
                         }
                     }
                 }
-                if (keyword != null) {
-                    QTDocument newQuote = getQuoteDoc(doc, orig, keyword);
-                    Emit firstVerbEmit = (Emit) verb_emit.toArray()[0];
-                    newQuote.addTag(verb2context.get(firstVerbEmit.getKeyword()));
+                if (entity != null) {
+                    QTDocument newQuote = getQuoteDoc(doc, orig, entity);
+//                    Emit firstVerbEmit = (Emit) verb_emit.toArray()[0];
+//                    newQuote.addTag(verb2context.get(firstVerbEmit.getKeyword()));
                     quotes.add(newQuote);
                 }
 
@@ -225,7 +297,7 @@ public class Speaker {
 
     public static Trie getTirefromFile(String filename) throws IOException {
         BufferedReader br;
-        Trie.TrieBuilder w = Trie.builder().onlyWholeWords().caseInsensitive().removeOverlaps();
+        Trie.TrieBuilder w = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
 
         br = new BufferedReader(new FileReader(filename));
         try {
@@ -242,7 +314,7 @@ public class Speaker {
     }
 
     public static void getPhsFromw(String input, String output) throws IOException {
-        Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().caseInsensitive().removeOverlaps();
+        Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
         String line;
         int num = 0;
         Trie ww = getTirefromFile(input);
@@ -254,7 +326,6 @@ public class Speaker {
                 if ((num++ % 100000) == 0) {
                     logger.info(num + " " + " " + num2 + " loaded");
                 }
-                //      if (num > 10500000) break;
                 if (!line.matches("^([A-Z]).*")) continue;
                 if (line.length() > 50) continue;
                 String[] parts = line.replaceAll("[_\\-]+", " ").split("\\s+");
@@ -305,52 +376,14 @@ public class Speaker {
         logger.info("Phrases loaded");
     }
 
-    public static void getPhs(String phraseFileName) throws IOException {
-        Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().caseInsensitive().removeOverlaps();
-        String line;
-        int num = 0;
-        //      Trie ww = getTirefromFile("/Users/matin/git/quantxt/qtingestor/w");
-        BufferedReader br = new BufferedReader(new FileReader("/Users/matin/Downloads/enwiki-20161201-all-titles-in-ns0"));
-
-        int num2 = 0;
-        try {
-            while ((line = br.readLine()) != null) {
-                if ((num++ % 100000) == 0) {
-                    logger.info(num + " " + " " + num2 + " loaded");
-                }
-                //      if (num > 10500000) break;
-                if (!line.matches("^([A-Z]).*")) continue;
-                if (line.length() > 50) continue;
-
-                StringDouble bestTag = getBestTag(line);
-
-                if (bestTag == null || bestTag.getVal() < .5) continue;
-                Files.write(Paths.get(phraseFileName), (line + "\n").getBytes(), StandardOpenOption.APPEND);
-                line = line.replaceAll("[_\\-]+", " ");
-                line = line.replaceAll("[^A-Za-z\\s]+", "").trim();
-                String[] parts = line.split("\\s+");
-                if (parts.length > 4) continue;
-                //             logger.info(bb + " --> " + line + " --> " + tag);
-                num2++;
-                phrase.addKeyword(line);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        phraseTree = phrase.build();
-        logger.info("Phrases loaded");
-    }
-
-    public static void init(String speakerFile,
-                            String ruleTagFile,
-                            String word2vec,
-                            String[] categories) throws IOException, ClassNotFoundException {
-        if (ruleTagFile != null) {
-            Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().caseInsensitive().removeOverlaps();
+    public static void init(InputStream speakerFile,
+                            InputStream phraseFile,
+                            InputStream contextFile) throws IOException, ClassNotFoundException {
+        if (phraseFile != null) {
+            Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
             String line;
             int num = 0;
-            BufferedReader br = new BufferedReader(new FileReader(ruleTagFile));
+            BufferedReader br = new BufferedReader(new InputStreamReader(phraseFile, "UTF-8"));
             while ((line = br.readLine()) != null) {
                 line = line.replaceAll("[_\\-]+", " ");
                 line = line.replaceAll("[^A-Za-z\\s]+", "").trim();
@@ -363,37 +396,41 @@ public class Speaker {
             phraseTree = phrase.build();
         }
 
-        if (categories != null) {
-            QUOTE_CATEGORY = categories[1];
-            ARTICLE_CATEGORY = categories[0];
-        }
-
         JsonParser parser = new JsonParser();
 
         //verbs
-        Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().caseInsensitive();
-        byte[] contextArr = IOUtils.toByteArray(new ClassPathResource("/context.json").getInputStream());
+        Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().ignoreCase();
+
+ //       byte[] contextArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
+ //       IOUtils.toByteArray(new ClassPathResource("/context.json").getInputStream());
+        URL url = Speaker.class.getClassLoader().getResource("context.json");
+
+        byte[] contextArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
+                IOUtils.toByteArray(url.openStream());
+
+
         JsonElement jsonElement = parser.parse(new String(contextArr, "UTF-8"));
         JsonObject contextJson = jsonElement.getAsJsonObject();
         for (Map.Entry<String, JsonElement> entry : contextJson.entrySet()) {
             String context_key = entry.getKey();
             JsonArray context_arr = entry.getValue().getAsJsonArray();
             for (JsonElement e : context_arr) {
-                String verb = e.getAsString();
-                verbs.addKeyword(verb);
-                verb2context.put(verb, context_key);
+                String verb = TextNormalizer.normalize(e.getAsString());
+                verbs.addKeyword(verb, context_key);
             }
         }
         verbTree = verbs.build();
 
         //titles
-        Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().caseInsensitive();
-        byte[] commonArr = IOUtils.toByteArray(new ClassPathResource("/common.json").getInputStream());
+        Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().ignoreCase();
+ //       byte[] commonArr = IOUtils.toByteArray(new ClassPathResource("/common.json").getInputStream());
+        byte[] commonArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("common.json").openStream());
         JsonElement commonosnElement = parser.parse(new String(commonArr, "UTF-8"));
         JsonObject commonosnObject = commonosnElement.getAsJsonObject();
         JsonElement titles_elems = commonosnObject.get("titles");
         if (titles_elems != null) {
             for (JsonElement elem : titles_elems.getAsJsonArray()) {
+         //       String ttl = lp.normalize(elem.getAsString());
                 String ttl = elem.getAsString();
                 titles.addKeyword(ttl);
             }
@@ -402,133 +439,75 @@ public class Speaker {
 
         //names
         if (speakerFile == null){
-            byte[] subjectArr = IOUtils.toByteArray(new ClassPathResource("/subject.json").getInputStream());
+            byte[] subjectArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("subject.json").openStream());
+//            byte[] subjectArr = IOUtils.toByteArray(new ClassPathResource("/subject.json").getInputStream());
             jsonElement = parser.parse(new String(subjectArr, "UTF-8"));
         } else {
-            jsonElement = parser.parse(new FileReader(speakerFile));
+            jsonElement = parser.parse(new InputStreamReader(speakerFile, "UTF-8"));
         }
 
         JsonArray speakerJson = jsonElement.getAsJsonArray();
-        Trie.TrieBuilder names = Trie.builder().onlyWholeWords().caseInsensitive();
+        Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
 
 
+        Gson gson = new Gson();
         for (JsonElement spj : speakerJson) {
-            JsonObject jsonObject = spj.getAsJsonObject();
-            String entity = jsonObject.get("entity").getAsString();
+            final Entity entity = gson.fromJson(spj, Entity.class);
+            String entity_name = entity.getName();
+            NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
+            entityNamedEntity.setEntity(entity);
+            entityNamedEntity.setParent(true);
+            SEARH_TEMRS.add(entity_name);
 
-            names.addKeyword(entity.replace("\"", ""));
-            Speaker speaker = new Speaker(entity.replace("\"", ""), entity, false);
-            keyword2speaker.put(entity.toLowerCase().replace("\"", ""), speaker);
+            names.addKeyword(entity_name, entityNamedEntity);
+            names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
 
-            JsonElement alts = jsonObject.get("alts");
+            String [] alts = entity.getAlts();
             if (alts != null) {
-                for (JsonElement elem : alts.getAsJsonArray()) {
-                    String alt = elem.getAsString();
-                    names.addKeyword(alt);
-                    keyword2speaker.put(alt.toLowerCase(), speaker);
+                for (String alt : alts) {
+                    names.addKeyword(alt, entityNamedEntity);
+                    names.addKeyword(alt.toUpperCase(), entityNamedEntity);
+
                 }
             }
 
-            JsonElement personElement = jsonObject.get("people");
-            if (personElement == null) continue;
-            JsonArray personArr = personElement.getAsJsonArray();
-            for (JsonElement elem : personArr) {
-                String person = elem.getAsString();
-                names.addKeyword(person);
-                speaker = new Speaker(person, entity, false);
-                keyword2speaker.put(person.toLowerCase(), speaker);
-                String[] person_parts = person.split("\\s+");
-                String last_name = person_parts[person_parts.length - 1];
-                names.addKeyword(last_name);
-                keyword2speaker.put(last_name.toLowerCase(), speaker);
+            List<NamedEntity> namedEntities = entity.getNamedEntities();
+            if (namedEntities == null) continue;
+            for (NamedEntity namedEntity : namedEntities) {
+                namedEntity.setEntity(entity);
+                String p_name = namedEntity.getName();
+                names.addKeyword(p_name, namedEntity);
+                names.addKeyword(p_name.toUpperCase(), namedEntity);
+                for (String alt : namedEntity.getAlts()) {
+         //           alt = lp.normalize(alt);
+                    names.addKeyword(alt, namedEntity);
+                    names.addKeyword(alt.toUpperCase(), namedEntity);
+                }
             }
         }
-
         nameTree = names.build();
-
-        /*
-        topic_model = new TopicModel();
-        if (word2vec != null) {
-            topic_model.loadInfererFromW2VFile(word2vec);
-        }
-
-        byte[] topicArr = IOUtils.toByteArray(new ClassPathResource("/topics.json").getInputStream());
-        jsonElement = parser.parse(new String(topicArr, "UTF-8"));
-        JsonObject topicJson = jsonElement.getAsJsonObject();
-        for (Map.Entry<String, JsonElement> entry : topicJson.entrySet()) {
-            String topic = entry.getKey();
-            String str = entry.getValue().getAsString();
-            double[] tVector = topic_model.getSentenceVector(str);
-            TOPIC_MAP.put(topic, tVector);
-        }
-        */
     }
 
-    /*
-    public static void loadCategories(File file) throws FileNotFoundException {
-        TOPIC_MAP.clear();
-        JsonParser parser = new JsonParser();
-        JsonElement jsonElement = parser.parse(new FileReader(file));
-        JsonObject topicJson = jsonElement.getAsJsonObject();
-        for (Map.Entry<String, JsonElement> entry : topicJson.entrySet()) {
-            String topic = entry.getKey();
-            String str = entry.getValue().getAsString();
-            double[] tVector = topic_model.getSentenceVector(str);
-            TOPIC_MAP.put(topic, tVector);
-        }
-    }
-    */
-    /*
-
-    public static StringDouble getBestTag(String str) {
-        double[] tvec = topic_model.getSentenceVector(str);
-        HashMap<String, Double> vals = new HashMap<>();
-        double avg = 0;
-        double numTopics = TOPIC_MAP.size();
-        for (Map.Entry<String, double[]> r : TOPIC_MAP.entrySet()) {
-            Double sim = TopicModel.cosineSimilarity(tvec, r.getValue());
-            if (sim.isNaN()) {
-                sim = 0d;
-            }
-            avg += sim / numTopics;
-            vals.put(r.getKey(), sim);
-
-            //         logger.info(r.getKey() + " " + sim);
-        }
-        //      if (avg < .1) return null;
-
-        StringDoubleComparator bvc = new StringDoubleComparator(vals);
-        TreeMap<String, Double> sorted_map = new TreeMap<>(bvc);
-        sorted_map.putAll(vals);
-
-        double max = sorted_map.firstEntry().getValue();
-        if (max < .1 || max / avg < 1.3){
-            logger.warn("All tags are likely!.. model is not sharp enough");
-        }
-        return new StringDouble(sorted_map.firstEntry().getKey(), sorted_map.firstEntry().getValue());
-    }
-    */
-
-    private boolean isNo_search() {
-        return no_search;
-    }
-
-    public static List<String> getAllSearchableTerms(){
-        List<String> list = new ArrayList<>();
-        for (Map.Entry<String, Speaker> e : keyword2speaker.entrySet()) {
-            Speaker spk = e.getValue();
-            if (spk.isNo_search()) continue;
-            List<String> search_terms = spk.getSearhTerm();
-            list.addAll(search_terms);
-        }
-        return list;
+    public static List<String> getSearhTemrs(){
+        return SEARH_TEMRS;
     }
 
     public static void main(String[] args) throws Exception {
         ENDocumentInfo.init();
-        Speaker.getPhsFromw("/Users/matin/git/quantxt/qtingestor/models/ww.phtags", "wadaewandy.txt");
- //      Speaker.init(150, "/Users/matin/git/quantxt/qtingestor/models/Casual.json", "/Users/matin/git/quantxt/qtingestor/models/ww.phtags", "/Users/matin/git/quantxt/qtingestor/snp500.w2v", null);
+        Speaker.init(new FileInputStream("/Users/matin/git/QTdatacollect/src/main/resources/CentralBanks.json") , null, null);
 
+        QTDocument doc = new ENDocumentInfo("While March’s U.S. employment report wasn’t as bad as the payrolls number indicated, there are plenty of reasons why April’s figures will be brighter -- and continue to show a solid labor market.\n" +
+                "\n" +
+                "The first jobs report of the second quarter should show the economy moving past early-year seasonal quirks -- both of the methodological kind that have plagued the Labor Department data for several years, as well as the noise emanating from two unusually warm months followed by one that contained a powerful Northeast storm during the report’s survey week.\n" +
+                "\n" +
+                "That would make the underlying picture clearer: a steady job market with hiring settling into a more sustainable pace and wage growth strengthening, all helping to cushion household balance sheets and make the first quarter’s weak consumption figure look like a blip. The overall bright labor-market picture helped prompt Federal Reserve officials Wednesday to suggest they’re still on track for two more interest-rate increases this year, saying the “fundamentals underpinning the continued growth” of consumer spending remain solid.",
+                "rican output after five years, says Bank of Canada’s Stephen Poloz");
+        doc.processDoc();
+
+        ArrayList<QTDocument> docs = Speaker.extractEntityMentions(doc);
+        for (QTDocument dd : docs){
+            logger.info(dd.getTitle());
+        }
     }
 }
 

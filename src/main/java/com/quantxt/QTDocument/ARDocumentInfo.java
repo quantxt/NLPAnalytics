@@ -1,8 +1,9 @@
 package com.quantxt.QTDocument;
 
 import com.memetix.mst.language.Language;
+import com.quantxt.doc.QTDocument;
 
-public class ARDocumentInfo extends QTDocument {
+public abstract class ARDocumentInfo extends QTDocument {
 	public ARDocumentInfo (String body, String title){
 		super(body, title);
 	}
@@ -12,7 +13,7 @@ public class ARDocumentInfo extends QTDocument {
 	}
 
 	@Override
-	protected boolean isStatement(String s) {
+	public boolean isStatement(String s) {
 		// TODO Auto-generated method stub
 		return false;
 	}

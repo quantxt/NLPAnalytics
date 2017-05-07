@@ -3,19 +3,26 @@ package com.quantxt.nlp;
 import cc.mallet.types.*;
 import cc.mallet.pipe.*;
 import cc.mallet.topics.*;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.quantxt.DataStores.WPpost;
+import com.quantxt.doc.QTDocument;
+import com.quantxt.types.MapSort;
+import com.quantxt.types.StringDouble;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
+import org.ahocorasick.trie.Trie;
 import org.apache.log4j.Logger;
 import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
+import org.joda.time.DateTime;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.*;
 import java.util.regex.*;
 import java.io.*;
@@ -27,14 +34,18 @@ public class TopicModel {
 
     final private static Logger logger = Logger.getLogger(TopicModel.class);
 
+    //training//////
     final private static int RANDOM_SEED = 5;
     private int numTopics;
     private int numIterations;
     private String modelName;
+    ///////////////
+
     private Pipe pipe;
     private HashMap<String, LDATopic> word2TopicW = new HashMap<>();
     private double[] topicW;
     private TokenizerFactory tokenFactor;
+    private Map<String, double[]> TOPIC_MAP = new HashMap<>();
 
     public TopicModel(){
         tokenFactor = new LinePreProcess();
@@ -73,6 +84,7 @@ public class TopicModel {
 
         return new SerialPipes(pipeList);
     }
+
 
     private ParallelTopicModel getModel(final InstanceList instantList) throws IOException
     {
@@ -119,6 +131,31 @@ public class TopicModel {
             br.close();
         }
         getModel(instances);
+    }
+
+    public StringDouble getBestTag(String str) {
+        double[] tvec = getSentenceVector(str);
+        Map<String, Double> vals = new HashMap<>();
+        double avg = 0;
+        double numTopics = TOPIC_MAP.size();
+        for (Map.Entry<String, double[]> r : TOPIC_MAP.entrySet()) {
+            Double sim = TopicModel.cosineSimilarity(tvec, r.getValue());
+            if (sim.isNaN()) {
+                sim = 0d;
+            }
+            avg += sim / numTopics;
+            vals.put(r.getKey(), sim);
+
+        }
+        //      if (avg < .1) return null;
+
+        Map<String, Double> sorted_map = MapSort.sortByValue(vals);
+        Map.Entry<String, Double> firstEntry = sorted_map.entrySet().iterator().next();
+        double max = firstEntry.getValue();
+        if (max < .1 || max / avg < 1.3){
+            logger.warn("All tags are likely!.. model is not sharp enough");
+        }
+        return new StringDouble(firstEntry.getKey(), firstEntry.getValue());
     }
 
     public ParallelTopicModel loadModel() throws IOException, ClassNotFoundException {
@@ -350,6 +387,167 @@ public class TopicModel {
                 topicW[topic] += weight;
             }
         }
+    }
+
+    public Trie getPhs(String phraseFileName) throws IOException {
+        Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
+        String line;
+
+        int num = 0;
+        BufferedReader br = new BufferedReader(new FileReader("/Users/matin/Downloads/enwiki-20161201-all-titles-in-ns0"));
+
+        int num2 = 0;
+        try {
+            while ((line = br.readLine()) != null) {
+                if ((num++ % 100000) == 0) {
+                    logger.info(num + " " + " " + num2 + " loaded");
+                }
+                //      if (num > 10500000) break;
+                if (!line.matches("^([A-Z]).*")) continue;
+                if (line.length() > 50) continue;
+
+                StringDouble bestTag = getBestTag(line);
+
+                if (bestTag == null || bestTag.getVal() < .5) continue;
+                Files.write(Paths.get(phraseFileName), (line + "\n").getBytes(), StandardOpenOption.APPEND);
+                line = line.replaceAll("[_\\-]+", " ");
+                line = line.replaceAll("[^A-Za-z\\s]+", "").trim();
+                String[] parts = line.split("\\s+");
+                if (parts.length > 4) continue;
+                //             logger.info(bb + " --> " + line + " --> " + tag);
+                num2++;
+                phrase.addKeyword(line);
+            }
+        } catch (IOException e) {
+            logger.info("Error: " + e);
+        }
+
+        logger.info("Phrases loaded");
+        return phrase.build();
+    }
+
+    public  Map<QTDocument, ArrayList<QTDocument>> getPCRels(final List<QTDocument> data,
+                                                             final double thresh){
+        logger.info("starting..");
+        List<double[]> word2vecs = new ArrayList<>();
+        for (int i = 0; i < data.size() - 1; i++) {
+            QTDocument p = data.get(i);
+            word2vecs.add(getSentenceVector(p.getTitle()));
+        }
+
+        logger.info("Computed w2v for " + data.size() + " instances");
+        ListIterator<QTDocument> iterP1 = data.listIterator(0);
+        ListIterator<double []> iterW2v1 = word2vecs.listIterator(0);
+
+        Map<QTDocument, ArrayList<QTDocument>> parnet_child = new HashMap<>();
+        while(iterP1.hasNext()){
+            QTDocument p1 = iterP1.next();
+            if (parnet_child.containsKey(p1)){
+                logger.info(p1.getId());
+            }
+            parnet_child.put(p1, new ArrayList<>());
+        }
+
+        logger.info("parnet_child has: " + parnet_child.size());
+
+        iterP1 = data.listIterator(0);
+        while(iterP1.hasNext() && iterW2v1.hasNext()){
+            QTDocument p1 = iterP1.next();
+            double [] w2v1 = iterW2v1.next();
+            DateTime d1 = p1.getDate();
+
+            ListIterator<QTDocument> iterP2 = data.listIterator(iterP1.nextIndex());
+            ListIterator<double []> iterW2v2 = word2vecs.listIterator(iterW2v1.nextIndex());
+            boolean found = false;
+            while(iterP2.hasNext() && iterW2v2.hasNext() && !found){
+                QTDocument p2 = iterP2.next();
+                DateTime d2 = p2.getDate();
+                long diff = (d1.getMillis() - d2.getMillis() ) / 1000 / 60 / 60 / 24; //day
+                if (diff > 5) break;
+                double [] w2v2 = iterW2v2.next();
+                double sim = TopicModel.cosineSimilarity(w2v1, w2v2);
+                //       if (sim > .98) continue;
+                if (sim > thresh){
+                    found = true;
+                    ArrayList<QTDocument> p2_childs = parnet_child.get(p2);
+                    p2_childs.add(p1);
+                    // check if p1 is a parent already
+                    ArrayList<QTDocument> p1_childs = parnet_child.get(p1);
+                    p2_childs.addAll(p1_childs);
+                }
+            }
+            if (found){
+                parnet_child.remove(p1);
+            }
+        }
+        return parnet_child;
+    }
+
+    public ArrayList<QTDocument> removeDups(final List<QTDocument> docs, double thresh) throws ParseException {
+        ArrayList<QTDocument> uniques = new ArrayList<>();
+//        logger.info("POSTS HAS: " + POSTS.size());
+//        ArrayList<WPpost> posts = new ArrayList<>();
+/*        for (int i=0; i< docs.size(); i++){
+            QTDocument doc = docs.get(i);
+            WPpost p = new WPpost(doc.getTitle(), doc.getBody(), doc.getDate());
+            p.setId(i);
+            posts.add(p);
+        }
+*/      Map<QTDocument, ArrayList<QTDocument>> rels = getPCRels(docs, thresh);
+        HashSet<String> dupids = new HashSet<>();
+        for (Map.Entry<QTDocument, ArrayList<QTDocument>> e : rels.entrySet()) {
+            if (e.getValue().size() > 0) {
+                for (QTDocument p: e.getValue()){
+                    dupids.add(p.getId());
+                }
+            }
+        }
+        for (int i=0; i< docs.size(); i++){
+            if (dupids.contains(i)) continue;
+            uniques.add(docs.get(i));
+        }
+
+        return uniques;
+    }
+
+    public void computNovelty(String[] taxonomies) throws Exception {
+        Map<QTDocument, ArrayList<QTDocument>> parnet_child = getParentChilds(taxonomies, .88);
+        ArrayList<QTDocument> toAddSimilars = new ArrayList<>();
+        ArrayList<String> similarsSnipperts = new ArrayList<>();
+        for (Map.Entry<QTDocument, ArrayList<QTDocument>> e : parnet_child.entrySet()) {
+            ArrayList<QTDocument> similars = e.getValue();
+            if (similars.size() == 0) continue;
+            QTDocument p = e.getKey();
+            for (QTDocument pp : similars){
+                StringBuilder sb = new StringBuilder();
+                sb.append("<a href=\"").append(pp.getLink())
+                        .append("\">").append(pp.getTitle())
+                        .append("<span class=\"date\">").append(pp.getDate())
+                        .append("</span></a><br>");
+                similarsSnipperts.add(sb.toString());
+        //        p.addSimilars(sb.toString());
+            }
+            toAddSimilars.add(p);
+        }
+        logger.info("About to modify " + toAddSimilars.size());
+        for (QTDocument p : toAddSimilars){
+            String id = p.getId();
+            StringBuilder sb = new StringBuilder();
+            sb.append("<p>");
+            for (String s : similarsSnipperts){
+                sb.append(s);
+            }
+            sb.append("</p>");
+            logger.info(id + " " + p.getTitle());
+   //         WPCategory.updateExcerpt(id , sb.toString());
+        }
+    }
+
+    private  Map<QTDocument, ArrayList<QTDocument>> getParentChilds(String [] taxonomies,
+                                                            double thresh) throws IOException, ClassNotFoundException, SQLException {
+  //      WPCategory.popPosts(taxonomies);
+        List<QTDocument> data = WPpost.getAllPosts();
+        return getPCRels(data, thresh);
     }
 
     public LDATopic getWLDATopic(String w){

@@ -51,6 +51,7 @@
   ],
 
   "Actions": [
+    "scored",
     "cautioned",
     "assumed",
     "derived",
@@ -107,7 +108,9 @@
     "shared",
     "asked",
     "published",
-    "reduced"
+    "reduced",
+    "followed",
+    "exceeded"
   ],
   "Partnership": [
     "partnered",
@@ -133,5 +136,11 @@
     "unveiled",
     "released",
     "rolled out"
+  ],
+  "Aux" :[
+    "is",
+    "has",
+    "will",
+    "was"
   ]
 }

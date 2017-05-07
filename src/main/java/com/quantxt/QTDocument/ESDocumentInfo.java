@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 
 import com.memetix.mst.language.Language;
 
+import com.quantxt.doc.QTDocument;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.util.Span;
@@ -32,10 +33,9 @@ public class ESDocumentInfo extends QTDocument {
 		nameFinder = new NameFinderME(nerPersonModel);
 		TokenNameFinderModel nerOrganizationModel = new TokenNameFinderModel(nerOrganizationnmodelIn);
 		organizationFinder = new NameFinderME(nerOrganizationModel);
-		System.out.println("spanish models initiliazed");
 	}
 	
-	
+	@Override
 	public void processDoc() {
 		if (body == null || body.isEmpty())
 			return;		
@@ -72,7 +72,12 @@ public class ESDocumentInfo extends QTDocument {
 	}
 
 	@Override
-	protected boolean isStatement(String s) {
+	public String Translate(String text, Language inLang, Language outLang) {
+		return null;
+	}
+
+	@Override
+	public boolean isStatement(String s) {
 		Matcher m = statementWords.matcher(s);
 		if (m.find())
 			return true;

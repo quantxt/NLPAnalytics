@@ -1,6 +1,7 @@
 package com.quantxt.QTDocument;
 
 import com.memetix.mst.language.Language;
+import com.quantxt.doc.QTDocument;
 
 public class PTDocumentInfo extends QTDocument {
 	public PTDocumentInfo (String body, String title){
@@ -8,11 +9,15 @@ public class PTDocumentInfo extends QTDocument {
 	}
 	
 	public void processDoc() {
-		englishTitle = Translate(title, Language.PORTUGUESE, Language.ENGLISH);
 	}
 
 	@Override
-	protected boolean isStatement(String s) {
+	public String Translate(String text, Language inLang, Language outLang) {
+		return null;
+	}
+
+	@Override
+	public boolean isStatement(String s) {
 		// TODO Auto-generated method stub
 		return false;
 	}

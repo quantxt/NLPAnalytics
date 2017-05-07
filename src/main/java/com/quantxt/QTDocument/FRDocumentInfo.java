@@ -8,6 +8,7 @@ import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 
 import com.memetix.mst.language.Language;
+import com.quantxt.doc.QTDocument;
 
 public class FRDocumentInfo extends QTDocument {
 
@@ -47,31 +48,19 @@ public class FRDocumentInfo extends QTDocument {
 		testing.addThruPipe(new Instance(_tokenizedText(text),  null, "text", null));
 		return inferencer.getSampledDistribution(testing.get(0), 200, 10, 5);
 	}
-	
+
+	@Override
 	public void processDoc() {
-		englishTitle = Translate(title, Language.FRENCH, Language.ENGLISH);
-		/*
-		double[] bodyProbabilities  = getTopicVec(body);
-		double[] titleProbabilities = getTopicVec(title);
-		
-		List<Integer> tmp = new ArrayList<Integer>();
-		for (int i=0; i < NumOfTopics; i++){
-			double val = bodyWeight * bodyProbabilities[i] + titleWeight * titleProbabilities[i];
-			if (val < .1)
-				continue;
-//			tmp.add(10 * i + (int)(10 * val));
-			tmp.add(i);
-		}
-		Collections.sort(tmp, Collections.reverseOrder());
-		for (int i=0; i < tmp.size(); i++){
-	//		addTopic(i, (double)tmp.get(i));
-			addTopic(tmp.get(i), 1.0);
-		}
-		*/
+
 	}
 
 	@Override
-	protected boolean isStatement(String s) {
+	public String Translate(String text, Language inLang, Language outLang) {
+		return null;
+	}
+
+	@Override
+	public boolean isStatement(String s) {
 		Matcher m = statementWords.matcher(s);
 		if (m.find())
 			return true;

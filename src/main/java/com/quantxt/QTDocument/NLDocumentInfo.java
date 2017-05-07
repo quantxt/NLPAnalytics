@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 
 import com.memetix.mst.language.Language;
 
+import com.quantxt.doc.QTDocument;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.sentdetect.SentenceDetectorME;
@@ -45,25 +46,25 @@ public class NLDocumentInfo extends QTDocument {
 		System.out.println("dutch models initiliazed");
 		
 	}
-	
+
+	@Override
 	public void processDoc() {
-	    englishTitle = Translate(title, Language.DUTCH, Language.ENGLISH);
 	    if (body == null || body.isEmpty())
 			return;		
 		String sentences[] = sentenceDetector.sentDetect(body);
-		getSentenceNER(sentences, nameFinder, organizationFinder);
 	}
 
 	@Override
-	protected boolean isStatement(String s) {
+	public String Translate(String text, Language inLang, Language outLang) {
+		return null;
+	}
+
+	@Override
+	public boolean isStatement(String s) {
 		Matcher m = statementWords.matcher(s);
 		if (m.find())
 			return true;
 		return false;
 	}
 
-	@Override
-	protected String[] getTokens(String s) {
-		return tokenizer.tokenize(s);
-	}
 }
