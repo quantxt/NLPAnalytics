@@ -1,10 +1,8 @@
 package com.quantxt.nlp;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.quantxt.nlp.types.TextNormalizer;
-import org.apache.log4j.Logger;
+import com.quantxt.QTDocument.ENDocumentInfo;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -14,9 +12,13 @@ import org.deeplearning4j.models.word2vec.wordstore.inmemory.AbstractCache;
 import org.deeplearning4j.text.sentenceiterator.BasicLineIterator;
 import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 
 /**
@@ -24,7 +26,7 @@ import java.util.*;
  */
 
 public class word2vec {
-    final private static Logger logger = Logger.getLogger(word2vec.class);
+    final private static Logger logger = LoggerFactory.getLogger(word2vec.class);
 
     public static void trainWordVev(final InputStream is,
                                     final String w2vecOutputFilename,
@@ -52,11 +54,11 @@ public class word2vec {
                     .build();
 
             Word2Vec vec = new Word2Vec.Builder()
-                    .minWordFrequency(2)
+                    .minWordFrequency(3)
                     .iterations(1)
                     .layerSize(dim)
                     .seed(42)
-                    .batchSize(100)
+                    .batchSize(1)
                     .windowSize(5)
                     .lookupTable(table)
     //                .stopWords(getStopWords())
@@ -82,9 +84,33 @@ public class word2vec {
     }
 
     public static void main(String[] args) throws Exception {
-        int topics = 20;
-        InputStream input = new FileInputStream("in.txt");
-        String output = "out.txt";
+        String in = "/Users/matin/git/QTdatacollect/text.tr.corpus";
+        ENDocumentInfo.init();
+        JsonParser parser = new JsonParser();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(in));
+            String line;
+            while ((line = br.readLine()) != null) {
+                try {
+                    JsonObject json = parser.parse(line).getAsJsonObject();
+                    String ttle = json.get("title").getAsString();
+                    String body = json.get("body").getAsString();
+                    ENDocumentInfo doc = new ENDocumentInfo(body, ttle);
+                    doc.processDoc();
+                    for (String s : doc.getSentences()) {
+                        Files.write(Paths.get("text.tr.corpus.lines"), (s + "\n").getBytes(), StandardOpenOption.APPEND);
+                    }
+                } catch (Exception ee){
+                    logger.error(line);
+                }
+            }
+        } catch (Exception e){
+            logger.error(e.getMessage());
+        }
+
+        int topics = 150;
+        InputStream input = new FileInputStream("text.tr.corpus.lines");
+        String output = "/Users/matin/git/QTdatacollect/foursquare/reuters_150_w2v.txt";
         trainWordVev(input, output, topics);
     }
 }

@@ -1,13 +1,12 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 import com.quantxt.SearchConcepts.BaseNameAlts;
 import com.quantxt.SearchConcepts.Entity;
 import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.nlp.types.Extraction;
-import org.ahocorasick.trie.Emit;
-import org.ahocorasick.trie.Trie;
+import com.quantxt.trie.Emit;
+import com.quantxt.trie.Trie;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

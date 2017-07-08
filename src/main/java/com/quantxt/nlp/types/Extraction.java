@@ -1,6 +1,6 @@
 package com.quantxt.nlp.types;
 
-import org.ahocorasick.trie.Emit;
+import com.quantxt.trie.Emit;
 
 import java.util.*;
 

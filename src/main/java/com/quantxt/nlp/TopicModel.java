@@ -7,16 +7,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.quantxt.DataStores.WPpost;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.trie.Trie;
 import com.quantxt.types.MapSort;
 import com.quantxt.types.StringDouble;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
-import org.ahocorasick.trie.Trie;
-import org.apache.log4j.Logger;
 import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -32,7 +33,7 @@ import java.io.*;
  */
 public class TopicModel {
 
-    final private static Logger logger = Logger.getLogger(TopicModel.class);
+    final private static Logger logger = LoggerFactory.getLogger(TopicModel.class);
 
     //training//////
     final private static int RANDOM_SEED = 5;

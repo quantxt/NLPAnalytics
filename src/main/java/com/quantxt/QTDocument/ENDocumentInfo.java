@@ -8,10 +8,13 @@ import java.util.Arrays;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.nlp.types.TextNormalizer;
+import com.quantxt.trie.Trie;
+import opennlp.tools.postag.POSModel;
+import opennlp.tools.postag.POSTagger;
+import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
 
-import org.ahocorasick.trie.Trie;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +31,7 @@ public class ENDocumentInfo extends QTDocument {
 	private double score;
 
 	private static SentenceDetectorME sentenceDetector = null;
+	private static POSTaggerME posModel = null;
 	
 	public ENDocumentInfo (String body, String title) {
 		super(body, title);
@@ -40,11 +44,15 @@ public class ENDocumentInfo extends QTDocument {
 	
 	public static void init() throws Exception{
 		if( initialized) return;
-		URL url = ENDocumentInfo.class.getClassLoader().getResource("en-sent.bin");
-		InputStream sentenceModellIn = url.openStream();
 
-		SentenceModel sentenceModel = new SentenceModel(sentenceModellIn);
+		URL url = ENDocumentInfo.class.getClassLoader().getResource("en-sent.bin");
+		SentenceModel sentenceModel = new SentenceModel(url.openStream());
 		sentenceDetector = new SentenceDetectorME(sentenceModel);
+
+		url = ENDocumentInfo.class.getClassLoader().getResource("en-pos-maxent.bin");
+		POSModel model = new POSModel(url.openStream());
+		posModel = new POSTaggerME(model);
+
 		TextNormalizer.init();
 		initialized = true;
 		logger.info("English models initiliazed");
@@ -84,21 +92,15 @@ public class ENDocumentInfo extends QTDocument {
 		return sentenceDetector.sentDetect(text);
 	}
 
-    @Override
+	//pos tagger is NOT thread safe  :-/
+	public static synchronized String [] getPosTags(String [] text){
+		return posModel.tag(text);
+	}
+
+	@Override
     public boolean isStatement(String s) {
 		return statementWords.containsMatch(s);
 	}
 
-	public static void main(String[] args) throws Exception {
-		init();
-		Speaker.init(new FileInputStream("cb.json") , null, null);
-
-		ENDocumentInfo doc= new ENDocumentInfo("Federal Reserve Chair Janet Yellen said on Tuesday that investments in education and skills training are vital to address persistently high unemployment among lower-income and minority communities. Education levels have historically lagged in low- and moderate-income communities, particularly communities of color, Yellen said in prepared remarks on", "yellen sid");
-		doc.processDoc();
-		ArrayList<QTDocument> quotes = Speaker.extractQuotes(doc);
-		for (QTDocument s : quotes){
-			logger.info(s.getTitle());
-		}
-	}
 }
 

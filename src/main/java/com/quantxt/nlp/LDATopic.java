@@ -1,18 +1,18 @@
 package com.quantxt.nlp;
 
 import com.quantxt.types.MapSort;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Created by matin on 4/21/2016.
  */
 public class LDATopic {
 
-    final private static Logger logger = Logger.getLogger(LDATopic.class);
+    final private static Logger logger = LoggerFactory.getLogger(LDATopic.class);
 
     private int numTopics;
     private double [] weights;

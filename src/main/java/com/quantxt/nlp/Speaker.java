@@ -1,16 +1,23 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.quantxt.QTDocument.ENDocumentInfo;
 import com.quantxt.SearchConcepts.Entity;
 import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.helper.ArticleBodyResolver;
+import com.quantxt.helper.DateResolver;
+import com.quantxt.interval.Interval;
+import com.quantxt.nlp.types.ExtInterval;
 import com.quantxt.nlp.types.TextNormalizer;
-import org.ahocorasick.trie.Emit;
-import org.ahocorasick.trie.Trie;
+import com.quantxt.trie.Emit;
+import com.quantxt.trie.Trie;
 import org.apache.commons.io.IOUtils;
+import org.joda.time.DateTime;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,28 +112,130 @@ public class Speaker {
         return summaries;
     }
 
+    private static boolean isTagDC(String tag){
+        return tag.equals("IN") || tag.equals("TO") || tag.equals("CC") || tag.equals("DT");
+    }
+    private static List<ExtInterval> getNounAndVerbPhrases(String orig, String [] parts){
+        int numTokens = parts.length;
+        String [] taags = ENDocumentInfo.getPosTags(parts);
+        List<String> tokenList= new ArrayList<>();
+        List<ExtInterval> phrases = new ArrayList<>();
+        String type = "X";
+        for (int j=numTokens-1; j>=0; j--){
+            String tag = taags[j];
+            String word = parts[j];
+            if ( isTagDC(tag) ) {
+                int nextIdx = j - 1;
+                if (nextIdx < 0) continue;
+                String nextTag = taags[nextIdx];
+                if ((tokenList.size() != 0) &&
+                        (isTagDC(tag) ) ||
+                        ( type.equals("N") && nextTag.startsWith("NN") ) ||
+                        (type.equals("V")  && nextTag.startsWith("VB") ))
+                {
+                    tokenList.add(word);
+                }
+                continue;
+            }
+            if (tag.startsWith("NN")){
+                if (!type.equals("N") && tokenList.size() >0){
+                    Collections.reverse(tokenList);
+                    String str = String.join(" ", tokenList);
+                    int start = orig.indexOf(str);
+                    if (start == -1){
+                        logger.error("NOT FOUND 1 " + str);
+                    }
+                    ExtInterval eit = new ExtInterval(start, start+str.length());
+                    eit.setType(type);
+                    phrases.add(eit);
+                    tokenList.clear();
+                }
+                type = "N";
+                tokenList.add(word);
+            }  else if ( tag.startsWith("JJ")){
+                if (tokenList.size() != 0){
+                    tokenList.add(word);
+                }
+            } else if (tag.startsWith("VB")){
+                if (!type.equals("V") && tokenList.size() >0){
+                    Collections.reverse(tokenList);
+                    String str = String.join(" ", tokenList);
+                    int start = orig.indexOf(str);
+                    if (start == -1){
+                        logger.error("NOT FOUND 2 " + str);
+                    }
+                    ExtInterval eit = new ExtInterval(start, start+str.length());
+                    eit.setType(type);
+                    phrases.add(eit);
+                    tokenList.clear();
+                }
+                type = "V";
+                tokenList.add(word);
+            } else if (tag.startsWith("MD") || tag.startsWith("RB")){
+                if (tokenList.size() != 0){
+                    tokenList.add(word);
+                }
+            }  else {
+                if (!type.equals("X") && tokenList.size() >0){
+                    Collections.reverse(tokenList);
+                    String str = String.join(" ", tokenList);
+                    int start = orig.indexOf(str);
+                    if (start == -1){
+                        logger.error("NOT FOUND 3 " + str);
+                    }
+                    ExtInterval eit = new ExtInterval(start, start+str.length());
+                    eit.setType(type);
+                    phrases.add(eit);
+                    tokenList.clear();
+                }
+                type = "X";
+            }
+        }
+
+        if (!type.equals("X") && tokenList.size() >0){
+            Collections.reverse(tokenList);
+            String str = String.join(" ", tokenList);
+            int start = orig.indexOf(str);
+            ExtInterval eit = new ExtInterval(start, start+str.length());
+            eit.setType(type);
+            phrases.add(eit);
+        }
+
+        Collections.reverse(phrases);
+        return phrases;
+    }
+
+    private static String removePrnts(String str){
+        str = str.replaceAll("\\([^\\)]+\\)", " ");
+        str = str.replaceAll("([\\.])+$", " $1");
+        str = str.replaceAll("\\s+", " ");
+        return str;
+    }
+
     public static ArrayList<QTDocument> extractEntityMentions(QTDocument doc) {
         ArrayList<QTDocument> quotes = new ArrayList<>();
         List<String> sents = doc.getSentences();
         int numSent = sents.size();
         Set<String> entitiesFromNamedFound = new HashSet<>();
-        Set<String> topEntitiesFound = new HashSet<>();
+ //       Set<String> topEntitiesFound = new HashSet<>();
 
-        Collection<Emit> ttl_names = nameTree.parseText(doc.getTitle());
+ /*       Collection<Emit> ttl_names = nameTree.parseText(doc.getTitle());
         for (Emit emt : ttl_names){
             NamedEntity ne = (NamedEntity) emt.getCustomeData();
             if (ne.isParent()){
                 topEntitiesFound.add(ne.getName());
             }
         }
-
-        for (int i = 1; i < numSent; i++) {
-            final String orig = sents.get(i);
-            final String origBefore = sents.get(i - 1);
+*/
+        for (int i = 0; i < numSent; i++) {
+            final String orig = removePrnts(sents.get(i)).trim();
+            final String origBefore = i == 0 ? doc.getTitle() : removePrnts(sents.get(i - 1)).trim();
     //        String rawSent_before = TextNormalizer.normalize(origBefore);
-            String rawSent_curr = TextNormalizer.normalize(orig);
-           int numTokens = rawSent_curr.split("\\s+").length;
-            if (numTokens < 6 || numTokens > 50) continue;
+     //       String rawSent_curr = TextNormalizer.normalize(orig);
+            String rawSent_curr = orig;
+            String [] parts = rawSent_curr.split("\\s+");
+            int numTokens = parts.length;
+            if (numTokens < 6 || numTokens > 80) continue;
 /*
             try {
                 Files.write(Paths.get("snp500.txt"), (orig  +"\n").getBytes(), StandardOpenOption.APPEND);
@@ -136,74 +245,90 @@ public class Speaker {
 */
 
             Collection<Emit> name_match_curr = nameTree.parseText(orig);
-            Collection<Emit> name_match_befr = nameTree.parseText(origBefore);
 
-            if (name_match_curr.size() == 0 && name_match_befr.size() == 0) continue;
+            if (name_match_curr.size() == 0){
+                Collection<Emit> name_match_befr = nameTree.parseText(origBefore);
+                if (name_match_befr.size() != 1) continue;
+                // simple co-ref for now
+                if (parts[0].equalsIgnoreCase("he") || parts[0].equalsIgnoreCase("she")) {
+                    Emit matchedName = name_match_befr.iterator().next();
+                    String keyword = matchedName.getKeyword();
+                    parts[0] = keyword;
+                    rawSent_curr = String.join(" " , parts);
+                    Emit shiftedEmit = new Emit(0, keyword.length()-1, keyword, matchedName.getCustomeData());
+                    name_match_curr.add(shiftedEmit);
+                }
+            }
+
+            //if still no emit continue
+            if (name_match_curr.size() == 0){
+                continue;
+            }
 
             Collection<Emit> titles_emet = titleTree.parseText(orig);
 
- //           int importance = 0;
- //           if (name_match_befr.size() > 0) importance++;
-
-//            if (name_match_curr.size() > 1) continue;
-
             List<Emit> allemits = new ArrayList<>();
             allemits.addAll(name_match_curr);
-            allemits.addAll(name_match_befr);
-            for (Emit emt : allemits){
+  //          allemits.addAll(name_match_befr);
+  /*          for (Emit emt : allemits){
                 NamedEntity ne = (NamedEntity) emt.getCustomeData();
                 if (ne.isParent()){
                     topEntitiesFound.add(ne.getName());
                 }
             }
-
+*/
             NamedEntity entity = null;
 
-            if (name_match_curr.size() > 1) {
-                Collection<Emit> verb_emit = verbTree.parseText(rawSent_curr);
-                if (verb_emit.size() == 0) {
-                    logger.debug("There are more than one entity and no verb: " + orig);
-                    for (Emit e_n : name_match_curr) {
-                        logger.debug(" --> " + e_n.getKeyword());
-                    }
-                    continue;
-                } else {
-                    for (Emit e_n : name_match_curr) {
-                        for (Emit e_v : verb_emit) {
-                            if (dist(e_n, e_v)) {
-                                entity = (NamedEntity) e_n.getCustomeData();
-                                break;
-                            }
+            QTDocument newQuote = null;
+ //           if (name_match_curr.size() > 0) {
+            List<ExtInterval> tagged = getNounAndVerbPhrases(rawSent_curr, parts);
+            for (Emit matchedName : name_match_curr) {
+                //       Emit matchedName = name_match_curr.iterator().next();
+                for (int j = 0; j < tagged.size(); j++) {
+                    ExtInterval ext = tagged.get(j);
+                    if (ext.overlapsWith(matchedName)) {
+                        //only if this is a noun type and next one is a verb!
+                        if (j == tagged.size() - 1) break;
+                        ExtInterval nextExt = tagged.get(j + 1);
+                        if (ext.getType().equals("N") && nextExt.getType().equals("V")) {
+                            entity = (NamedEntity) matchedName.getCustomeData();
+                            newQuote = getQuoteDoc(doc, orig, entity);
+                            newQuote.setDocType(QTDocument.DOCTYPE.Action);
+                            break;
                         }
                     }
                 }
+                if (newQuote != null) break;
             }
 
-            if (name_match_curr.size() == 1) {
-                entity = (NamedEntity) name_match_curr.iterator().next().getCustomeData();
+            if (newQuote == null) {
+                //If it is not an action then it is an statement and just pick the first found entity
+                Emit matchedName = name_match_curr.iterator().next();
+                entity = (NamedEntity) matchedName.getCustomeData();
+                newQuote = getQuoteDoc(doc, orig, entity);
+                newQuote.setDocType(QTDocument.DOCTYPE.Statement);
             }
+  //          }
 
-            if (entity == null) {
+            if (newQuote == null) {
                 logger.debug("Entity is still null : " + orig);
                 continue;
             }
 
             entitiesFromNamedFound.add(entity.getEntity().getName());
-
             // if this entity is a child and parent hasn't been found then this entity should not be added
-            if (!topEntitiesFound.contains(entity.getEntity().getName())){
-                continue;
-            }
+  //          if (!topEntitiesFound.contains(entity.getEntity().getName())){
+  //              continue;
+  //          }
 
-            QTDocument newQuote = getQuoteDoc(doc, orig, entity);
-            newQuote.setDocType(QTDocument.DOCTYPE.Phrase);
             newQuote.setBody(origBefore + " " + orig);
             quotes.add(newQuote);
 
-            if (titles_emet.size()  == 0) continue;
-            Iterator<Emit> it = titles_emet.iterator();
-            while(it.hasNext()) {
-                newQuote.addFacts("Title", it.next().getKeyword());
+            if (titles_emet.size()  != 0) {
+                Iterator<Emit> it = titles_emet.iterator();
+                while (it.hasNext()) {
+                    newQuote.addFacts("Title", it.next().getKeyword());
+                }
             }
         }
         return quotes;
@@ -376,7 +501,7 @@ public class Speaker {
         logger.info("Phrases loaded");
     }
 
-    public static void init(InputStream speakerFile,
+    public static void init(Entity [] entities,
                             InputStream phraseFile,
                             InputStream contextFile) throws IOException, ClassNotFoundException {
         if (phraseFile != null) {
@@ -423,7 +548,6 @@ public class Speaker {
 
         //titles
         Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().ignoreCase();
- //       byte[] commonArr = IOUtils.toByteArray(new ClassPathResource("/common.json").getInputStream());
         byte[] commonArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("common.json").openStream());
         JsonElement commonosnElement = parser.parse(new String(commonArr, "UTF-8"));
         JsonObject commonosnObject = commonosnElement.getAsJsonObject();
@@ -436,38 +560,36 @@ public class Speaker {
             }
         }
         titleTree = titles.build();
+        Gson gson = new Gson();
 
         //names
-        if (speakerFile == null){
+        if (entities == null){
             byte[] subjectArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("subject.json").openStream());
-//            byte[] subjectArr = IOUtils.toByteArray(new ClassPathResource("/subject.json").getInputStream());
-            jsonElement = parser.parse(new String(subjectArr, "UTF-8"));
-        } else {
-            jsonElement = parser.parse(new InputStreamReader(speakerFile, "UTF-8"));
+            entities = gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class);
         }
 
-        JsonArray speakerJson = jsonElement.getAsJsonArray();
         Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
 
-
-        Gson gson = new Gson();
-        for (JsonElement spj : speakerJson) {
-            final Entity entity = gson.fromJson(spj, Entity.class);
+        for (Entity entity : entities){
+    //        final Entity entity = gson.fromJson(spj, Entity.class);
             String entity_name = entity.getName();
             NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
             entityNamedEntity.setEntity(entity);
             entityNamedEntity.setParent(true);
             SEARH_TEMRS.add(entity_name);
 
-            names.addKeyword(entity_name, entityNamedEntity);
-            names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
+            // include entity as a speaker?
+            if (entity.isSpeaker()) {
+                names.addKeyword(entity_name, entityNamedEntity);
+                names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
 
-            String [] alts = entity.getAlts();
-            if (alts != null) {
-                for (String alt : alts) {
-                    names.addKeyword(alt, entityNamedEntity);
-                    names.addKeyword(alt.toUpperCase(), entityNamedEntity);
+                String[] alts = entity.getAlts();
+                if (alts != null) {
+                    for (String alt : alts) {
+                        names.addKeyword(alt, entityNamedEntity);
+                        names.addKeyword(alt.toUpperCase(), entityNamedEntity);
 
+                    }
                 }
             }
 
@@ -478,10 +600,13 @@ public class Speaker {
                 String p_name = namedEntity.getName();
                 names.addKeyword(p_name, namedEntity);
                 names.addKeyword(p_name.toUpperCase(), namedEntity);
-                for (String alt : namedEntity.getAlts()) {
-         //           alt = lp.normalize(alt);
-                    names.addKeyword(alt, namedEntity);
-                    names.addKeyword(alt.toUpperCase(), namedEntity);
+                Set<String> nameAlts = namedEntity.getAlts();
+                if (nameAlts != null) {
+                    for (String alt : namedEntity.getAlts()) {
+                        //           alt = lp.normalize(alt);
+                        names.addKeyword(alt, namedEntity);
+                        names.addKeyword(alt.toUpperCase(), namedEntity);
+                    }
                 }
             }
         }
@@ -494,20 +619,34 @@ public class Speaker {
 
     public static void main(String[] args) throws Exception {
         ENDocumentInfo.init();
-        Speaker.init(new FileInputStream("/Users/matin/git/QTdatacollect/src/main/resources/CentralBanks.json") , null, null);
 
-        QTDocument doc = new ENDocumentInfo("While March’s U.S. employment report wasn’t as bad as the payrolls number indicated, there are plenty of reasons why April’s figures will be brighter -- and continue to show a solid labor market.\n" +
-                "\n" +
-                "The first jobs report of the second quarter should show the economy moving past early-year seasonal quirks -- both of the methodological kind that have plagued the Labor Department data for several years, as well as the noise emanating from two unusually warm months followed by one that contained a powerful Northeast storm during the report’s survey week.\n" +
-                "\n" +
-                "That would make the underlying picture clearer: a steady job market with hiring settling into a more sustainable pace and wage growth strengthening, all helping to cushion household balance sheets and make the first quarter’s weak consumption figure look like a blip. The overall bright labor-market picture helped prompt Federal Reserve officials Wednesday to suggest they’re still on track for two more interest-rate increases this year, saying the “fundamentals underpinning the continued growth” of consumer spending remain solid.",
-                "rican output after five years, says Bank of Canada’s Stephen Poloz");
-        doc.processDoc();
+        Entity entity = new Entity("House of Representatives", null, false);
+        //    List<String> nes = new ArrayList<>();
+        //    nes.add("Tammy Baldwin");
+        entity.addPerson("Tammy Baldwin", null);
 
-        ArrayList<QTDocument> docs = Speaker.extractEntityMentions(doc);
-        for (QTDocument dd : docs){
-            logger.info(dd.getTitle());
+        Entity[] entities = new Entity[] {entity};
+        Speaker.init(entities, null, null);
+
+       // "http://milwaukeecourieronline.com/index.php/2017/05/27/u-s-senator-tammy-baldwin-statement-on-cbo-score-of-house-passed-health-care-bill/"
+        String link = "http://milwaukeecourieronline.com/index.php/2017/05/27/u-s-senator-tammy-baldwin-statement-on-cbo-score-of-house-passed-health-care-bill/";
+     //   "https://insurancenewsnet.com/oarticle/u-s-senator-tammy-baldwin-to-president-trump-on-proposed-medicaid-cuts-americas-veterans-deserve-better";
+        Document jsoupDoc = Jsoup.connect(link).get();
+        DateTime document_date = DateResolver.resolveDate(jsoupDoc);
+        ArticleBodyResolver adr = new ArticleBodyResolver(jsoupDoc);
+
+        List<Element> bodyElems = adr.getText();
+        String body = "";
+        for (Element e : bodyElems){
+            body += e.text() + " ";
         }
+
+        String title = jsoupDoc.title();
+        ENDocumentInfo doc = new ENDocumentInfo(body, title);
+        doc.setDate(document_date);
+        doc.processDoc();
+        ArrayList<QTDocument> docs = extractEntityMentions(doc);
+        logger.info(document_date + " " + docs.size());
     }
 }
 

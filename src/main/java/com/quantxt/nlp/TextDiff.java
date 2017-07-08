@@ -1,11 +1,11 @@
 package com.quantxt.nlp;
 
-import cc.mallet.types.InstanceList;
 import com.quantxt.QTDocument.ENDocumentInfo;
 import com.quantxt.nlp.comp.TERalignment;
 import com.quantxt.nlp.comp.TERcalc;
 import com.quantxt.nlp.comp.TERcost;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -17,7 +17,7 @@ import java.util.*;
  */
 public class TextDiff {
 
-    private static Logger logger = Logger.getLogger(TERalignment.class);
+    private static Logger logger = LoggerFactory.getLogger(TERalignment.class);
 
     final private TERcost costfunc;
 

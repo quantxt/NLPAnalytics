@@ -3,12 +3,14 @@ package com.quantxt.nlp;
 import cc.mallet.pipe.Pipe;
 import cc.mallet.types.Instance;
 import com.quantxt.nlp.types.TextNormalizer;
-import org.apache.log4j.Logger;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultStreamTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
 import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 
 /**
@@ -16,7 +18,7 @@ import java.io.*;
  */
 public class LinePreProcess extends Pipe implements TokenizerFactory {
 
-    final private static Logger logger = Logger.getLogger(LinePreProcess.class);
+    final private static Logger logger = LoggerFactory.getLogger(LinePreProcess.class);
     private TokenPreProcess tokenPreProcess;
 
     public LinePreProcess() {

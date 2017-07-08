@@ -1,26 +1,41 @@
 package com.quantxt.SearchConcepts;
 
+import java.util.*;
+
 /**
  * Created by matin on 3/31/17.
  */
 public class NamedEntity {
-    private Entity entity;
+
+    private transient Entity entity;
     private String name;
     private boolean isParent = false;
-    private String [] alts;
+    private TreeSet<String> alts;
 
-    public NamedEntity(String n , String [] p){
+    public NamedEntity(String n , List<String> p){
         name = n;
-        alts = p;
+        if (p != null) {
+            alts = new TreeSet<>();
+            alts.addAll(p);
+        }
     }
 
     public void setEntity(Entity e){
         entity = e;
     }
 
+    public void addAlts(Collection<String> newAlts){
+        if (alts == null){
+            alts = new TreeSet<>();
+        }
+        alts.addAll(newAlts);
+    }
+
     public Entity getEntity(){return entity;}
     public String getName(){return name;}
-    public String [] getAlts(){return alts;}
+    public Set<String> getAlts(){
+        return alts;
+    }
     public boolean isParent(){
         return isParent;
     }
