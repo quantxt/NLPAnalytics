@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.memetix.mst.language.Language;
 
 import com.quantxt.doc.QTDocument;
 import opennlp.tools.namefind.NameFinderME;

@@ -1,14 +1,13 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 import com.quantxt.QTDocument.ENDocumentInfo;
+import com.quantxt.QTDocument.QTDocumentFactory;
 import com.quantxt.SearchConcepts.Entity;
 import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.ArticleBodyResolver;
 import com.quantxt.helper.DateResolver;
-import com.quantxt.interval.Interval;
 import com.quantxt.nlp.types.ExtInterval;
 import com.quantxt.nlp.types.TextNormalizer;
 import com.quantxt.trie.Emit;
@@ -47,20 +46,11 @@ public class Speaker {
                                           NamedEntity namedEntity)
     {
         quote = quote.replaceAll("^Advertisement\\s+", "").trim();
-        ENDocumentInfo sDoc = new ENDocumentInfo("", quote);
+        QTDocument sDoc = QTDocumentFactory.createQTDoct("", quote, doc.getLanguage());
         sDoc.setDate(doc.getDate());
-//        sDoc.setCategories(QUOTE_CATEGORY);
         sDoc.setLink(doc.getLink());
         sDoc.setLogo(doc.getLogo());
         sDoc.setSource(doc.getSource());
-
-        /*
-        StringDouble bt = getBestTag(quote);
-        if (bt != null && bt.getVal() > .1) {
-            sDoc.addTag(bt.getStr());
-            doc.addTag(bt.getStr());
-        }
-        */
 
         sDoc.setAuthor(namedEntity.getName());
         sDoc.setEntity(namedEntity.getEntity().getName());
@@ -102,7 +92,7 @@ public class Speaker {
         ArrayList<String> summaries = new ArrayList<>();
         for (int i = 1; i < numSent; i++) {
             final String orig = sents.get(i);
-            String normalized = TextNormalizer.normalize(orig);
+            String normalized = doc.normalize(orig);
             int numTokens = normalized.split("\\s+").length;
             if (numTokens < 6 || numTokens > 50) continue;
             Collection<Emit> verb_emit = verbTree.parseText(normalized);
@@ -115,9 +105,12 @@ public class Speaker {
     private static boolean isTagDC(String tag){
         return tag.equals("IN") || tag.equals("TO") || tag.equals("CC") || tag.equals("DT");
     }
-    private static List<ExtInterval> getNounAndVerbPhrases(String orig, String [] parts){
+
+    private static List<ExtInterval> getNounAndVerbPhrases(QTDocument doc,
+                                                            String orig,
+                                                           String [] parts){
         int numTokens = parts.length;
-        String [] taags = ENDocumentInfo.getPosTags(parts);
+        String [] taags = doc.getPosTags(parts);
         List<String> tokenList= new ArrayList<>();
         List<ExtInterval> phrases = new ArrayList<>();
         String type = "X";
@@ -130,8 +123,8 @@ public class Speaker {
                 String nextTag = taags[nextIdx];
                 if ((tokenList.size() != 0) &&
                         (isTagDC(tag) ) ||
-                        ( type.equals("N") && nextTag.startsWith("NN") ) ||
-                        (type.equals("V")  && nextTag.startsWith("VB") ))
+                        (type.equals("N") && nextTag.startsWith("NN") ) ||
+                        (type.equals("V") && nextTag.startsWith("VB") ))
                 {
                     tokenList.add(word);
                 }
@@ -230,8 +223,7 @@ public class Speaker {
         for (int i = 0; i < numSent; i++) {
             final String orig = removePrnts(sents.get(i)).trim();
             final String origBefore = i == 0 ? doc.getTitle() : removePrnts(sents.get(i - 1)).trim();
-    //        String rawSent_before = TextNormalizer.normalize(origBefore);
-     //       String rawSent_curr = TextNormalizer.normalize(orig);
+
             String rawSent_curr = orig;
             String [] parts = rawSent_curr.split("\\s+");
             int numTokens = parts.length;
@@ -269,19 +261,12 @@ public class Speaker {
 
             List<Emit> allemits = new ArrayList<>();
             allemits.addAll(name_match_curr);
-  //          allemits.addAll(name_match_befr);
-  /*          for (Emit emt : allemits){
-                NamedEntity ne = (NamedEntity) emt.getCustomeData();
-                if (ne.isParent()){
-                    topEntitiesFound.add(ne.getName());
-                }
-            }
-*/
+
             NamedEntity entity = null;
 
             QTDocument newQuote = null;
  //           if (name_match_curr.size() > 0) {
-            List<ExtInterval> tagged = getNounAndVerbPhrases(rawSent_curr, parts);
+            List<ExtInterval> tagged = getNounAndVerbPhrases(doc, rawSent_curr, parts);
             for (Emit matchedName : name_match_curr) {
                 //       Emit matchedName = name_match_curr.iterator().next();
                 for (int j = 0; j < tagged.size(); j++) {

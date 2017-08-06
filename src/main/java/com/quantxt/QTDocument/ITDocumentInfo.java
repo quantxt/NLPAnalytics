@@ -1,6 +1,5 @@
 package com.quantxt.QTDocument;
 
-import com.memetix.mst.language.Language;
 import com.quantxt.doc.QTDocument;
 
 public class ITDocumentInfo extends QTDocument {

@@ -7,7 +7,6 @@ import java.util.regex.Pattern;
 import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 
-import com.memetix.mst.language.Language;
 import com.quantxt.doc.QTDocument;
 
 public class FRDocumentInfo extends QTDocument {

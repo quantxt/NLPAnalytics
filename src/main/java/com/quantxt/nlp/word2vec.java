@@ -1,12 +1,8 @@
 package com.quantxt.nlp;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.quantxt.QTDocument.ENDocumentInfo;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
-import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.deeplearning4j.models.word2vec.wordstore.inmemory.AbstractCache;
 import org.deeplearning4j.text.sentenceiterator.BasicLineIterator;
@@ -16,9 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 
 
 /**
@@ -28,15 +21,18 @@ import java.nio.file.StandardOpenOption;
 public class word2vec {
     final private static Logger logger = LoggerFactory.getLogger(word2vec.class);
 
-    public static void trainWordVev(final InputStream is,
-                                    final String w2vecOutputFilename,
-                                    final int dim) throws IOException {
-        WordVectors wordVectors;
+    public word2vec(){
+
+    }
+    public void train(final InputStream is,
+                      final String w2vecOutputFilename,
+                      final int dim) throws IOException {
+  //      WordVectors wordVectors;
         File serializedFile = new File(w2vecOutputFilename);
         if (serializedFile.exists()) {
-            logger.info("reading " + w2vecOutputFilename + " from disk... ");
-            wordVectors = WordVectorSerializer.loadTxtVectors(serializedFile);
-            logger.info("loaded");
+            logger.info(w2vecOutputFilename + " already exists. Trainer is terminated.");
+  //          wordVectors = WordVectorSerializer.loadTxtVectors(serializedFile);
+  //          logger.info("loaded");
         } else {
             logger.info("Load & Vectorize Sentences....");
 
@@ -70,7 +66,7 @@ public class word2vec {
             logger.info("Fitting Word2Vec model....");
             vec.fit();
             WordVectorSerializer.writeWordVectors(vec, w2vecOutputFilename);
-            wordVectors = WordVectorSerializer.fromTableAndVocab(table, cache);
+  //          wordVectors = WordVectorSerializer.fromTableAndVocab(table, cache);
         }
         logger.info("Training word2vec finished.");
 
@@ -84,6 +80,7 @@ public class word2vec {
     }
 
     public static void main(String[] args) throws Exception {
+        /*
         String in = "/Users/matin/git/QTdatacollect/text.tr.corpus";
         ENDocumentInfo.init();
         JsonParser parser = new JsonParser();
@@ -107,10 +104,11 @@ public class word2vec {
         } catch (Exception e){
             logger.error(e.getMessage());
         }
-
+*/
         int topics = 150;
-        InputStream input = new FileInputStream("text.tr.corpus.lines");
-        String output = "/Users/matin/git/QTdatacollect/foursquare/reuters_150_w2v.txt";
-        trainWordVev(input, output, topics);
+        InputStream input = new FileInputStream("text.tr.corpus.lines.10000");
+        String output = "/Users/matin/git/QTdatacollect/foursquare/reuters_150_w2v.10000.txt";
+        word2vec w2v = new word2vec();
+        w2v.train(input, output, topics);
     }
 }

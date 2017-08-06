@@ -27,8 +27,7 @@ public class TextNormalizer {
         stopwords = new HashSet<>();
         List<String> sl = null;
         try {
-            URL url = ENDocumentInfo.class.getClassLoader().getResource("stoplist.txt");
-//            sl = IOUtils.readLines(new ClassPathResource("/stopwords.txt").getInputStream());
+            URL url = ENDocumentInfo.class.getClassLoader().getResource("en/stoplist.txt");
             sl = IOUtils.readLines(url.openStream());
             for (String s : sl){
                 String [] tokens = TextNormalizer.normalize(s).split("\\s+");
@@ -75,16 +74,7 @@ public class TextNormalizer {
             }
         }
        // string = StringUtils.join(postEdit, " ");
-        int pLength = postEdit.size();
-        if (pLength > 0) {
-            StringBuilder tmp = new StringBuilder();
-            for (int i = 0; i < pLength - 1; i++) {
-                tmp.append(postEdit.get(i) + " ");
-            }
-            tmp.append(postEdit.get(pLength - 1));
-            string = tmp.toString();
-        }
-        return string;
+        return String.join(" " , postEdit);
     }
 
     public static void main(String[] args) throws Exception {
