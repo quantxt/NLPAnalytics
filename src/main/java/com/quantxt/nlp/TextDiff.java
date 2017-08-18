@@ -22,7 +22,7 @@ public class TextDiff {
     final private TERcost costfunc;
 
     public TextDiff(int delc, int insc, int subc, int shiftc) throws Exception {
-        ENDocumentInfo.init();
+        ENDocumentInfo.init(null);
         TERcalc.setCase(true);
         costfunc = new TERcost();
         costfunc._delete_cost = delc;

@@ -1,19 +1,16 @@
 package com.quantxt.QTDocument;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.*;
 
 import com.google.gson.*;
-import com.quantxt.SearchConcepts.Entity;
 import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.nlp.types.ExtInterval;
-import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 import opennlp.tools.postag.POSModel;
@@ -34,23 +31,14 @@ public class ENDocumentInfo extends QTDocument {
 	private static final Logger logger = LoggerFactory.getLogger(ENDocumentInfo.class);
 
 	final private static opennlp.tools.stemmer.PorterStemmer porterStemmer = new opennlp.tools.stemmer.PorterStemmer();
-	private static Set<String> stopwords = null;
-
-	private static Trie statementWords = null;
-	private static boolean initialized = false;
-
-	private static Trie phraseTree = null;
-	protected static Trie nameTree   = null;
-	private static Trie verbTree   = null;
-	private static Trie titleTree  = null;
-	private static List<String> SEARH_TEMRS = new ArrayList<>();
-	private static Tagger tagger = null;
 
 	private String rawText;
 	private double score;
 
 	private static SentenceDetectorME sentenceDetector = null;
 	private static POSTaggerME posModel = null;
+	private static Set<String> stopwords = null;
+	private static Trie verbTree   = null;
 	
 	public ENDocumentInfo (String body, String title) {
 		super(body, title);
@@ -67,123 +55,9 @@ public class ENDocumentInfo extends QTDocument {
 		return stopwords.contains(p);
 	}
 
-	public static void initTries(Entity[] entities,
-							     InputStream phraseFile,
-							     InputStream contextFile) throws IOException, ClassNotFoundException {
-		if (phraseFile != null) {
-			Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
-			String line;
-			int num = 0;
-			BufferedReader br = new BufferedReader(new InputStreamReader(phraseFile, "UTF-8"));
-			while ((line = br.readLine()) != null) {
-				line = line.replaceAll("[_\\-]+", " ");
-				line = line.replaceAll("[^A-Za-z\\s]+", "").trim();
-				String[] parts = line.split("\\s+");
-				if (parts.length > 4) continue;
-				num++;
-				phrase.addKeyword(line);
-			}
-			logger.info(num + " phrases loaded for tagging");
-			phraseTree = phrase.build();
-		}
-
-		JsonParser parser = new JsonParser();
-
-		//verbs
-		Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().ignoreCase();
-
-		URL url = Speaker.class.getClassLoader().getResource("en/context.json");
-
-		byte[] contextArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
-				IOUtils.toByteArray(url.openStream());
-
-
-		ENDocumentInfo tmpEn = new ENDocumentInfo("", "");
-		JsonElement jsonElement = parser.parse(new String(contextArr, "UTF-8"));
-		JsonObject contextJson = jsonElement.getAsJsonObject();
-		for (Map.Entry<String, JsonElement> entry : contextJson.entrySet()) {
-			String context_key = entry.getKey();
-			JsonArray context_arr = entry.getValue().getAsJsonArray();
-			for (JsonElement e : context_arr) {
-			//	String verb = TextNormalizer.normalize(e.getAsString());
-				String verb = tmpEn.normalize(e.getAsString());
-				verbs.addKeyword(verb, context_key);
-			}
-		}
-		verbTree = verbs.build();
-
-		//titles
-		Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().ignoreCase();
-		byte[] commonArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("en/common.json").openStream());
-		JsonElement commonosnElement = parser.parse(new String(commonArr, "UTF-8"));
-		JsonObject commonosnObject = commonosnElement.getAsJsonObject();
-		JsonElement titles_elems = commonosnObject.get("titles");
-		if (titles_elems != null) {
-			for (JsonElement elem : titles_elems.getAsJsonArray()) {
-				//       String ttl = lp.normalize(elem.getAsString());
-				String ttl = elem.getAsString();
-				titles.addKeyword(ttl);
-			}
-		}
-		titleTree = titles.build();
-		Gson gson = new Gson();
-
-		//names
-		if (entities == null){
-			byte[] subjectArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("en/subject.json").openStream());
-			entities = gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class);
-		}
-
-		Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
-
-		for (Entity entity : entities){
-			//        final Entity entity = gson.fromJson(spj, Entity.class);
-			String entity_name = entity.getName();
-			NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
-			entityNamedEntity.setEntity(entity);
-			entityNamedEntity.setParent(true);
-			SEARH_TEMRS.add(entity_name);
-
-			// include entity as a speaker?
-			if (entity.isSpeaker()) {
-				names.addKeyword(entity_name, entityNamedEntity);
-				names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
-
-				String[] alts = entity.getAlts();
-				if (alts != null) {
-					for (String alt : alts) {
-						names.addKeyword(alt, entityNamedEntity);
-						names.addKeyword(alt.toUpperCase(), entityNamedEntity);
-
-					}
-				}
-			}
-
-			List<NamedEntity> namedEntities = entity.getNamedEntities();
-			if (namedEntities == null) continue;
-			for (NamedEntity namedEntity : namedEntities) {
-				namedEntity.setEntity(entity);
-				String p_name = namedEntity.getName();
-				names.addKeyword(p_name, namedEntity);
-				names.addKeyword(p_name.toUpperCase(), namedEntity);
-				Set<String> nameAlts = namedEntity.getAlts();
-				if (nameAlts != null) {
-					for (String alt : namedEntity.getAlts()) {
-						//           alt = lp.normalize(alt);
-						names.addKeyword(alt, namedEntity);
-						names.addKeyword(alt.toUpperCase(), namedEntity);
-					}
-				}
-			}
-		}
-		nameTree = names.build();
-
-		logger.info("English tries were created");
-	}
-
-
-	public static void init() throws Exception{
-		if( initialized) return;
+	public static void init(InputStream contextFile) throws Exception{
+		//Already initialized
+		if (sentenceDetector != null) return;
 
 		URL url = ENDocumentInfo.class.getClassLoader().getResource("en/en-sent.bin");
 		SentenceModel sentenceModel = new SentenceModel(url.openStream());
@@ -192,9 +66,6 @@ public class ENDocumentInfo extends QTDocument {
 		url = ENDocumentInfo.class.getClassLoader().getResource("en/en-pos-maxent.bin");
 		POSModel model = new POSModel(url.openStream());
 		posModel = new POSTaggerME(model);
-
-//		TextNormalizer.init();
-//		if (stopwords != null) return;
 
 		stopwords = new HashSet<>();
 		List<String> sl = null;
@@ -213,15 +84,35 @@ public class ENDocumentInfo extends QTDocument {
 			logger.equals(e.getMessage());
 		}
 
-		tagger = Tagger.load("en");
-		initialized = true;
+		//verbs
+		JsonParser parser = new JsonParser();
+		Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().ignoreCase();
+
+		url = Speaker.class.getClassLoader().getResource("en/context.json");
+
+		byte[] contextArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
+				IOUtils.toByteArray(url.openStream());
+
+
+		JsonElement jsonElement = parser.parse(new String(contextArr, "UTF-8"));
+		JsonObject contextJson = jsonElement.getAsJsonObject();
+		for (Map.Entry<String, JsonElement> entry : contextJson.entrySet()) {
+			String context_key = entry.getKey();
+			JsonArray context_arr = entry.getValue().getAsJsonArray();
+			for (JsonElement e : context_arr) {
+				//	String verb = TextNormalizer.normalize(e.getAsString());
+				String verb = tmpEn.normalize(e.getAsString());
+				verbs.addKeyword(verb, context_key);
+			}
+		}
+		verbTree = verbs.build();
 		logger.info("English models initiliazed");
 	}
 	
 	public double[] getTopicVec (String text){
 		if (text == null || text.isEmpty())
 			return null;
-		//////remobe this
+		//////remove this
 		return null;
 	}
 
@@ -240,10 +131,8 @@ public class ENDocumentInfo extends QTDocument {
 	}
 
 	@Override
-	public double [] getVectorizedTitle(){
-		synchronized (tagger) {
-			return tagger.getTextVec(title);
-		}
+	public double [] getVectorizedTitle(QTExtract speaker){
+		return speaker.tag(title);
 	}
 
 	@Override
@@ -301,7 +190,7 @@ public class ENDocumentInfo extends QTDocument {
 
 	@Override
     public boolean isStatement(String s) {
-		return statementWords.containsMatch(s);
+		return false;
 	}
 
 
@@ -418,7 +307,7 @@ public class ENDocumentInfo extends QTDocument {
 	}
 
 	@Override
-	public ArrayList<QTDocument> extractEntityMentions() {
+	public ArrayList<QTDocument> extractEntityMentions(QTExtract speaker) {
 		ArrayList<QTDocument> quotes = new ArrayList<>();
 		List<String> sents = getSentences();
 		int numSent = sents.size();
@@ -449,10 +338,12 @@ public class ENDocumentInfo extends QTDocument {
             }
 */
 
-			Collection<Emit> name_match_curr = nameTree.parseText(orig);
+//			Collection<Emit> name_match_curr = nameTree.parseText(orig);
+
+			Collection<Emit> name_match_curr = speaker.parseNames(orig);
 
 			if (name_match_curr.size() == 0){
-				Collection<Emit> name_match_befr = nameTree.parseText(origBefore);
+				Collection<Emit> name_match_befr = speaker.parseNames(origBefore);
 				if (name_match_befr.size() != 1) continue;
 				// simple co-ref for now
 				if (parts[0].equalsIgnoreCase("he") || parts[0].equalsIgnoreCase("she")) {
@@ -470,7 +361,7 @@ public class ENDocumentInfo extends QTDocument {
 				continue;
 			}
 
-			Collection<Emit> titles_emet = titleTree.parseText(orig);
+			Collection<Emit> titles_emet = speaker.parseTitles(orig);
 
 			List<Emit> allemits = new ArrayList<>();
 			allemits.addAll(name_match_curr);

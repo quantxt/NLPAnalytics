@@ -40,7 +40,7 @@ public class word2vec {
             SentenceIterator iter = new BasicLineIterator(is);
             // Split on white spaces in the line to get words
  //           TokenizerFactory t = new LinePreProcess();
-            ESDocumentInfo.init();
+            ESDocumentInfo.init(null);
             TokenizerFactory t = new LinePreProcess(new ESDocumentInfo("", ""));
             t.setTokenPreProcessor(new TextPreProcessor());
 

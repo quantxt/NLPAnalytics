@@ -8,9 +8,9 @@ import com.google.gson.*;
 import com.quantxt.SearchConcepts.Entity;
 import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.nlp.types.ExtInterval;
-import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 
@@ -38,14 +38,9 @@ public class ESDocumentInfo extends QTDocument {
 	private static final Logger logger = LoggerFactory.getLogger(ESDocumentInfo.class);
 	private static final Analyzer analyzer = new StandardAnalyzer();
 
-	private static Trie statementWords = null;
-	private static boolean initialized = false;
 	private static CharArraySet stopwords = null;
 
 	private static Trie verbTree   = null;
-	private static Trie phraseTree = null;
-	private static Trie titleTree  = null;
-	private static Tagger tagger = null;
 
 	private String rawText;
 	private double score;
@@ -68,71 +63,8 @@ public class ESDocumentInfo extends QTDocument {
 		return stopwords.contains(p);
 	}
 
-	public static void initTries(Entity[] entities,
-								 InputStream phraseFile,
-								 InputStream contextFile) throws IOException, ClassNotFoundException {
-		if (phraseFile != null) {
-			Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
-			String line;
-			int num = 0;
-			BufferedReader br = new BufferedReader(new InputStreamReader(phraseFile, "UTF-8"));
-			while ((line = br.readLine()) != null) {
-				line = line.replaceAll("[_\\-]+", " ");
-				line = line.replaceAll("[^A-Za-z\\s]+", "").trim();
-				String[] parts = line.split("\\s+");
-				if (parts.length > 4) continue;
-				num++;
-				phrase.addKeyword(line);
-			}
-			logger.info(num + " phrases loaded for tagging");
-			phraseTree = phrase.build();
-		}
-
-		JsonParser parser = new JsonParser();
-
-		//verbs
-		Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().ignoreCase();
-
-		URL url = Speaker.class.getClassLoader().getResource("es/context.json");
-
-		byte[] contextArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
-				IOUtils.toByteArray(url.openStream());
-
-
-		JsonElement jsonElement = parser.parse(new String(contextArr, "UTF-8"));
-		JsonObject contextJson = jsonElement.getAsJsonObject();
-		for (Map.Entry<String, JsonElement> entry : contextJson.entrySet()) {
-			String context_key = entry.getKey();
-			JsonArray context_arr = entry.getValue().getAsJsonArray();
-			for (JsonElement e : context_arr) {
-				String verb = e.getAsString().toLowerCase();
-				//String verb = TextNormalizer.normalize(e.getAsString());
-				verbs.addKeyword(verb, context_key);
-			}
-		}
-		verbTree = verbs.build();
-
-		//titles
-		Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().ignoreCase();
-		byte[] commonArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("en/common.json").openStream());
-		JsonElement commonosnElement = parser.parse(new String(commonArr, "UTF-8"));
-		JsonObject commonosnObject = commonosnElement.getAsJsonObject();
-		JsonElement titles_elems = commonosnObject.get("titles");
-		if (titles_elems != null) {
-			for (JsonElement elem : titles_elems.getAsJsonArray()) {
-				//       String ttl = lp.normalize(elem.getAsString());
-				String ttl = elem.getAsString();
-				titles.addKeyword(ttl);
-			}
-		}
-		titleTree = titles.build();
-		logger.info("Spanish tries were created");
-	}
-
-	public static void init() throws Exception{
-		if( initialized) return;
-
-//		statementWords = Pattern.compile("(?i)\\bdijo|dice|añadió\\b");
+	public static void init(InputStream contextFile) throws Exception{
+		if( sentenceDetector != null) return;
 
 		URL url = ESDocumentInfo.class.getClassLoader().getResource("en/en-sent.bin");
 		SentenceModel sentenceModel = new SentenceModel(url.openStream());
@@ -152,8 +84,29 @@ public class ESDocumentInfo extends QTDocument {
 		} catch (IOException e) {
 			logger.equals(e.getMessage());
 		}
-		tagger = Tagger.load("es");
-		initialized = true;
+		//verbs
+		JsonParser parser = new JsonParser();
+		Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().ignoreCase();
+
+		url = Speaker.class.getClassLoader().getResource("en/context.json");
+
+		byte[] contextArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
+				IOUtils.toByteArray(url.openStream());
+
+		ESDocumentInfo tmpDoc = new ESDocumentInfo("", "");
+		JsonElement jsonElement = parser.parse(new String(contextArr, "UTF-8"));
+		JsonObject contextJson = jsonElement.getAsJsonObject();
+		for (Map.Entry<String, JsonElement> entry : contextJson.entrySet()) {
+			String context_key = entry.getKey();
+			JsonArray context_arr = entry.getValue().getAsJsonArray();
+			for (JsonElement e : context_arr) {
+				//	String verb = TextNormalizer.normalize(e.getAsString());
+				String verb = tmpDoc.normalize(e.getAsString());
+				verbs.addKeyword(verb, context_key);
+			}
+		}
+		verbTree = verbs.build();
+
 		logger.info("Spanish models initiliazed");
 	}
 
@@ -178,10 +131,8 @@ public class ESDocumentInfo extends QTDocument {
 	}
 
 	@Override
-	public double [] getVectorizedTitle(){
-		synchronized (tagger) {
-			return tagger.getTextVec(title);
-		}
+	public double [] getVectorizedTitle(QTExtract speaker){
+		return speaker.tag(title);
 	}
 
 	@Override
@@ -224,7 +175,7 @@ public class ESDocumentInfo extends QTDocument {
 
 	@Override
 	public boolean isStatement(String s) {
-		return statementWords.containsMatch(s);
+		return false;
 	}
 
 	public String [] getPosTags(String [] text)
@@ -353,7 +304,7 @@ public class ESDocumentInfo extends QTDocument {
 	}
 
 	@Override
-	public ArrayList<QTDocument> extractEntityMentions() {
+	public ArrayList<QTDocument> extractEntityMentions(QTExtract speaker) {
 		ArrayList<QTDocument> quotes = new ArrayList<>();
 		List<String> sents = getSentences();
 		int numSent = sents.size();
@@ -375,10 +326,10 @@ public class ESDocumentInfo extends QTDocument {
             }
 */
 
-			Collection<Emit> name_match_curr = ENDocumentInfo.nameTree.parseText(orig);
+			Collection<Emit> name_match_curr = speaker.parseNames(orig);
 
 			if (name_match_curr.size() == 0){
-				Collection<Emit> name_match_befr = ENDocumentInfo.nameTree.parseText(origBefore);
+				Collection<Emit> name_match_befr = speaker.parseNames(origBefore);
 				if (name_match_befr.size() != 1) continue;
 				// simple co-ref for now
 				if (parts[0].equalsIgnoreCase("él") || parts[0].equalsIgnoreCase("el") ||
@@ -397,7 +348,7 @@ public class ESDocumentInfo extends QTDocument {
 				continue;
 			}
 
-			Collection<Emit> titles_emet = titleTree.parseText(orig);
+			Collection<Emit> titles_emet = speaker.parseTitles(orig);
 
 			List<Emit> allemits = new ArrayList<>();
 			allemits.addAll(name_match_curr);
@@ -460,16 +411,15 @@ public class ESDocumentInfo extends QTDocument {
 	}
 
 	public static void main(String[] args) throws Exception {
-		ESDocumentInfo.init();
-		ESDocumentInfo.initTries(null, null, null);
-		ENDocumentInfo.init();
+		ESDocumentInfo.init(null);
+		ENDocumentInfo.init(null);
 		Entity entity = new Entity("Lilian Tintori", null, false);
 
 		entity.addPerson("Lilian Tintori", null);
 
 		Entity[] entities = new Entity[] {entity};
 
-		ENDocumentInfo.initTries(entities, null, null);
+		QTExtract speaker = new Speaker(entities, null, null);
 
 		String in = "Lilian Tintori anunció este sábado en la noche en su cuenta en Twitter que su esposo, el líder opositor venezolano Leopoldo López, fue trasladado de nuevo de regreso a su casa.";
 		QTDocument es = QTDocumentFactory.createQTDoct(in , in);
@@ -480,6 +430,6 @@ public class ESDocumentInfo extends QTDocument {
 		String [] pos = es.getPosTags(in.split("\\s+"));
 		logger.info(String.join(" " , pos));
 
-		ArrayList<QTDocument> docs = es.extractEntityMentions();
+		ArrayList<QTDocument> docs = es.extractEntityMentions(speaker);
 	}
 }
