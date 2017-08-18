@@ -6,7 +6,7 @@ public class PTDocumentInfo extends QTDocument {
 	public PTDocumentInfo (String body, String title){
 		super(body, title);
 	}
-	
+
 	public void processDoc() {
 	}
 

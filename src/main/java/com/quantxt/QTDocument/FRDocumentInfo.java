@@ -21,7 +21,7 @@ public class FRDocumentInfo extends QTDocument {
 	public FRDocumentInfo (String body, String title){
 		super(body, title);
 	}
-	
+
 	public static void init() throws Exception{
 		NumOfTopics    = 100;
 //		instances   = InstanceList.load(new File("models/topic."+ NumOfTopics +"news.fr.instance"));

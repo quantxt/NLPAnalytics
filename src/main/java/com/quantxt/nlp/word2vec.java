@@ -1,5 +1,6 @@
 package com.quantxt.nlp;
 
+import com.quantxt.QTDocument.ESDocumentInfo;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -26,7 +27,7 @@ public class word2vec {
     }
     public void train(final InputStream is,
                       final String w2vecOutputFilename,
-                      final int dim) throws IOException {
+                      final int dim) throws Exception {
   //      WordVectors wordVectors;
         File serializedFile = new File(w2vecOutputFilename);
         if (serializedFile.exists()) {
@@ -38,7 +39,9 @@ public class word2vec {
 
             SentenceIterator iter = new BasicLineIterator(is);
             // Split on white spaces in the line to get words
-            TokenizerFactory t = new LinePreProcess();
+ //           TokenizerFactory t = new LinePreProcess();
+            ESDocumentInfo.init();
+            TokenizerFactory t = new LinePreProcess(new ESDocumentInfo("", ""));
             t.setTokenPreProcessor(new TextPreProcessor());
 
             AbstractCache cache = new AbstractCache();
@@ -50,7 +53,7 @@ public class word2vec {
                     .build();
 
             Word2Vec vec = new Word2Vec.Builder()
-                    .minWordFrequency(3)
+                    .minWordFrequency(2)
                     .iterations(1)
                     .layerSize(dim)
                     .seed(42)
@@ -105,9 +108,9 @@ public class word2vec {
             logger.error(e.getMessage());
         }
 */
-        int topics = 150;
-        InputStream input = new FileInputStream("text.tr.corpus.lines.10000");
-        String output = "/Users/matin/git/QTdatacollect/foursquare/reuters_150_w2v.10000.txt";
+        int topics = 100;
+        InputStream input = new FileInputStream("/Users/matin/git/QTdatacollect/es.txt");
+        String output = "/Users/matin/git/QTdatacollect/tagger/es/w2v.txt";
         word2vec w2v = new word2vec();
         w2v.train(input, output, topics);
     }

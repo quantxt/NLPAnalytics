@@ -10,6 +10,7 @@ import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.nlp.types.ExtInterval;
+import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 
@@ -44,6 +45,7 @@ public class ESDocumentInfo extends QTDocument {
 	private static Trie verbTree   = null;
 	private static Trie phraseTree = null;
 	private static Trie titleTree  = null;
+	private static Tagger tagger = null;
 
 	private String rawText;
 	private double score;
@@ -53,12 +55,13 @@ public class ESDocumentInfo extends QTDocument {
 
 	public ESDocumentInfo (String body, String title) {
 		super(body, title);
+		language = Language.SPANISH;
 	}
 
 	public ESDocumentInfo (Elements body, String title) {
 		super(body.html(), title);
 		rawText = body.text();
-		language = Language.SPANISH;
+
 	}
 
 	public static boolean isStopWord(String p){
@@ -149,9 +152,9 @@ public class ESDocumentInfo extends QTDocument {
 		} catch (IOException e) {
 			logger.equals(e.getMessage());
 		}
+		tagger = Tagger.load("es");
 		initialized = true;
 		logger.info("Spanish models initiliazed");
-
 	}
 
 	public static synchronized ArrayList<String> stemmer(String str){
@@ -167,10 +170,18 @@ public class ESDocumentInfo extends QTDocument {
 				String term = charTermAttribute.toString();
 				postEdit.add(term);
 			}
+			stream.close();
 		} catch (Exception e){
 
 		}
 		return postEdit;
+	}
+
+	@Override
+	public double [] getVectorizedTitle(){
+		synchronized (tagger) {
+			return tagger.getTextVec(title);
+		}
 	}
 
 	@Override

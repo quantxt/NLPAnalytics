@@ -25,7 +25,7 @@ public class NLDocumentInfo extends QTDocument {
 	public NLDocumentInfo (String body, String title){
 		super(body, title);
 	}
-	
+
 	public static void init() throws Exception{
 		statementWords = Pattern.compile("(?i)\\bzegt|vertelt|zei|meldde|aldus\\b");
 

@@ -48,8 +48,8 @@ public class TopicModel {
     private TokenizerFactory tokenFactor;
     private Map<String, double[]> TOPIC_MAP = new HashMap<>();
 
-    public TopicModel(){
-        tokenFactor = new LinePreProcess();
+    public TopicModel(QTDocument doc){
+        tokenFactor = new LinePreProcess(doc);
         tokenFactor.setTokenPreProcessor(new TextPreProcessor());
         pipe = getPipe();
     }

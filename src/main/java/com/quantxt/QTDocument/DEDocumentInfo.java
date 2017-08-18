@@ -6,7 +6,7 @@ public class DEDocumentInfo extends QTDocument {
 	public DEDocumentInfo (String body, String title){
 		super(body, title);
 	}
-	
+
 	public void processDoc() {
 		englishTitle = Translate(title, Language.GERMAN, Language.ENGLISH);
 	}

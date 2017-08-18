@@ -34,12 +34,12 @@ import java.util.*;
 public class Speaker {
     final private static Logger logger = LoggerFactory.getLogger(Speaker.class);
 
-    private static Trie phraseTree = null;
-    private static Trie nameTree   = null;
-    private static Trie verbTree   = null;
-    private static Trie titleTree  = null;
+    private Trie phraseTree = null;
+    private Trie nameTree   = null;
+    private Trie verbTree   = null;
+    private Trie titleTree  = null;
 
-    private static List<String> SEARH_TEMRS = new ArrayList<>();
+    private List<String> SEARH_TEMRS = new ArrayList<>();
 
     private static QTDocument getQuoteDoc(QTDocument doc,
                                           String quote,
@@ -75,7 +75,7 @@ public class Speaker {
 //        return ((e1_b - e2_e) < 10);
     }
 
-    public static String getFact(String input) {
+    public String getFact(String input) {
         Collection<Emit> verbs = verbTree.parseText(input);
         for (Emit e : verbs) {
             int v_e = e.getEnd() + 1;  // ?? why?
@@ -86,7 +86,7 @@ public class Speaker {
         return null;
     }
 
-    public static List<String> getSummary(QTDocument doc){
+    public List<String> getSummary(QTDocument doc){
         List<String> sents = doc.getSentences();
         int numSent = sents.size();
         ArrayList<String> summaries = new ArrayList<>();
@@ -205,7 +205,7 @@ public class Speaker {
         return str;
     }
 
-    public static ArrayList<QTDocument> extractEntityMentions(QTDocument doc) {
+    public ArrayList<QTDocument> extractEntityMentions(QTDocument doc) {
         ArrayList<QTDocument> quotes = new ArrayList<>();
         List<String> sents = doc.getSentences();
         int numSent = sents.size();
@@ -319,6 +319,7 @@ public class Speaker {
         return quotes;
     }
 
+    /*
     public static ArrayList<QTDocument> extractQuotes(QTDocument doc) {
         ArrayList<QTDocument> quotes = new ArrayList<>();
         List<String> sents = doc.getSentences();
@@ -332,13 +333,13 @@ public class Speaker {
             //           String normStatement_curr = Normalizer.normalize(rawSent_curr);
             int numTokens = rawSent_curr.split("\\s+").length;
             if (numTokens < 6 || numTokens > 50) continue;
-/*
-            try {
-                Files.write(Paths.get("snp500.txt"), (orig  +"\n").getBytes(), StandardOpenOption.APPEND);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-*/
+
+//            try {
+//                Files.write(Paths.get("snp500.txt"), (orig  +"\n").getBytes(), StandardOpenOption.APPEND);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+
             Collection<Emit> verb_emit = verbTree.parseText(rawSent_curr);
 
             if (verb_emit.size() == 0) continue;
@@ -394,8 +395,9 @@ public class Speaker {
         }
         return quotes;
     }
+    */
 
-    public static ArrayList<String> phraseMatch(String str) {
+    public ArrayList<String> phraseMatch(String str) {
         if (phraseTree == null) return null;
         ArrayList<String> matches = new ArrayList<>();
         Collection<Emit> emits = phraseTree.parseText(str);
@@ -423,7 +425,8 @@ public class Speaker {
         return w.build();
     }
 
-    public static void getPhsFromw(String input, String output) throws IOException {
+
+    public void getPhsFromw(String input, String output) throws IOException {
         Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
         String line;
         int num = 0;
@@ -486,9 +489,10 @@ public class Speaker {
         logger.info("Phrases loaded");
     }
 
-    public static void init(Entity [] entities,
-                            InputStream phraseFile,
-                            InputStream contextFile) throws IOException, ClassNotFoundException {
+    public Speaker(Entity [] entities,
+                   InputStream phraseFile,
+                   InputStream contextFile) throws IOException, ClassNotFoundException
+    {
         if (phraseFile != null) {
             Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
             String line;
@@ -598,7 +602,7 @@ public class Speaker {
         nameTree = names.build();
     }
 
-    public static List<String> getSearhTemrs(){
+    public List<String> getSearhTemrs(){
         return SEARH_TEMRS;
     }
 
@@ -611,7 +615,7 @@ public class Speaker {
         entity.addPerson("Tammy Baldwin", null);
 
         Entity[] entities = new Entity[] {entity};
-        Speaker.init(entities, null, null);
+        Speaker spk = new Speaker(entities, null, null);
 
        // "http://milwaukeecourieronline.com/index.php/2017/05/27/u-s-senator-tammy-baldwin-statement-on-cbo-score-of-house-passed-health-care-bill/"
         String link = "http://milwaukeecourieronline.com/index.php/2017/05/27/u-s-senator-tammy-baldwin-statement-on-cbo-score-of-house-passed-health-care-bill/";
@@ -630,7 +634,7 @@ public class Speaker {
         ENDocumentInfo doc = new ENDocumentInfo(body, title);
         doc.setDate(document_date);
         doc.processDoc();
-        ArrayList<QTDocument> docs = extractEntityMentions(doc);
+        ArrayList<QTDocument> docs = spk.extractEntityMentions(doc);
         logger.info(document_date + " " + docs.size());
     }
 }

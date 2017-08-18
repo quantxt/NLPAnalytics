@@ -6,7 +6,7 @@ public class FADocumentInfo extends QTDocument {
 	public FADocumentInfo (String body, String title){
 		super(body, title);
 	}
-	
+
 	public void processDoc() {
 		englishTitle = Translate(title, Language.FARSI, Language.ENGLISH);
 	}

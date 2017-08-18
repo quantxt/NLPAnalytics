@@ -13,6 +13,7 @@ import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.nlp.types.ExtInterval;
+import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 import opennlp.tools.postag.POSModel;
@@ -43,6 +44,7 @@ public class ENDocumentInfo extends QTDocument {
 	private static Trie verbTree   = null;
 	private static Trie titleTree  = null;
 	private static List<String> SEARH_TEMRS = new ArrayList<>();
+	private static Tagger tagger = null;
 
 	private String rawText;
 	private double score;
@@ -52,6 +54,7 @@ public class ENDocumentInfo extends QTDocument {
 	
 	public ENDocumentInfo (String body, String title) {
 		super(body, title);
+		language = Language.ENGLISH;
 	}
 
 	public ENDocumentInfo (Elements body, String title) {
@@ -209,6 +212,8 @@ public class ENDocumentInfo extends QTDocument {
 		} catch (IOException e) {
 			logger.equals(e.getMessage());
 		}
+
+		tagger = Tagger.load("en");
 		initialized = true;
 		logger.info("English models initiliazed");
 	}
@@ -232,6 +237,13 @@ public class ENDocumentInfo extends QTDocument {
 			}
 		}
 		return postEdit;
+	}
+
+	@Override
+	public double [] getVectorizedTitle(){
+		synchronized (tagger) {
+			return tagger.getTextVec(title);
+		}
 	}
 
 	@Override

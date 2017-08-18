@@ -1,5 +1,7 @@
 package com.quantxt.SearchConcepts;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.*;
 
 /**
@@ -7,6 +9,7 @@ import java.util.*;
  */
 public class NamedEntity {
 
+    @JsonIgnore
     private transient Entity entity;
     private String name;
     private boolean isParent = false;

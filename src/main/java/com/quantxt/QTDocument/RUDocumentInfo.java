@@ -6,7 +6,7 @@ public class RUDocumentInfo extends QTDocument {
 	public RUDocumentInfo (String body, String title){
 		super(body, title);
 	}
-	
+
 	public void processDoc() {
 		englishTitle = Translate(title, Language.RUSSIAN, Language.ENGLISH);
 	}

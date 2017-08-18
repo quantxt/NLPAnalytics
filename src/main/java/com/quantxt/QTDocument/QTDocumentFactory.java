@@ -37,7 +37,6 @@ public class QTDocumentFactory {
             }
         }
         if (es > en){
-            logger.info("This is a spansih doc");
             return new ESDocumentInfo(body, title);
         }
 
