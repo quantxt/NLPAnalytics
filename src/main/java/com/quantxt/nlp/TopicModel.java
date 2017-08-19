@@ -51,8 +51,9 @@ public class TopicModel {
     public TopicModel(QTDocument doc){
         tokenFactor = new LinePreProcess(doc);
         tokenFactor.setTokenPreProcessor(new TextPreProcessor());
-        pipe = getPipe();
+        pipe = getPipe(doc.getLanguage());
     }
+
 
     public TopicModel(int n, int iter, String m){
         numTopics = n;
@@ -65,6 +66,10 @@ public class TopicModel {
     }
 
     public Pipe getPipe(){
+        return getPipe(QTDocument.Language.ENGLISH);
+    }
+
+    public Pipe getPipe(QTDocument.Language lang){
         ArrayList<Pipe> pipeList = new ArrayList<>();
 
  //       ClassLoader classLoader = getClass().getClassLoader();
@@ -76,8 +81,14 @@ public class TopicModel {
         pipeList.add(new CharSequence2TokenSequence(Pattern.compile("[\\p{L}\\p{N}_]+")));
         //      pipeList.add( new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")) );
 
+        String langDir = "en";
+        switch (lang){
+            case SPANISH:
+                langDir = "es";
+                break;
+        }
         try {
-            pipeList.add( new TokenSequenceRemoveStopwords(new ClassPathResource("/stoplist.txt").getFile(), "UTF-8", false, false, false) );
+            pipeList.add( new TokenSequenceRemoveStopwords(new ClassPathResource(langDir + "/stoplist.txt").getFile(), "UTF-8", false, false, false) );
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }

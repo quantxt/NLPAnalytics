@@ -24,20 +24,6 @@ public class Tagger {
 
     private static Properties prop = null;
 
-    public static Properties getProp(){
-        if (prop != null) return prop;
-        prop = new Properties();
-        InputStream input = null;
-        try {
-            input = Tagger.class.getClassLoader().getResource("config.properties").openStream();
-            prop.load(input);
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return prop;
-    }
-
     private INDArray columnMeans;
     private INDArray columnStds;
     private MultiLayerNetwork model;
@@ -45,10 +31,9 @@ public class Tagger {
     private HashMap<String, Integer> dictionary;
 
 
-    public static Tagger load(String model_sub_dir) {
-
+    public static Tagger load(String dirname)
+    {
         try {
-            String dirname = prop.getProperty("tagger.dir") + "/" + model_sub_dir;
             File mean_file  = new File(dirname + "/" + "mean.ser");
             File std_file   = new File(dirname + "/" + "std.ser");
             File model_file = new File(dirname + "/" + "model_dp.ser");
@@ -60,7 +45,7 @@ public class Tagger {
             FileInputStream w2v_stream   = w2v_file.exists() ? new FileInputStream(w2v_file): null;
             FileInputStream dic_stream   = dict_file.exists() ? new FileInputStream(dict_file): null;
 
-            Tagger tagger = new Tagger(model_sub_dir, mean_stream, std_stream, model_stream, w2v_stream, dic_stream);
+            Tagger tagger = new Tagger(dirname, mean_stream, std_stream, model_stream, w2v_stream, dic_stream);
             return tagger;
 
         } catch (Exception e) {

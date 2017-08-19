@@ -40,7 +40,7 @@ public class Speaker implements QTExtract {
 
 
     public Speaker(Entity[] entities,
-                   String taggerCode,
+                   String taggerDir,
                    InputStream phraseFile) throws IOException
     {
         if (phraseFile != null) {
@@ -128,8 +128,8 @@ public class Speaker implements QTExtract {
             }
         }
         nameTree = names.build();
-        tagger = Tagger.load(taggerCode);
-        logger.info("Speaker for " + taggerCode + " is created");
+        tagger = Tagger.load(taggerDir);
+        logger.info("Speaker for " + taggerDir + " is created");
     }
 
 
