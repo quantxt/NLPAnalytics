@@ -2,6 +2,7 @@ package com.quantxt.QTDocument;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.net.URL;
 import java.util.*;
 
@@ -19,9 +20,18 @@ import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.StopFilter;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.analysis.es.SpanishAnalyzer;
+import org.apache.lucene.analysis.snowball.SnowballFilter;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tartarus.snowball.ext.SpanishStemmer;
 
 import static com.quantxt.QTDocument.QTHelper.removePrnts;
 import static java.util.Arrays.asList;
@@ -30,14 +40,17 @@ public class ENDocumentInfo extends QTDocument {
 
 	private static final Logger logger = LoggerFactory.getLogger(ENDocumentInfo.class);
 
-	final private static opennlp.tools.stemmer.PorterStemmer porterStemmer = new opennlp.tools.stemmer.PorterStemmer();
+//	final private static opennlp.tools.stemmer.PorterStemmer porterStemmer = new opennlp.tools.stemmer.PorterStemmer();
+	private static final Analyzer analyzer = new EnglishAnalyzer();
 
 	private String rawText;
 	private double score;
 
 	private static SentenceDetectorME sentenceDetector = null;
 	private static POSTaggerME posModel = null;
-	private static Set<String> stopwords = null;
+//	private static Set<String> stopwords = null;
+	private static CharArraySet stopwords = null;
+
 	private static Trie verbTree   = null;
 	
 	public ENDocumentInfo (String body, String title) {
@@ -67,7 +80,8 @@ public class ENDocumentInfo extends QTDocument {
 		POSModel model = new POSModel(url.openStream());
 		posModel = new POSTaggerME(model);
 
-		stopwords = new HashSet<>();
+	//	stopwords = new HashSet<>();
+		stopwords = new CharArraySet(800, true);
 		List<String> sl = null;
 		ENDocumentInfo tmpEn = new ENDocumentInfo("", "");
 		try {
@@ -119,7 +133,25 @@ public class ENDocumentInfo extends QTDocument {
 	public double getScore(){return score;}
 	public void setScore(double e){score = e;}
 
-	public static synchronized ArrayList<String> stemmer(List<String> list){
+	public static synchronized ArrayList<String> stemmer(String str){
+		ArrayList<String> postEdit = new ArrayList<>();
+		TokenStream stream  = analyzer.tokenStream(null, new StringReader(str));
+		stream = new StopFilter(stream, stopwords);
+		stream = new SnowballFilter(stream, new SpanishStemmer());
+		CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
+
+		try {
+			stream.reset();
+			while (stream.incrementToken()) {
+				String term = charTermAttribute.toString();
+				postEdit.add(term);
+			}
+			stream.close();
+		} catch (Exception e){
+
+		}
+		return postEdit;
+		/*
 		ArrayList<String> postEdit = new ArrayList<>();
 		for (String l : list) {
 			if (!stopwords.contains(l)) {
@@ -128,6 +160,7 @@ public class ENDocumentInfo extends QTDocument {
 			}
 		}
 		return postEdit;
+		*/
 	}
 
 	@Override
@@ -138,18 +171,23 @@ public class ENDocumentInfo extends QTDocument {
 	@Override
 	public String normalize(String string)
 	{
-		string = string.replaceAll("\\\\\"","\"");
-		string = string.replaceAll("\\\\n","");
-		string = string.replaceAll("\\\\r","");
-		string = string.replaceAll("\\\\t","");
-		string = string.replaceAll("[\\&\\!\\“\\”\\$\\=\\>\\<_\\'\\’\\-\\—\"\\‘\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
-		string = string.replaceAll("\\b\\d+\\b", "");
-		string = string.toLowerCase();
-		List<String> list = asList(string.split("\\s+"));
+//		string = string.replaceAll("\\\\\"","\"");
+//		string = string.replaceAll("\\\\n","");
+//		string = string.replaceAll("\\\\r","");
+//		string = string.replaceAll("\\\\t","");
+//		string = string.replaceAll("[\\&\\!\\“\\”\\$\\=\\>\\<_\\'\\’\\-\\—\"\\‘\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
+//		string = string.replaceAll("\\b\\d+\\b", "");
+//		string = string.replaceAll(" " , " ");
+	//	string = string.toLowerCase().trim();
+
+		ArrayList<String> postEdit = stemmer(string);
+		return String.join(" ", postEdit);
+
+//		List<String> list = asList(string.split("\\s+"));
 
 		//This is thread safe
-		ArrayList<String> postEdit = stemmer(list);
-		return String.join(" ", postEdit);
+//		ArrayList<String> postEdit = stemmer(list);
+//		return String.join(" ", postEdit);
 	}
 
     @Override

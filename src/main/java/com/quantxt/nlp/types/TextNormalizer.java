@@ -18,6 +18,7 @@ import static java.util.Arrays.asList;
  */
 public class TextNormalizer {
 
+    /*
     final private static Logger logger = LoggerFactory.getLogger(TextNormalizer.class);
     final private static opennlp.tools.stemmer.PorterStemmer porterStemmer = new opennlp.tools.stemmer.PorterStemmer();
     private static Set<String> stopwords = null;
@@ -81,4 +82,5 @@ public class TextNormalizer {
         logger.info(TextNormalizer.normalize("health care obamacare"));
 
     }
+    */
 }

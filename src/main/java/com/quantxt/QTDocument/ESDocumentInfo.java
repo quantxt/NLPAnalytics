@@ -23,6 +23,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.snowball.SnowballFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -36,7 +37,7 @@ import static com.quantxt.QTDocument.QTHelper.removePrnts;
 public class ESDocumentInfo extends QTDocument {
 
 	private static final Logger logger = LoggerFactory.getLogger(ESDocumentInfo.class);
-	private static final Analyzer analyzer = new StandardAnalyzer();
+	private static final Analyzer analyzer = new SpanishAnalyzer();
 
 	private static CharArraySet stopwords = null;
 

@@ -3,9 +3,9 @@ package com.quantxt.nlp;
 import cc.mallet.types.*;
 import cc.mallet.pipe.*;
 import cc.mallet.topics.*;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import com.quantxt.DataStores.WPpost;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.trie.Trie;
 import com.quantxt.types.MapSort;
@@ -13,8 +13,6 @@ import com.quantxt.types.StringDouble;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
 import org.datavec.api.util.ClassPathResource;
-import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
-import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.regex.*;
@@ -45,12 +42,11 @@ public class TopicModel {
     private Pipe pipe;
     private HashMap<String, LDATopic> word2TopicW = new HashMap<>();
     private double[] topicW;
-    private TokenizerFactory tokenFactor;
     private Map<String, double[]> TOPIC_MAP = new HashMap<>();
 
     public TopicModel(QTDocument doc){
-        tokenFactor = new LinePreProcess(doc);
-        tokenFactor.setTokenPreProcessor(new TextPreProcessor());
+//        tokenFactor = new LinePreProcess(doc);
+//        tokenFactor.setTokenPreProcessor(new TextPreProcessor());
         pipe = getPipe(doc.getLanguage());
     }
 
@@ -60,8 +56,8 @@ public class TopicModel {
         numIterations = iter;
         modelName = numTopics + "_" + m;
         topicW = new double[numTopics];
-        tokenFactor = new LinePreProcess();
-        tokenFactor.setTokenPreProcessor(new TextPreProcessor());
+//        tokenFactor = new LinePreProcess();
+//        tokenFactor.setTokenPreProcessor(new TextPreProcessor());
         pipe = getPipe();
     }
 
@@ -217,15 +213,19 @@ public class TopicModel {
         return probs;
     }
 
+    /*
     public List<String> getTokens(String str){
         Tokenizer s = tokenFactor.create(str);
         return s.getTokens();
     }
+    */
 
     public double [] getSentenceVector(String line){
 
-        Tokenizer s = tokenFactor.create(line);
-        List<String> tokens = s.getTokens();
+ //       Tokenizer s = tokenFactor.create(line);
+ //       List<String> tokens = s.getTokens();
+
+        String[] tokens = line.split("\\s+");
 
         double [] probs = new double[numTopics];
         for (String w : tokens){
@@ -255,12 +255,14 @@ public class TopicModel {
         populateWord2ProbMap(model);
     }
 
+    /*
     public double [] getProbs(final String data){
         InstanceList instances = new InstanceList (this.getPipe());
         Instance ins = new Instance(data, "en", "training", "file");
         instances.addThruPipe(ins);
         return getProbs(instances.get(0));
     }
+    */
 
     public double [] getProbs(final Instance ins){
         double [] probs = new double[numTopics];
@@ -520,46 +522,6 @@ public class TopicModel {
         }
 
         return uniques;
-    }
-
-    public void computNovelty(String[] taxonomies) throws Exception {
-        Map<QTDocument, ArrayList<QTDocument>> parnet_child = getParentChilds(taxonomies, .88);
-        ArrayList<QTDocument> toAddSimilars = new ArrayList<>();
-        ArrayList<String> similarsSnipperts = new ArrayList<>();
-        for (Map.Entry<QTDocument, ArrayList<QTDocument>> e : parnet_child.entrySet()) {
-            ArrayList<QTDocument> similars = e.getValue();
-            if (similars.size() == 0) continue;
-            QTDocument p = e.getKey();
-            for (QTDocument pp : similars){
-                StringBuilder sb = new StringBuilder();
-                sb.append("<a href=\"").append(pp.getLink())
-                        .append("\">").append(pp.getTitle())
-                        .append("<span class=\"date\">").append(pp.getDate())
-                        .append("</span></a><br>");
-                similarsSnipperts.add(sb.toString());
-        //        p.addSimilars(sb.toString());
-            }
-            toAddSimilars.add(p);
-        }
-        logger.info("About to modify " + toAddSimilars.size());
-        for (QTDocument p : toAddSimilars){
-            String id = p.getId();
-            StringBuilder sb = new StringBuilder();
-            sb.append("<p>");
-            for (String s : similarsSnipperts){
-                sb.append(s);
-            }
-            sb.append("</p>");
-            logger.info(id + " " + p.getTitle());
-   //         WPCategory.updateExcerpt(id , sb.toString());
-        }
-    }
-
-    private  Map<QTDocument, ArrayList<QTDocument>> getParentChilds(String [] taxonomies,
-                                                            double thresh) throws IOException, ClassNotFoundException, SQLException {
-  //      WPCategory.popPosts(taxonomies);
-        List<QTDocument> data = WPpost.getAllPosts();
-        return getPCRels(data, thresh);
     }
 
     public LDATopic getWLDATopic(String w){

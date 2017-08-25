@@ -17,7 +17,7 @@ import java.util.*;
  */
 public class TextDiff {
 
-    private static Logger logger = LoggerFactory.getLogger(TERalignment.class);
+    private static Logger logger = LoggerFactory.getLogger(TextDiff.class);
 
     final private TERcost costfunc;
 
@@ -115,6 +115,10 @@ public class TextDiff {
         return res;
     }
 
+    public static TERalignment getAlignment(String sent1, String sent2, TERcost cf){
+        TERalignment result = TERcalc.TER(sent1, sent2, cf);
+        return result;
+    }
 
     public String getTextComp(String text1, String text2){
 

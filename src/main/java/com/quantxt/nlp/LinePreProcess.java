@@ -2,6 +2,7 @@ package com.quantxt.nlp;
 
 import cc.mallet.pipe.Pipe;
 import cc.mallet.types.Instance;
+import com.quantxt.QTDocument.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.nlp.types.TextNormalizer;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultStreamTokenizer;
@@ -24,7 +25,8 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
     private QTDocument qt;
 
     public LinePreProcess() {
-        TextNormalizer.init();
+        qt = new ENDocumentInfo("" , "");
+     //   TextNormalizer.init();
     }
 
     public LinePreProcess(QTDocument doc) {
@@ -34,7 +36,7 @@ public class LinePreProcess extends Pipe implements TokenizerFactory {
     public Instance pipe (Instance carrier)
     {
         String string = (String) carrier.getData();
-        string = TextNormalizer.normalize(string);
+        string = qt.normalize(string);
 
         carrier.setData(string);
         return carrier;

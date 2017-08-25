@@ -1,5 +1,6 @@
 package com.quantxt.nlp;
 
+import com.quantxt.QTDocument.ENDocumentInfo;
 import com.quantxt.QTDocument.ESDocumentInfo;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
@@ -25,10 +26,10 @@ public class word2vec {
     public word2vec(){
 
     }
+
     public void train(final InputStream is,
                       final String w2vecOutputFilename,
                       final int dim) throws Exception {
-  //      WordVectors wordVectors;
         File serializedFile = new File(w2vecOutputFilename);
         if (serializedFile.exists()) {
             logger.info(w2vecOutputFilename + " already exists. Trainer is terminated.");
@@ -40,8 +41,8 @@ public class word2vec {
             SentenceIterator iter = new BasicLineIterator(is);
             // Split on white spaces in the line to get words
  //           TokenizerFactory t = new LinePreProcess();
-            ESDocumentInfo.init(null);
-            TokenizerFactory t = new LinePreProcess(new ESDocumentInfo("", ""));
+            ENDocumentInfo.init(null);
+            TokenizerFactory t = new LinePreProcess(new ENDocumentInfo("", ""));
             t.setTokenPreProcessor(new TextPreProcessor());
 
             AbstractCache cache = new AbstractCache();
@@ -108,9 +109,9 @@ public class word2vec {
             logger.error(e.getMessage());
         }
 */
-        int topics = 100;
-        InputStream input = new FileInputStream("/Users/matin/git/QTdatacollect/es.txt");
-        String output = "/Users/matin/git/QTdatacollect/tagger/es/w2v.txt";
+        int topics = 25;
+        InputStream input = new FileInputStream("/Users/matin/git/QTdatacollect/mpwatch.corpus.lines");
+        String output = "/Users/matin/git/QTdatacollect/tagger/mpwatch/w2v.txt";
         word2vec w2v = new word2vec();
         w2v.train(input, output, topics);
     }
