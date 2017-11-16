@@ -82,7 +82,7 @@ public class TERalignment {
     }
 
     public void scoreDetails() {
-        numIns = numDel = numSub = numWsf = numSft = 0;
+        numIns = numDel = numSub = numWsf = numSft = numMtch = 0;
         if (allshifts != null) {
             for (int i = 0; i < allshifts.length; ++i)
                 numWsf += allshifts[i].size();
@@ -102,6 +102,8 @@ public class TERalignment {
                     case 'I':
                         numIns++;
                         break;
+                    default:
+                        numMtch++;
                 }
             }
         }
@@ -476,7 +478,7 @@ public class TERalignment {
     public int numSub = 0;
     public int numSft = 0;
     public int numWsf = 0;
-
+    public int numMtch = 0;
 
 
 

@@ -12,6 +12,7 @@
     "discussed",
     "speak",
     "spoke",
+    "reported",
     "reiterated",
     "announced",
     "emphasized",
@@ -20,28 +21,10 @@
     "explained",
     "outlined",
     "highlighted",
-    "delivered",
-    "deployed",
+    "discuss",
     "redeployed",
     "urged"
   ],
-
-  "Creation" : [
-    "built",
-    "build",
-    "design",
-    "designed",
-    "created",
-    "coded",
-    "done",
-    "developed",
-    "made",
-    "hired",
-    "launched",
-    "mocked up",
-    "worked"
-  ],
-
   "Speculation" : [
     "believe",
     "anticipate",
@@ -50,8 +33,10 @@
     "think",
     "assume"
   ],
-
-  "Actions": [
+  "Action": [
+    "hired",
+    "delivered",
+    "deployed",
     "scored",
     "cautioned",
     "assumed",
@@ -65,7 +50,6 @@
     "granted",
     "declined",
     "called",
-    "reported",
     "denied",
     "kept",
     "defended",
@@ -105,7 +89,6 @@
     "retreated",
     "introduced",
     "did",
-    "developed",
     "shared",
     "asked",
     "published",
@@ -499,7 +482,6 @@
     "detail",
     "detect",
     "determine",
-    "develop",
     "devise",
     "diagnose",
     "dictate",
@@ -513,7 +495,6 @@
     "discharge",
     "discontinue",
     "discover",
-    "discuss",
     "disguise",
     "dispatch",
     "dispense",
@@ -1823,10 +1804,22 @@
     "bought",
     "purchased"
   ],
-  "Product": [
+  "Production": [
     "unveiled",
     "released",
-    "rolled out"
+    "rolled out",
+    "built",
+    "build",
+    "design",
+    "designed",
+    "created",
+    "coded",
+    "done",
+    "developed",
+    "made",
+    "launched",
+    "mocked up",
+    "worked"
   ],
   "Aux" :[
     "is",

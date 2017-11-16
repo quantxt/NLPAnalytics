@@ -1,18 +1,14 @@
 package com.quantxt.nlp;
 
-import cc.mallet.types.*;
-import cc.mallet.pipe.*;
-import cc.mallet.topics.*;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import com.quantxt.QTDocument.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.nlp.comp.TERalignment;
+import com.quantxt.nlp.comp.TERcalc;
+import com.quantxt.nlp.comp.TERcost;
 import com.quantxt.trie.Trie;
 import com.quantxt.types.MapSort;
 import com.quantxt.types.StringDouble;
-import opennlp.tools.sentdetect.SentenceDetectorME;
-import opennlp.tools.sentdetect.SentenceModel;
-import org.datavec.api.util.ClassPathResource;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +18,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.text.ParseException;
 import java.util.*;
-import java.util.regex.*;
 import java.io.*;
 
 /**
@@ -39,15 +34,32 @@ public class TopicModel {
     private String modelName;
     ///////////////
 
-    private Pipe pipe;
     private HashMap<String, LDATopic> word2TopicW = new HashMap<>();
     private double[] topicW;
+    private double [] mean;
+    private double[] std;
+
+
     private Map<String, double[]> TOPIC_MAP = new HashMap<>();
 
-    public TopicModel(QTDocument doc){
+    public TERcost getCostFunction(){
+        TERcost costfunc = new TERcost();
+        costfunc._delete_cost = 1;
+        costfunc._insert_cost = 1;
+        costfunc._shift_cost = .1;
+        costfunc._match_cost = 0;
+        costfunc._substitute_cost = 1;
+        return costfunc;
+    }
+
+    public TopicModel(){
+        TERcalc.setCase(true);
+        TERcalc.setShiftDist(10);
+        TERcalc.setBeamWidth(5);
+
 //        tokenFactor = new LinePreProcess(doc);
 //        tokenFactor.setTokenPreProcessor(new TextPreProcessor());
-        pipe = getPipe(doc.getLanguage());
+//        pipe = getPipe(doc.getLanguage());
     }
 
 
@@ -58,87 +70,7 @@ public class TopicModel {
         topicW = new double[numTopics];
 //        tokenFactor = new LinePreProcess();
 //        tokenFactor.setTokenPreProcessor(new TextPreProcessor());
-        pipe = getPipe();
-    }
-
-    public Pipe getPipe(){
-        return getPipe(QTDocument.Language.ENGLISH);
-    }
-
-    public Pipe getPipe(QTDocument.Language lang){
-        ArrayList<Pipe> pipeList = new ArrayList<>();
-
- //       ClassLoader classLoader = getClass().getClassLoader();
- //       File stopWordFile = new File(classLoader.getResource("en.stop.txt").getFile());
-
-        // Pipes: lowercase, tokenize, remove stopwords, map to features
-        pipeList.add( new CharSequenceLowercase() );
-        pipeList.add(new LinePreProcess() );
-        pipeList.add(new CharSequence2TokenSequence(Pattern.compile("[\\p{L}\\p{N}_]+")));
-        //      pipeList.add( new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")) );
-
-        String langDir = "en";
-        switch (lang){
-            case SPANISH:
-                langDir = "es";
-                break;
-        }
-        try {
-            pipeList.add( new TokenSequenceRemoveStopwords(new ClassPathResource(langDir + "/stoplist.txt").getFile(), "UTF-8", false, false, false) );
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        pipeList.add( new TokenSequence2FeatureSequence() );
-
-        return new SerialPipes(pipeList);
-    }
-
-
-    private ParallelTopicModel getModel(final InstanceList instantList) throws IOException
-    {
-        ParallelTopicModel model = new ParallelTopicModel(numTopics, 1.0, 0.01);
-        model.setRandomSeed(RANDOM_SEED);
-        model.addInstances(instantList);
-        model.setNumThreads(6);
-        model.setNumIterations(numIterations);
-        model.setOptimizeInterval(10);
-        model.estimate();
-        ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(modelName + ".ser"));
-        out.writeObject(model);
-        out.close();
-        return model;
-    }
-
-    public void train(String inFile,
-                      String text_field,
-                      int maxLine) throws IOException {
-
-        InstanceList instances = new InstanceList (this.getPipe());
-
-        BufferedReader br = new BufferedReader(new FileReader(inFile));
-        try {
-            String line;
-            int numline = maxLine;
-            while ((line = br.readLine()) != null) {
-                JsonElement elem = new JsonParser().parse(line);
-                if (numline-- <0) break;
-                if (elem.isJsonArray()) {
-                    for (JsonElement je : elem.getAsJsonArray()) {
-                        String data = je.getAsJsonObject().get(text_field).getAsString();
-                        Instance ins = new Instance(data, "en", "training", "file");
-                        instances.addThruPipe(ins);
-                    }
-                } else {
-                    String data = elem.getAsJsonObject().get(text_field).getAsString();
-                    Instance ins = new Instance(data, "en", "training", "file");
-                    instances.addThruPipe(ins);
-                }
-            }
-
-        } finally {
-            br.close();
-        }
-        getModel(instances);
+//        pipe = getPipe();
     }
 
     public StringDouble getBestTag(String str) {
@@ -166,6 +98,7 @@ public class TopicModel {
         return new StringDouble(firstEntry.getKey(), firstEntry.getValue());
     }
 
+    /*
     public ParallelTopicModel loadModel() throws IOException, ClassNotFoundException {
         File serializedFile = new File(modelName+".ser");
         if (serializedFile.exists()) {
@@ -198,6 +131,7 @@ public class TopicModel {
         }
         return instantList;
     }
+    */
 
     public double [] getAvgVector(){
 
@@ -220,11 +154,8 @@ public class TopicModel {
     }
     */
 
-    public double [] getSentenceVector(String line){
-
- //       Tokenizer s = tokenFactor.create(line);
- //       List<String> tokens = s.getTokens();
-
+    public double [] getSentenceVector(String line)
+    {
         String[] tokens = line.split("\\s+");
 
         double [] probs = new double[numTopics];
@@ -240,10 +171,101 @@ public class TopicModel {
                 probs[i] += d;
             }
         }
-
         return probs;
     }
 
+    public double cosineSimilarityTER(String s1, String s2) {
+
+        TERcost cf = getCostFunction();
+        TERalignment align = TERcalc.TER(s1, s2, cf);
+        double wer = align.numEdits / align.numWords;
+        if (wer > .8) return 0;
+        List<List<String>> l1 = getSentenceVectorSequence(s1);
+        List<List<String>> l2 = getSentenceVectorSequence(s2);
+
+        if (l1 == null || l2 == null) return 0;
+
+        TERalignment alignP = TERcalc.TER(String.join(" ", l2.get(0)), String.join(" " , l1.get(0)), cf);
+        TERalignment alignN = TERcalc.TER(String.join(" ", l2.get(1)), String.join(" " , l1.get(1)), cf);
+
+        double werP = alignP.numEdits / alignP.numWords;
+        double werN = alignN.numEdits / alignN.numWords;
+
+        return Math.max(2 - werP - werN, 0) / 2;
+    }
+
+
+    public List<List<String>> getSentenceVectorSequence(String line)
+    {
+ //       logger.info(line);
+      //  double [] sentvec = getSentenceVector(line);
+        String[] tokens = line.split("\\s+");
+        List<List<String>> res = new ArrayList<>();
+        List<String> posTopics = new ArrayList<>();
+        List<String> negTopics = new ArrayList<>();
+        Map<Integer, Double> pMap = new HashMap<>();
+        Map<Integer, Double> nMap = new HashMap<>();
+        for (int i = 0; i <numTopics; i++){
+            pMap.put(i, 0d);
+            nMap.put(i, 0d);
+        }
+        for (String w : tokens){
+            LDATopic ldatopic = getWLDATopic(w);
+            if (ldatopic == null) {
+                logger.debug("oov: " + w);
+                continue;
+            }
+         //   double cosWd = cosineSimilarity(sentvec, ldatopic.getWeights());
+         //   logger.info(w + " : " + cosWd);
+            for (int i = 0; i <numTopics; i++){
+                double d = ldatopic.getWeights()[i];
+                if ( d > 0) {
+                    Double val = pMap.get(i);
+                    pMap.put(i, val+d);
+                } else {
+                    Double val = nMap.get(i);
+                    nMap.put(i, val+ (d * -1));
+                }
+            }
+        }
+
+        Map<Integer, Double> sortedpMap = MapSort.sortdescByValue(pMap);
+        Map<Integer, Double> sortednMap = MapSort.sortdescByValue(nMap);
+        HashSet<Integer> top10P = new HashSet<>();
+        for (Map.Entry<Integer, Double> e : sortedpMap.entrySet()){
+            top10P.add(e.getKey());
+            if (top10P.size() > 4) break;
+        }
+        HashSet<Integer> top10N = new HashSet<>();
+        for (Map.Entry<Integer, Double> e : sortednMap.entrySet()){
+            top10N.add(e.getKey());
+            if (top10N.size() > 4) break;
+        }
+
+        for (String w : tokens){
+            LDATopic ldatopic = getWLDATopic(w);
+            if (ldatopic == null) {
+                logger.debug("oov: " + w);
+                continue;
+            }
+            for (int i=0; i< numTopics; i++){
+                double d = ldatopic.getWeights()[i];
+                if (d == 0) continue;
+                if (d > 0 && top10P.contains(i)){
+                    posTopics.add(String.valueOf(i));
+                } else if (d < 0 && top10N.contains(i)) {
+                    negTopics.add(String.valueOf(i));
+                }
+            }
+        }
+//        logger.info("positive: " + String.join(" ", posTopics));
+//        logger.info("negative: " + String.join(" ", negTopics));
+        res.add(posTopics);
+        res.add(negTopics);
+    //    logger.info("topics has: " + tokens.length + " --> " + topics.size());
+        return res;
+    }
+    /*
     public void loadInfererFromFile(String file) throws IOException, ClassNotFoundException {
 //        String modelName = "MostReadNews_"+numTopics;
         ParallelTopicModel model = loadModel();
@@ -254,7 +276,7 @@ public class TopicModel {
         model.printTopWords(new File(modelName + ".topwords"), 20, false);
         populateWord2ProbMap(model);
     }
-
+    */
     /*
     public double [] getProbs(final String data){
         InstanceList instances = new InstanceList (this.getPipe());
@@ -264,6 +286,7 @@ public class TopicModel {
     }
     */
 
+    /*
     public double [] getProbs(final Instance ins){
         double [] probs = new double[numTopics];
         FeatureSequence tokens = (FeatureSequence) ins.getData();
@@ -297,6 +320,7 @@ public class TopicModel {
         }
         return probs;
     }
+    */
 
     public double getTopicWeight(int t){
         return topicW[t];
@@ -318,44 +342,85 @@ public class TopicModel {
             normA += Math.pow(vectorA[i], 2);
             normB += Math.pow(vectorB[i], 2);
         }
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        if ((normA ==0) || (normB == 0)) return 0;
+        return dotProduct / (Math.sqrt(normA * normB));
     }
 
-    private void loadInfererFromW2VFile(BufferedReader br){
-        try {
-            //find number of topics/diemsions
-            String line = br.readLine();
-            String [] parts = line.split("\\s+");
-            numTopics = parts.length - 1;
-            topicW = new double[numTopics];
-            do  {
-                parts = line.split("\\s+");
-                String w = parts[0];
-                LDATopic ldaTopic = word2TopicW.get(w);
-                if (ldaTopic == null){
-                    ldaTopic = new LDATopic(numTopics);
-                    word2TopicW.put(w, ldaTopic);
-                }
-                for (int topic = 0; topic < numTopics; topic++) {
-                    double weight = Double.parseDouble(parts[topic+1]);
-//                    if (weight > 0) {
-                    ldaTopic.add(topic, weight);
-                    topicW[topic] += weight;
-//                    }
-                }
-            } while ((line = br.readLine()) != null);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (br != null)br.close();
-            } catch (IOException ex) {
-                ex.printStackTrace();
+    private void loadInfererFromW2VFile(BufferedReader br) throws IOException {
+
+        //find number of topics/diemsions
+        String line = br.readLine();
+        String [] parts = line.split("\\s+");
+        numTopics = parts.length - 1;
+        topicW = new double[numTopics];
+        mean = new double[numTopics];
+        std  = new double[numTopics];
+        double count = 0;
+        while ( (line = br.readLine()) != null) {
+            parts = line.split("\\s+");
+            String w = parts[0];
+            LDATopic ldaTopic = word2TopicW.get(w);
+            if (ldaTopic == null){
+                ldaTopic = new LDATopic(numTopics);
+                word2TopicW.put(w, ldaTopic);
             }
+            for (int topic = 0; topic < numTopics; topic++) {
+                double weight = Double.parseDouble(parts[topic+1]);
+                ldaTopic.add(topic, weight);
+                topicW[topic] += weight;
+                double coef = count / (count+1);
+                mean[topic] = mean[topic] * coef + weight / (count+1);
+                std[topic]   = std[topic] * coef + weight * weight / (count+1);
+            }
+            count++;
         }
+        for (int topic = 0; topic < numTopics; topic++){
+            if (mean[topic] == 0) continue;
+    //        double coef = topicW[topic];
+            std[topic] = Math.sqrt(std[topic] - mean[topic] * mean[topic]);
+    //        mean[topic] /= coef;
+        }
+        logger.info("before");
+        Map<String, Double> pp = new HashMap<>();
+        for (Map.Entry<String, LDATopic> e : word2TopicW.entrySet()){
+            String w = e.getKey();
+            LDATopic lt = e.getValue();
+            double div = cosineSimilarity(lt.getWeights(), mean);
+            pp.put(w, div);
+
+        }
+        /*
+        Map<String, Double> ppSorted = MapSort.sortdescByValue(pp);
+        for (Map.Entry<String, Double> e : ppSorted.entrySet()){
+            logger.info(e.getKey() + " / " + e.getValue());
+        }
+
+        logger.info("after");
+        */
+        for (Map.Entry<String, LDATopic> e : word2TopicW.entrySet()){
+            String w = e.getKey();
+            LDATopic lt = e.getValue();
+            for (int j=0; j <lt.getWeights().length; j++){
+                double d = (lt.getWeights()[j] - mean[j] ) / std[j];
+                if (Math.abs(d) < 1.2 || Math.abs(d) > 2.8){
+                    lt.getWeights()[j] = 0d;
+                } else {
+                    lt.getWeights()[j] = d;
+                }
+            }
+            double div = cosineSimilarity(lt.getWeights(), mean);
+            pp.put(w, div);
+        }
+        /*
+        ppSorted = MapSort.sortdescByValue(pp);
+        for (Map.Entry<String, Double> e : ppSorted.entrySet()){
+            logger.info(e.getKey() + " / " + e.getValue());
+        }
+        */
     }
 
     public void loadInfererFromW2VFile(InputStream is) throws IOException, ClassNotFoundException {
+        if (is == null) return;
         BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
         loadInfererFromW2VFile(br);
     }
@@ -366,6 +431,7 @@ public class TopicModel {
 
     }
 
+    /*
     private void populateWord2ProbMap(ParallelTopicModel model) throws IOException {
         logger.info("Populating topic-weight map for: " + modelName + " " + numTopics + " topics");
         for (int topic = 0; topic < numTopics; topic++) {
@@ -402,6 +468,7 @@ public class TopicModel {
             }
         }
     }
+    */
 
     public Trie getPhs(String phraseFileName) throws IOException {
         Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
@@ -534,5 +601,6 @@ public class TopicModel {
         double simp = cosineSimilarity(p1, p2);
         return simp;
     }
+
 }
 

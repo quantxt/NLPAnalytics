@@ -1,6 +1,7 @@
 package com.quantxt.SearchConcepts;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import org.nd4j.shade.jackson.annotation.JsonIgnore;
 
 import java.util.*;
 

@@ -1,10 +1,10 @@
 package com.quantxt.nlp;
 
 import com.quantxt.QTDocument.ENDocumentInfo;
-import com.quantxt.QTDocument.ESDocumentInfo;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
+import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.deeplearning4j.models.word2vec.wordstore.inmemory.AbstractCache;
 import org.deeplearning4j.text.sentenceiterator.BasicLineIterator;
@@ -14,6 +14,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 
 /**
@@ -22,9 +25,68 @@ import java.io.*;
 
 public class word2vec {
     final private static Logger logger = LoggerFactory.getLogger(word2vec.class);
+    private WordVectors w2v;
+    private TokenizerFactory tokenizer;
+    private int minFreq = 4;
 
-    public word2vec(){
+    public word2vec(int m){
+        minFreq = m;
+        try {
+            ENDocumentInfo.init(null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        tokenizer = new LinePreProcess(new ENDocumentInfo("", ""));
+        tokenizer.setTokenPreProcessor(new TextPreProcessor());
+    }
 
+    public void load(final File f) throws FileNotFoundException, UnsupportedEncodingException {
+        w2v = WordVectorSerializer.loadTxtVectors(f);
+    }
+
+    public double[] getWordVector(String w){
+        return w2v.getWordVector(w);
+    }
+
+    public Map<String, Double> getCloseWordRankMap(String w, int i){
+        Collection<String> collection = w2v.wordsNearest(w, i);
+        HashMap<String, Double> map = new HashMap<>();
+        map.put(w, 1d);
+        for (String s: collection){
+            map.put(s, w2v.similarity(w,s));
+        }
+        return map;
+    }
+
+    public double getAverageDistance(String source, String target){
+        String parts1[] = source.split("\\s+");
+        String parts2[] = target.split("\\s+");
+        double numWords = 0;
+
+        double sum = 0;
+        for (String w1 : parts1){
+            for (String w2 : parts2){
+                try {
+                    Double d = w2v.similarity(w1, w2);
+                    if (!d.isNaN() && Math.abs(d) > 0) {
+                        sum += d;
+                        numWords+=1;
+                    }
+                } catch (NullPointerException n){
+
+                }
+            }
+        }
+        if (numWords == 0) return 0;
+        return sum / numWords;
+    }
+
+    public double getDistance(String w1, String w2){
+        return w2v.similarity(w1, w2);
+    }
+
+    public Collection<String> getClosest(String w1, int d){
+        return w2v.wordsNearest(w1, d);
     }
 
     public void train(final InputStream is,
@@ -40,39 +102,37 @@ public class word2vec {
 
             SentenceIterator iter = new BasicLineIterator(is);
             // Split on white spaces in the line to get words
- //           TokenizerFactory t = new LinePreProcess();
-            ENDocumentInfo.init(null);
-            TokenizerFactory t = new LinePreProcess(new ENDocumentInfo("", ""));
-            t.setTokenPreProcessor(new TextPreProcessor());
 
             AbstractCache cache = new AbstractCache();
             WeightLookupTable table = new InMemoryLookupTable.Builder()
                     .vectorLength(dim)
                     .useAdaGrad(false)
                     .cache(cache)
-                    .lr(0.025f)
                     .build();
 
             Word2Vec vec = new Word2Vec.Builder()
-                    .minWordFrequency(2)
+                    .minWordFrequency(minFreq)
                     .iterations(1)
                     .layerSize(dim)
                     .seed(42)
+                    .epochs(1)
                     .batchSize(1)
                     .windowSize(5)
                     .lookupTable(table)
     //                .stopWords(getStopWords())
                     .vocabCache(cache)
                     .iterate(iter)
-                    .tokenizerFactory(t)
+                    .tokenizerFactory(tokenizer)
                     .build();
 
             logger.info("Fitting Word2Vec model....");
             vec.fit();
             WordVectorSerializer.writeWordVectors(vec, w2vecOutputFilename);
-  //          wordVectors = WordVectorSerializer.fromTableAndVocab(table, cache);
+    //        WordVectors wordVectors = WordVectorSerializer.fromTableAndVocab(table, cache);
+    //        logger.info("sim: " + sim );
         }
         logger.info("Training word2vec finished.");
+
 
         /*
         double sim = wordVectors.similarity(TextNormalizer.normalize("mobile"), TextNormalizer.normalize("ios"));
@@ -81,38 +141,5 @@ public class word2vec {
         Collection<String> nearestWords = wordVectors.wordsNearest(TextNormalizer.normalize("Computer") , 10);
         logger.info(gson.toJson(nearestWords));
         */
-    }
-
-    public static void main(String[] args) throws Exception {
-        /*
-        String in = "/Users/matin/git/QTdatacollect/text.tr.corpus";
-        ENDocumentInfo.init();
-        JsonParser parser = new JsonParser();
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(in));
-            String line;
-            while ((line = br.readLine()) != null) {
-                try {
-                    JsonObject json = parser.parse(line).getAsJsonObject();
-                    String ttle = json.get("title").getAsString();
-                    String body = json.get("body").getAsString();
-                    ENDocumentInfo doc = new ENDocumentInfo(body, ttle);
-                    doc.processDoc();
-                    for (String s : doc.getSentences()) {
-                        Files.write(Paths.get("text.tr.corpus.lines"), (s + "\n").getBytes(), StandardOpenOption.APPEND);
-                    }
-                } catch (Exception ee){
-                    logger.error(line);
-                }
-            }
-        } catch (Exception e){
-            logger.error(e.getMessage());
-        }
-*/
-        int topics = 25;
-        InputStream input = new FileInputStream("/Users/matin/git/QTdatacollect/mpwatch.corpus.lines");
-        String output = "/Users/matin/git/QTdatacollect/tagger/mpwatch/w2v.txt";
-        word2vec w2v = new word2vec();
-        w2v.train(input, output, topics);
     }
 }

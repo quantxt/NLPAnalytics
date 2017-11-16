@@ -1,10 +1,6 @@
 package com.quantxt.nlp;
 
-import cc.mallet.pipe.Pipe;
-import cc.mallet.types.Instance;
-import com.quantxt.QTDocument.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
-import com.quantxt.nlp.types.TextNormalizer;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultStreamTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
@@ -18,28 +14,14 @@ import java.io.*;
 /**
  * Created by matin on 5/3/2016.
  */
-public class LinePreProcess extends Pipe implements TokenizerFactory {
+public class LinePreProcess implements TokenizerFactory {
 
     final private static Logger logger = LoggerFactory.getLogger(LinePreProcess.class);
     private TokenPreProcess tokenPreProcess;
     private QTDocument qt;
 
-    public LinePreProcess() {
-        qt = new ENDocumentInfo("" , "");
-     //   TextNormalizer.init();
-    }
-
     public LinePreProcess(QTDocument doc) {
         qt = doc;
-    }
-
-    public Instance pipe (Instance carrier)
-    {
-        String string = (String) carrier.getData();
-        string = qt.normalize(string);
-
-        carrier.setData(string);
-        return carrier;
     }
 
     public Tokenizer create(String toTokenize) {

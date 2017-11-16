@@ -44,7 +44,6 @@ public class ESDocumentInfo extends QTDocument {
 	private static Trie verbTree   = null;
 
 	private String rawText;
-	private double score;
 
 	private static SentenceDetectorME sentenceDetector = null;
 	private static POSTaggerME posModel = null;
@@ -409,28 +408,5 @@ public class ESDocumentInfo extends QTDocument {
 			}
 		}
 		return quotes;
-	}
-
-	public static void main(String[] args) throws Exception {
-		ESDocumentInfo.init(null);
-		ENDocumentInfo.init(null);
-		Entity entity = new Entity("Lilian Tintori", null, false);
-
-		entity.addPerson("Lilian Tintori", null);
-
-		Entity[] entities = new Entity[] {entity};
-
-		QTExtract speaker = new Speaker(entities, null, null);
-
-		String in = "Lilian Tintori anunció este sábado en la noche en su cuenta en Twitter que su esposo, el líder opositor venezolano Leopoldo López, fue trasladado de nuevo de regreso a su casa.";
-		QTDocument es = QTDocumentFactory.createQTDoct(in , in);
-		es.processDoc();
-		String out = es.normalize(in);
-		logger.info("normalize: " + out);
-
-		String [] pos = es.getPosTags(in.split("\\s+"));
-		logger.info(String.join(" " , pos));
-
-		ArrayList<QTDocument> docs = es.extractEntityMentions(speaker);
 	}
 }
