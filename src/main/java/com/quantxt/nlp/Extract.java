@@ -1,12 +1,12 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
-import com.quantxt.SearchConcepts.BaseNameAlts;
-import com.quantxt.SearchConcepts.Entity;
-import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.nlp.types.Extraction;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
+import com.quantxt.types.BaseNameAlts;
+import com.quantxt.types.Entity;
+import com.quantxt.types.NamedEntity;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,6 @@ public class Extract {
     public void loadFlatTree(InputStream ins){
         Trie.TrieBuilder trie = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
         String line;
-        int num = 0;
         BufferedReader br = new BufferedReader(new InputStreamReader(ins));
         try {
             while ((line = br.readLine()) != null) {

@@ -18,14 +18,14 @@ public class LinePreProcess implements TokenizerFactory {
 
     final private static Logger logger = LoggerFactory.getLogger(LinePreProcess.class);
     private TokenPreProcess tokenPreProcess;
-    private QTDocument qt;
+//    private QTDocument qt;
 
     public LinePreProcess(QTDocument doc) {
-        qt = doc;
+        /*qt = doc;*/
     }
 
     public Tokenizer create(String toTokenize) {
-        toTokenize = qt.normalize(toTokenize);
+    //    toTokenize = qt.normalize(toTokenize);
         DefaultTokenizer t = new DefaultTokenizer(toTokenize.trim());
         t.setTokenPreProcessor(this.tokenPreProcess);
         return t;

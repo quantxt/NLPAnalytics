@@ -1,18 +1,16 @@
 package com.quantxt.QTDocument;
 
-import com.quantxt.SearchConcepts.Entity;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.nlp.types.ExtInterval;
+import com.quantxt.types.Entity;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by matin on 10/10/17.
@@ -28,11 +26,16 @@ public class ENDocumentInfoTest {
 
         try {
             ENDocumentInfo.init(null);
-            ArrayList<Entity> entityArray = new ArrayList<>();
-            entityArray.add(new Entity("Gilead Sciences, Inc." , null , true));
-            entityArray.add(new Entity("Amazon Inc." , new String[]{"Amazon"} , true));
-            Entity[] entities = entityArray.toArray(new Entity[entityArray.size()]);
-            enx = new Speaker(entities, null, null);
+            ArrayList<Entity> entityArray1 = new ArrayList<>();
+            entityArray1.add(new Entity("Gilead Sciences, Inc." , null , true));
+            entityArray1.add(new Entity("Amazon Inc." , new String[]{"Amazon"} , true));
+            ArrayList<Entity> entityArray2 = new ArrayList<>();
+            entityArray2.add(new Entity("Director" , new String[]{"Director"} , true));
+            entityArray2.add(new Entity("Senior Director" , new String[]{"Senior Director"} , true));
+            Map<String, Entity[]> entMap = new HashMap<>();
+            entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
+            entMap.put("Title" , entityArray2.toArray(new Entity[entityArray2.size()]));
+            enx = new Speaker(entMap, (String)null, null);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -57,10 +60,11 @@ public class ENDocumentInfoTest {
     public void testNounVerbPh1(){
         init();
         String str = "Gilead Sciences, Inc. told to reuters.";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "");
+        QTDocument doc = new ENDocumentInfo(str, "");
         doc.processDoc();
         ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
-        Assert.assertEquals(docs.get(0).getEntity() , "Gilead Sciences, Inc.");
+        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").iterator().next() , "Gilead Sciences, Inc.");
     }
 
     @Test
@@ -70,36 +74,51 @@ public class ENDocumentInfoTest {
         ENDocumentInfo doc = new ENDocumentInfo(str, "");
         doc.processDoc();
         ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
-        Assert.assertEquals(docs.get(0).getEntity() , "Amazon Inc.");
+        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").iterator().next() , "Amazon Inc.");
     }
 
     @Test
     public void testNounVerbPh3(){
         init();
         String str = "Amazon reported a gain on his earnings .";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "");
+        QTDocument doc = new ENDocumentInfo(str, "");
         doc.processDoc();
         ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
-        Assert.assertEquals(docs.get(0).getEntity() , "Amazon Inc.");
+        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").iterator().next() , "Amazon Inc.");
     }
 
     @Test
     public void testNounVerbPh4(){
         init();
         String str = "Amazon Corp reported a gain on his earnings .";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "");
+        QTDocument doc = new ENDocumentInfo(str, "");
         doc.processDoc();
         ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
-        Assert.assertEquals(docs.get(0).getEntity() , "Amazon Inc.");
+        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").iterator().next() , "Amazon Inc.");
     }
 
     @Test
     public void testNounVerbPh5(){
         init();
         String str = "Amazon LLC announced a gain on his earnings .";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "");
+        QTDocument doc = new ENDocumentInfo(str, "");
         doc.processDoc();
         ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
-        Assert.assertEquals(docs.get(0).getEntity() , "Amazon Inc.");
+        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").iterator().next() , "Amazon Inc.");
+    }
+
+    @Test
+    public void testNounVerbPh6(){
+        init();
+        String str = "He works as a high rank Senior Director in Amazon";
+        QTDocument doc = new ENDocumentInfo(str, "");
+        doc.processDoc();
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
+        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Title").iterator().next() , "Senior Director");
     }
 }

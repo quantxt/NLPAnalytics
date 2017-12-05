@@ -14,7 +14,6 @@ public class TextPreProcessor implements TokenPreProcess {
 
     @Override
     public String preProcess(String token) {
-    //    token = token.toLowerCase();
         return token;
     }
 }

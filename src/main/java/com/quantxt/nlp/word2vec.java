@@ -29,7 +29,8 @@ public class word2vec {
     private TokenizerFactory tokenizer;
     private int minFreq = 4;
 
-    public word2vec(int m){
+    public word2vec(int m)
+    {
         minFreq = m;
         try {
             ENDocumentInfo.init(null);
@@ -42,6 +43,13 @@ public class word2vec {
 
     public void load(final File f) throws FileNotFoundException, UnsupportedEncodingException {
         w2v = WordVectorSerializer.loadTxtVectors(f);
+    }
+    public void set(WordVectors wv){
+        w2v = wv;
+    }
+
+    public WordVectors getW2v(){
+        return w2v;
     }
 
     public double[] getWordVector(String w){
@@ -91,7 +99,8 @@ public class word2vec {
 
     public void train(final InputStream is,
                       final String w2vecOutputFilename,
-                      final int dim) throws Exception {
+                      final int dim,
+                      boolean write) throws Exception {
         File serializedFile = new File(w2vecOutputFilename);
         if (serializedFile.exists()) {
             logger.info(w2vecOutputFilename + " already exists. Trainer is terminated.");
@@ -127,8 +136,10 @@ public class word2vec {
 
             logger.info("Fitting Word2Vec model....");
             vec.fit();
-            WordVectorSerializer.writeWordVectors(vec, w2vecOutputFilename);
-    //        WordVectors wordVectors = WordVectorSerializer.fromTableAndVocab(table, cache);
+            if (write) {
+                WordVectorSerializer.writeWordVectors(vec, w2vecOutputFilename);
+            }
+            w2v = WordVectorSerializer.fromTableAndVocab(table, cache);
     //        logger.info("sim: " + sim );
         }
         logger.info("Training word2vec finished.");
@@ -141,5 +152,12 @@ public class word2vec {
         Collection<String> nearestWords = wordVectors.wordsNearest(TextNormalizer.normalize("Computer") , 10);
         logger.info(gson.toJson(nearestWords));
         */
+    }
+
+    public static void main(String[] args) throws Exception {
+        FileInputStream fi = new FileInputStream(new File("/Users/matin/git/TxtAlign/skwidalarr"));
+        String out = "w2v";
+        word2vec w2v = new word2vec(2);
+        w2v.train(fi, out, 10, true);
     }
 }

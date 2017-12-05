@@ -5,13 +5,13 @@ import java.net.URL;
 import java.util.*;
 
 import com.google.gson.*;
-import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.nlp.types.ExtInterval;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
+import com.quantxt.types.NamedEntity;
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.sentdetect.SentenceDetectorME;
@@ -112,7 +112,10 @@ public class ENDocumentInfo extends QTDocument {
 					break;
 				case "Aux" : verbTybe = DOCTYPE.Aux;
 					break;
+				case "Employment" : verbTybe = DOCTYPE.Employment;
+					break;
 			}
+
 			JsonArray context_arr = entry.getValue().getAsJsonArray();
 			for (JsonElement e : context_arr) {
 				String verb = e.getAsString();
@@ -317,28 +320,6 @@ public class ENDocumentInfo extends QTDocument {
 		return phrases;
 	}
 
-	private QTDocument getQuoteDoc(String quote,
-								   NamedEntity namedEntity)
-	{
-		quote = quote.replaceAll("^Advertisement\\s+", "").trim();
-		QTDocument sDoc = new ENDocumentInfo("", quote);
-		sDoc.setDate(getDate());
-		sDoc.setLink(getLink());
-		sDoc.setLogo(getLogo());
-		sDoc.setSource(getSource());
-
-		if (namedEntity != null) {
-			sDoc.setAuthor(namedEntity.getName());
-			sDoc.setEntity(namedEntity.getEntity().getName());
-			this.addTag(namedEntity.getName());
-			sDoc.addTag(namedEntity.getName());
-			this.addTag(namedEntity.getEntity().getName());
-			sDoc.addTag(namedEntity.getEntity().getName());
-		}
-
-		return sDoc;
-	}
-
 	protected DOCTYPE getVerbType(String verbPhs) {
 		TokenStream result = analyzer.tokenStream(null, verbPhs);
 
@@ -350,6 +331,7 @@ public class ENDocumentInfo extends QTDocument {
 			while (result.incrementToken()) {
 				tokens.add(resultAttr.toString());
 			}
+
 			result.close();
 			if (tokens.size() == 0) return null;
 			Collection<Emit> emits = verbTree.parseText(String.join(" ", tokens));
@@ -369,22 +351,13 @@ public class ENDocumentInfo extends QTDocument {
 		return DOCTYPE.Statement;
 	}
 
-
-	public ArrayList<QTDocument> extractEntityMentionsV2(QTExtract speaker) {
+	@Override
+	public ArrayList<QTDocument> extractEntityMentions(QTExtract speaker) {
 		ArrayList<QTDocument> quotes = new ArrayList<>();
 		List<String> sents = getSentences();
 		int numSent = sents.size();
-		Set<String> entitiesFromNamedFound = new HashSet<>();
-		//       Set<String> topEntitiesFound = new HashSet<>();
+	//	Set<String> entitiesFromNamedFound = new HashSet<>();
 
- /*       Collection<Emit> ttl_names = nameTree.parseText(doc.getTitle());
-        for (Emit emt : ttl_names){
-            NamedEntity ne = (NamedEntity) emt.getCustomeData();
-            if (ne.isParent()){
-                topEntitiesFound.add(ne.getName());
-            }
-        }
-*/
 		for (int i = 0; i < numSent; i++) {
 			final String orig = removePrnts(sents.get(i)).trim();
 			final String origBefore = i == 0 ? title : removePrnts(sents.get(i - 1)).trim();
@@ -401,19 +374,23 @@ public class ENDocumentInfo extends QTDocument {
             }
 */
 
-			Collection<Emit> name_match_curr = speaker.parseNames(orig);
+			Map<String, Collection<Emit>> name_match_curr = speaker.parseNames(orig);
 
-			if (name_match_curr.size() == 0){
-				Collection<Emit> name_match_befr = speaker.parseNames(origBefore);
-				if (name_match_befr.size() != 1) continue;
-				// simple co-ref for now
-				if (parts[0].equalsIgnoreCase("he") || parts[0].equalsIgnoreCase("she")) {
-					Emit matchedName = name_match_befr.iterator().next();
-					String keyword = matchedName.getKeyword();
-					parts[0] = keyword;
-					rawSent_curr = String.join(" " , parts);
-					Emit shiftedEmit = new Emit(0, keyword.length()-1, keyword, matchedName.getCustomeData());
-					name_match_curr.add(shiftedEmit);
+			if (name_match_curr.size() == 0) {
+				Map<String, Collection<Emit>> name_match_befr = speaker.parseNames(origBefore);
+				for (Map.Entry<String, Collection<Emit>> entType : name_match_befr.entrySet()) {
+					Collection<Emit> ent_set = entType.getValue();
+					if (ent_set.size() != 1) continue;
+					// simple co-ref for now
+					if (parts[0].equalsIgnoreCase("he") || parts[0].equalsIgnoreCase("she")) {
+						Emit matchedName = ent_set.iterator().next();
+						String keyword = matchedName.getKeyword();
+						parts[0] = keyword;
+						rawSent_curr = String.join(" ", parts);
+						Emit shiftedEmit = new Emit(0, keyword.length() - 1, keyword, matchedName.getCustomeData());
+						name_match_curr.put(entType.getKey(), ent_set);
+				//		name_match_curr.add(shiftedEmit);
+					}
 				}
 			}
 
@@ -422,35 +399,42 @@ public class ENDocumentInfo extends QTDocument {
 				continue;
 			}
 
-			Collection<Emit> titles_emet = speaker.parseTitles(orig);
+	//		Collection<Emit> titles_emet = speaker.parseTitles(orig);
 
-			List<Emit> allemits = new ArrayList<>();
-			allemits.addAll(name_match_curr);
+	//		Map<String, Collection<Emit>> allemits = new HashMap<>();
+	//		allemits.putAll(name_match_curr);
 
-			NamedEntity entity = null;
-
-			QTDocument newQuote = null;
+			QTDocument newQuote = getQuoteDoc(orig);
 			//           if (name_match_curr.size() > 0) {
 			List<ExtInterval> tagged = getNounAndVerbPhrases(rawSent_curr, parts);
-			for (Emit matchedName : name_match_curr) {
-				//       Emit matchedName = name_match_curr.iterator().next();
-				for (int j = 0; j < tagged.size(); j++) {
-					ExtInterval ext = tagged.get(j);
-					if (ext.overlapsWith(matchedName)) {
-						//only if this is a noun type and next one is a verb!
-						if (j == tagged.size() - 1) break;
-						ExtInterval nextExt = tagged.get(j + 1);
-						if (ext.getType().equals("N") && nextExt.getType().equals("V")) {
-							DOCTYPE verbType = getVerbType(rawSent_curr.substring(nextExt.getStart(), nextExt.getEnd()));
-							if (verbType == null) continue;
-							entity = (NamedEntity) matchedName.getCustomeData();
-							newQuote = getQuoteDoc(orig, entity);
-							newQuote.setDocType(verbType);
-							break;
+			for (Map.Entry<String, Collection<Emit>> entType : name_match_curr.entrySet()){
+				for (Emit matchedName : entType.getValue()) {
+					//       Emit matchedName = name_match_curr.iterator().next();
+					for (int j = 0; j < tagged.size(); j++) {
+						ExtInterval ext = tagged.get(j);
+						if (ext.overlapsWith(matchedName)) {
+							//only if this is a noun type and next one is a verb!
+							if (j + 1 < tagged.size()) {
+								ExtInterval nextExt = tagged.get(j + 1);
+								if (ext.getType().equals("N") && nextExt.getType().equals("V")) {
+									DOCTYPE verbType = getVerbType(rawSent_curr.substring(nextExt.getStart(), nextExt.getEnd()));
+									if (verbType == null) continue;
+									NamedEntity ne = (NamedEntity) matchedName.getCustomeData();
+									newQuote.addEntity(entType.getKey(), ne.getName());
+									newQuote.setDocType(verbType);
+								}
+							} else {
+								if (ext.getType().equals("N")) {
+									DOCTYPE verbType = getVerbType(rawSent_curr);
+									if (verbType == null) continue;
+									NamedEntity ne = (NamedEntity) matchedName.getCustomeData();
+									newQuote.addEntity(entType.getKey(), ne.getName());
+									newQuote.setDocType(verbType);
+								}
+							}
 						}
 					}
 				}
-				if (newQuote != null) break;
 			}
 
 			/*
@@ -465,12 +449,12 @@ public class ENDocumentInfo extends QTDocument {
 			*/
 			//          }
 
-			if (newQuote == null) {
+			if (newQuote.getEntity() == null) {
 				logger.debug("Entity is still null or Verb type is not detected: " + orig);
 				continue;
 			}
 
-			entitiesFromNamedFound.add(entity.getEntity().getName());
+	//		entitiesFromNamedFound.add(entity.getEntity().getName());
 
 			// if this entity is a child and parent hasn't been found then this entity should not be added
 			//          if (!topEntitiesFound.contains(entity.getEntity().getName())){
@@ -479,17 +463,18 @@ public class ENDocumentInfo extends QTDocument {
 
 			newQuote.setBody(origBefore + " " + orig);
 			quotes.add(newQuote);
-
+/*
 			if (titles_emet.size()  != 0) {
 				Iterator<Emit> it = titles_emet.iterator();
 				while (it.hasNext()) {
 					newQuote.addFacts("Title", it.next().getKeyword());
 				}
 			}
-		}
+*/		}
 		return quotes;
 	}
 
+	/*
 	@Override
 	public ArrayList<QTDocument> extractEntityMentions(QTExtract speaker) {
 		ArrayList<QTDocument> quotes = new ArrayList<>();
@@ -508,11 +493,17 @@ public class ENDocumentInfo extends QTDocument {
 			ArrayList<Emit> name_match_curr = new ArrayList<>(speaker.parseNames(orig));
 
 			if (name_match_curr.size() == 0){
-				Collection<Emit> name_match_befr = speaker.parseNames(origBefore);
-				if (name_match_befr.size() == 1) {
+				Map<String, Collection<Emit>> name_match_befr = speaker.parseNames(origBefore);
+				for (Map.Entry<String, Collection<Emit>> entType : name_match_befr.entrySet()) {
+					Collection<Emit> ent_set = entType.getValue();
+					if (ent_set.size() != 1) continue;
+
+			//	Map<String, Collection<Emit>> name_match_befr = speaker.parseNames(origBefore);
+			//	if (name_match_befr.size() == 1) {
 					// simple co-ref for now
 					if (parts[0].equalsIgnoreCase("he") || parts[0].equalsIgnoreCase("she")) {
-						Emit matchedName = name_match_befr.iterator().next();
+
+						Emit matchedName = ent_set.iterator().next();
 						String keyword = matchedName.getKeyword();
 						parts[0] = keyword;
 						rawSent_curr = String.join(" ", parts);
@@ -522,10 +513,8 @@ public class ENDocumentInfo extends QTDocument {
 				}
 			}
 
-			Collection<Emit> titles_emet = speaker.parseTitles(orig);
-
-			List<Emit> allemits = new ArrayList<>();
-			allemits.addAll(name_match_curr);
+	//		List<Emit> allemits = new ArrayList<>();
+	//		allemits.addAll(name_match_curr);
 
 			NamedEntity entity = (name_match_curr != null && name_match_curr.size() > 0) ?
 					(NamedEntity) name_match_curr.get(0).getCustomeData() :
@@ -556,14 +545,17 @@ public class ENDocumentInfo extends QTDocument {
 			newQuote.setBody(origBefore + " " + orig);
 			quotes.add(newQuote);
 
-			if (titles_emet.size()  != 0) {
-				Iterator<Emit> it = titles_emet.iterator();
-				while (it.hasNext()) {
-					newQuote.addFacts("Title", it.next().getKeyword());
-				}
-			}
+
+	//		if (titles_emet.size()  != 0) {
+	//			Iterator<Emit> it = titles_emet.iterator();
+	//			while (it.hasNext()) {
+	//				newQuote.addFacts("Title", it.next().getKeyword());
+	//			}
+	//		}
+
 		}
 		return quotes;
 	}
+	*/
 }
 

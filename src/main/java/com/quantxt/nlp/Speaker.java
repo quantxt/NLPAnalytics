@@ -2,14 +2,15 @@ package com.quantxt.nlp;
 
 import com.google.gson.*;
 import com.quantxt.QTDocument.ENDocumentInfo;
-import com.quantxt.SearchConcepts.Entity;
-import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
+import com.quantxt.types.Entity;
+import com.quantxt.types.NamedEntity;
 import org.apache.commons.io.IOUtils;
+import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
@@ -22,6 +23,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.quantxt.types.NamedEntity.PERSON;
+
 /**
  * Created by matin on 10/9/16.
  */
@@ -29,14 +32,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Speaker implements QTExtract {
     final private static Logger logger = LoggerFactory.getLogger(Speaker.class);
 
-    private static Trie acronymTree = null;
     private Trie phraseTree = null;
-    private Trie nameTree   = null;
+    private Map<String, Trie> nameTree   = new HashMap<>();
     private Trie titleTree  = null;
     private List<String> search_terms = new ArrayList<>();
     private Tagger tagger = null;
-    private ConcurrentHashMap<String, Double> tokenRank = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Double> tokenRank;
 
+    /*
     static {
         Trie.TrieBuilder trie = Trie.builder().onlyWholeWords();
         try {
@@ -49,12 +52,14 @@ public class Speaker implements QTExtract {
         }
         acronymTree = trie.build();
     }
+    */
 
-    public void popTokenRank(List<String> tokens){
+    public Map<String, Double> popTokenRank(List<String> tokens, int nums){
         word2vec w2v = tagger.getW2v();
-        if (w2v == null) return;
+        if (w2v == null) return null;
+        tokenRank = new ConcurrentHashMap<>();
         for (String t : tokens) {
-            Collection<String> closests = w2v.getClosest(t, 500);
+            Collection<String> closests = w2v.getClosest(t, nums);
             tokenRank.put(t, 1d);
             for (String c : closests){
                 double r = w2v.getDistance(c, t);
@@ -65,10 +70,14 @@ public class Speaker implements QTExtract {
                 tokenRank.put(c, r + r_cur);
             }
         }
+        return tokenRank;
     }
 
-    public double getSentenceRank(String sent){
-        String [] parts = sent.split("\\s+");
+    public WordVectors getw2v(){
+        return tagger.getW2v().getW2v();
+    }
+
+    public double getSentenceRank(List<String> parts){
         double rank  = 0;
         for (String p : parts){
             Double d = tokenRank.get(p);
@@ -79,9 +88,8 @@ public class Speaker implements QTExtract {
         return rank;
     }
 
-    public Speaker(Entity[] entities,
-                   String taggerDir,
-                   InputStream phraseFile) throws IOException
+    private void loadEntsAndPhs(Map<String, Entity[]> entityMap,
+                                InputStream phraseFile) throws IOException
     {
         if (phraseFile != null) {
             Trie.TrieBuilder phrase = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
@@ -119,59 +127,85 @@ public class Speaker implements QTExtract {
         Gson gson = new Gson();
 
         //names
-        if (entities == null){
+        if (entityMap == null){
             byte[] subjectArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("en/subject.json").openStream());
-            entities = gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class);
+            entityMap = new HashMap<>();
+            entityMap.put(PERSON, gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class));
         }
 
-        Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
 
-        for (Entity entity : entities){
-            //        final Entity entity = gson.fromJson(spj, Entity.class);
-            String entity_name = entity.getName();
-            NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
-            entityNamedEntity.setEntity(entity);
-            entityNamedEntity.setParent(true);
-            search_terms.add(entity_name);
 
-            // include entity as a speaker?
-            if (entity.isSpeaker()) {
-                names.addKeyword(entity_name, entityNamedEntity);
-                names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
+        for (Map.Entry<String, Entity[]> e : entityMap.entrySet()) {
+            String entType = e.getKey();
+            Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
+            for (Entity entity : e.getValue()) {
+                String entity_name = entity.getName();
+                NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
+                entityNamedEntity.setEntity(entType, entity);
+                entityNamedEntity.setParent(true);
+                search_terms.add(entity_name);
 
-                String[] alts = entity.getAlts();
-                if (alts != null) {
-                    for (String alt : alts) {
-                        names.addKeyword(alt, entityNamedEntity);
-                        names.addKeyword(alt.toUpperCase(), entityNamedEntity);
+                // include entity as a speaker?
+                if (entity.isSpeaker()) {
+                    names.addKeyword(entity_name, entityNamedEntity);
+                    names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
 
+                    String[] alts = entity.getAlts();
+                    if (alts != null) {
+                        for (String alt : alts) {
+                            names.addKeyword(alt, entityNamedEntity);
+                            names.addKeyword(alt.toUpperCase(), entityNamedEntity);
+
+                        }
+                    }
+                }
+
+                List<NamedEntity> namedEntities = entity.getNamedEntities();
+                if (namedEntities == null) continue;
+                for (NamedEntity namedEntity : namedEntities) {
+                    namedEntity.setEntity(entType, entity);
+                    String p_name = namedEntity.getName();
+                    names.addKeyword(p_name, namedEntity);
+                    names.addKeyword(p_name.toUpperCase(), namedEntity);
+                    Set<String> nameAlts = namedEntity.getAlts();
+                    if (nameAlts != null) {
+                        for (String alt : namedEntity.getAlts()) {
+                            names.addKeyword(alt, namedEntity);
+                            names.addKeyword(alt.toUpperCase(), namedEntity);
+                        }
                     }
                 }
             }
-
-            List<NamedEntity> namedEntities = entity.getNamedEntities();
-            if (namedEntities == null) continue;
-            for (NamedEntity namedEntity : namedEntities) {
-                namedEntity.setEntity(entity);
-                String p_name = namedEntity.getName();
-                names.addKeyword(p_name, namedEntity);
-                names.addKeyword(p_name.toUpperCase(), namedEntity);
-                Set<String> nameAlts = namedEntity.getAlts();
-                if (nameAlts != null) {
-                    for (String alt : namedEntity.getAlts()) {
-                        names.addKeyword(alt, namedEntity);
-                        names.addKeyword(alt.toUpperCase(), namedEntity);
-                    }
-                }
-            }
+            nameTree.put(entType, names.build());
         }
-        nameTree = names.build();
+    }
+
+
+    public Speaker(Map<String, Entity[]> entities,
+                   String taggerDir,
+                   InputStream phraseFile) throws IOException
+    {
+        loadEntsAndPhs(entities, phraseFile);
+
         if (taggerDir != null) {
             tagger = Tagger.load(taggerDir);
         }
         logger.info("Speaker for " + taggerDir + " is created");
     }
 
+
+    public Speaker(Map<String, Entity[]> entities,
+                   word2vec w2v,
+                   InputStream phraseFile) throws IOException
+    {
+        loadEntsAndPhs(entities, phraseFile);
+        if (w2v != null) {
+            tagger = new Tagger();
+            tagger.setW2v(w2v);
+        }
+
+        logger.info("word2vex is set");
+    }
 
     @Override
     public double [] tag(String str){
@@ -188,34 +222,14 @@ public class Speaker implements QTExtract {
     }
 
     @Override
-    public Collection<Emit> parseNames(String str){
-        return nameTree.parseText(str);
-    }
+    public Map<String, Collection<Emit>> parseNames(String str){
+        HashMap<String, Collection<Emit>> res = new HashMap<>();
+        for (Map.Entry<String, Trie> e : nameTree.entrySet()){
+            Trie trie = e.getValue();
+            res.put(e.getKey(), trie.parseText(str));
+        }
 
-    @Override
-    public Collection<Emit> parseTitles(String str){
-        return titleTree.parseText(str);
-    }
-
-    private QTDocument getQuoteDoc(QTDocument doc,
-                                   String quote,
-                                   NamedEntity namedEntity)
-    {
-        quote = quote.replaceAll("^Advertisement\\s+", "").trim();
-        QTDocument sDoc = new ENDocumentInfo("", quote);
-        sDoc.setDate(doc.getDate());
-        sDoc.setLink(doc.getLink());
-        sDoc.setLogo(doc.getLogo());
-        sDoc.setSource(doc.getSource());
-
-        sDoc.setAuthor(namedEntity.getName());
-        sDoc.setEntity(namedEntity.getEntity().getName());
-        doc.addTag(namedEntity.getName());
-        sDoc.addTag(namedEntity.getName());
-        doc.addTag(namedEntity.getEntity().getName());
-        sDoc.addTag(namedEntity.getEntity().getName());
-
-        return sDoc;
+        return res;
     }
 
 

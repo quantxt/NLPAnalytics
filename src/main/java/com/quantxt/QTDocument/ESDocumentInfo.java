@@ -5,8 +5,6 @@ import java.net.URL;
 import java.util.*;
 
 import com.google.gson.*;
-import com.quantxt.SearchConcepts.Entity;
-import com.quantxt.SearchConcepts.NamedEntity;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.Speaker;
@@ -14,6 +12,7 @@ import com.quantxt.nlp.types.ExtInterval;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 
+import com.quantxt.types.NamedEntity;
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.sentdetect.SentenceDetectorME;
@@ -25,7 +24,6 @@ import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.snowball.SnowballFilter;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
@@ -283,24 +281,34 @@ public class ESDocumentInfo extends QTDocument {
 		return phrases;
 	}
 
-	private QTDocument getQuoteDoc(String quote,
-								   NamedEntity namedEntity)
-	{
-		quote = quote.replaceAll("^Advertisement\\s+", "").trim();
-		QTDocument sDoc = new ESDocumentInfo("", quote);
-		sDoc.setDate(getDate());
-		sDoc.setLink(getLink());
-		sDoc.setLogo(getLogo());
-		sDoc.setSource(getSource());
+	protected DOCTYPE getVerbType(String verbPhs) {
+		TokenStream result = analyzer.tokenStream(null, verbPhs);
 
-		sDoc.setAuthor(namedEntity.getName());
-		sDoc.setEntity(namedEntity.getEntity().getName());
-		this.addTag(namedEntity.getName());
-		sDoc.addTag(namedEntity.getName());
-		this.addTag(namedEntity.getEntity().getName());
-		sDoc.addTag(namedEntity.getEntity().getName());
+		try {
+			result = new SnowballFilter(result, "Spanish");
+			CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
+			result.reset();
+			List<String> tokens = new ArrayList<>();
+			while (result.incrementToken()) {
+				tokens.add(resultAttr.toString());
+			}
+			result.close();
+			if (tokens.size() == 0) return null;
+			Collection<Emit> emits = verbTree.parseText(String.join(" ", tokens));
+			for (Emit e : emits) {
+				DOCTYPE vType = (DOCTYPE) e.getCustomeData();
+				if (vType == DOCTYPE.Aux) {
+					if (emits.size() == 1) return null;
+					continue;
+				}
+				return vType;
+			}
 
-		return sDoc;
+		} catch (IOException e){
+			logger.error("Error getVerbType: " + e.getMessage());
+		}
+
+		return DOCTYPE.Statement;
 	}
 
 	@Override
@@ -326,20 +334,25 @@ public class ESDocumentInfo extends QTDocument {
             }
 */
 
-			Collection<Emit> name_match_curr = speaker.parseNames(orig);
+			Map<String, Collection<Emit>> name_match_curr = speaker.parseNames(orig);
 
-			if (name_match_curr.size() == 0){
-				Collection<Emit> name_match_befr = speaker.parseNames(origBefore);
-				if (name_match_befr.size() != 1) continue;
-				// simple co-ref for now
-				if (parts[0].equalsIgnoreCase("él") || parts[0].equalsIgnoreCase("el") ||
-						parts[0].equalsIgnoreCase("ella")) {
-					Emit matchedName = name_match_befr.iterator().next();
-					String keyword = matchedName.getKeyword();
-					parts[0] = keyword;
-					rawSent_curr = String.join(" " , parts);
-					Emit shiftedEmit = new Emit(0, keyword.length()-1, keyword, matchedName.getCustomeData());
-					name_match_curr.add(shiftedEmit);
+			if (name_match_curr.size() == 0) {
+				Map<String, Collection<Emit>> name_match_befr = speaker.parseNames(origBefore);
+				for (Map.Entry<String, Collection<Emit>> entType : name_match_befr.entrySet()) {
+					Collection<Emit> ent_set = entType.getValue();
+					if (ent_set.size() != 1) continue;
+					// simple co-ref for now
+					if (parts[0].equalsIgnoreCase("él") || parts[0].equalsIgnoreCase("el") ||
+							parts[0].equalsIgnoreCase("ella"))
+					{
+						Emit matchedName = ent_set.iterator().next();
+						String keyword = matchedName.getKeyword();
+						parts[0] = keyword;
+						rawSent_curr = String.join(" ", parts);
+						Emit shiftedEmit = new Emit(0, keyword.length() - 1, keyword, matchedName.getCustomeData());
+						name_match_curr.put(entType.getKey(), ent_set);
+						//		name_match_curr.add(shiftedEmit);
+					}
 				}
 			}
 
@@ -348,50 +361,45 @@ public class ESDocumentInfo extends QTDocument {
 				continue;
 			}
 
-			Collection<Emit> titles_emet = speaker.parseTitles(orig);
 
-			List<Emit> allemits = new ArrayList<>();
-			allemits.addAll(name_match_curr);
-
-			NamedEntity entity = null;
-
-			QTDocument newQuote = null;
+			QTDocument newQuote = getQuoteDoc(orig);
 			//           if (name_match_curr.size() > 0) {
 			List<ExtInterval> tagged = getNounAndVerbPhrases(rawSent_curr, parts);
-			for (Emit matchedName : name_match_curr) {
-				//       Emit matchedName = name_match_curr.iterator().next();
-				for (int j = 0; j < tagged.size(); j++) {
-					ExtInterval ext = tagged.get(j);
-					if (ext.overlapsWith(matchedName)) {
-						//only if this is a noun type and next one is a verb!
-						if (j == tagged.size() - 1) break;
-						ExtInterval nextExt = tagged.get(j + 1);
-						if (ext.getType().equals("N") && nextExt.getType().equals("V")) {
-							entity = (NamedEntity) matchedName.getCustomeData();
-							newQuote = getQuoteDoc(orig, entity);
-							newQuote.setDocType(QTDocument.DOCTYPE.Action);
-							break;
+			for (Map.Entry<String, Collection<Emit>> entType : name_match_curr.entrySet()){
+				for (Emit matchedName : entType.getValue()) {
+					//       Emit matchedName = name_match_curr.iterator().next();
+					for (int j = 0; j < tagged.size(); j++) {
+						ExtInterval ext = tagged.get(j);
+						if (ext.overlapsWith(matchedName)) {
+							//only if this is a noun type and next one is a verb!
+							if (j + 1 < tagged.size()) {
+								ExtInterval nextExt = tagged.get(j + 1);
+								if (ext.getType().equals("N") && nextExt.getType().equals("V")) {
+									DOCTYPE verbType = getVerbType(rawSent_curr.substring(nextExt.getStart(), nextExt.getEnd()));
+									if (verbType == null) continue;
+									NamedEntity ne = (NamedEntity) matchedName.getCustomeData();
+									newQuote.addEntity(entType.getKey(), ne.getName());
+									newQuote.setDocType(verbType);
+								}
+							} else {
+								if (ext.getType().equals("N")) {
+									DOCTYPE verbType = getVerbType(rawSent_curr);
+									if (verbType == null) continue;
+									NamedEntity ne = (NamedEntity) matchedName.getCustomeData();
+									newQuote.addEntity(entType.getKey(), ne.getName());
+									newQuote.setDocType(verbType);
+								}
+							}
 						}
 					}
 				}
-				if (newQuote != null) break;
 			}
 
-			if (newQuote == null) {
-				//If it is not an action then it is an statement and just pick the first found entity
-				Emit matchedName = name_match_curr.iterator().next();
-				entity = (NamedEntity) matchedName.getCustomeData();
-				newQuote = getQuoteDoc(orig, entity);
-				newQuote.setDocType(QTDocument.DOCTYPE.Statement);
-			}
-			//          }
-
-			if (newQuote == null) {
+			if (newQuote.getEntity() == null) {
 				logger.debug("Entity is still null : " + orig);
 				continue;
 			}
 
-			entitiesFromNamedFound.add(entity.getEntity().getName());
 			// if this entity is a child and parent hasn't been found then this entity should not be added
 			//          if (!topEntitiesFound.contains(entity.getEntity().getName())){
 			//              continue;
@@ -399,13 +407,14 @@ public class ESDocumentInfo extends QTDocument {
 
 			newQuote.setBody(origBefore + " " + orig);
 			quotes.add(newQuote);
-
+/*
 			if (titles_emet.size()  != 0) {
 				Iterator<Emit> it = titles_emet.iterator();
 				while (it.hasNext()) {
 					newQuote.addFacts("Title", it.next().getKeyword());
 				}
 			}
+*/
 		}
 		return quotes;
 	}

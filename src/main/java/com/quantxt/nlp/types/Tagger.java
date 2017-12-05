@@ -1,8 +1,8 @@
 package com.quantxt.nlp.types;
 
-import com.quantxt.QTDocument.ENDocumentInfo;
 import com.quantxt.nlp.word2vec;
 import com.quantxt.types.MapSort;
+import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -27,6 +27,9 @@ public class Tagger {
     private word2vec w2v;
     private HashMap<String, Integer> dictionary;
 
+    public Tagger(){
+
+    }
 
     public static Tagger load(String dirname, String lang) {
         try {
@@ -73,6 +76,10 @@ public class Tagger {
         }
 
         return null;
+    }
+
+    public void setW2v(word2vec w2v){
+        this.w2v = w2v;
     }
 
     public word2vec getW2v() {
