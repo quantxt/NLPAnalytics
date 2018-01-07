@@ -2,8 +2,8 @@ package com.quantxt.QTDocument;
 
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
+import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.nlp.Speaker;
-import com.quantxt.nlp.types.ExtInterval;
 import com.quantxt.types.Entity;
 import org.junit.Assert;
 import org.junit.Test;

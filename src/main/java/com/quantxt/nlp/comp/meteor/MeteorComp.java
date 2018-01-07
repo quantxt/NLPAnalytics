@@ -48,14 +48,15 @@ public class MeteorComp {
         config.setParaFileURL(new File(fileName).toURI().toURL());
         MeteorScorer scorer = new MeteorScorer(config);
         String s1 =
-                "Amazon Web Services announced a new security service called Amazon Macie at an event in New York on Monday .";
+                "Homeowners in high-tax states like New York, New Jersey and California could be big losers as their ability to deduct their local property taxes and state and local income taxes from their federal tax bills is now capped at $10,000. ";
         String s2 =
-                "The trial seeks to leverage the benefits of hosting on Amazon Web Services Cloud platform, while the appropriate security protocols are tested .";
+                "Under the GOP's final tax bill, millions of Americans will lose the tax benefits they enjoy from owning their homes.";
         ArrayList<String> l1 = new ArrayList<>();
         ArrayList<String> l2 = new ArrayList<>();
-        l1.add(endoc.normalize(s1));
-        l2.add(endoc.normalize(s2));
+        l1.add(s1);
+        l2.add(s2);
         MeteorStats stats = scorePlaintext(scorer, l1, l2);
+        logger.info(stats.toString());
 
     }
 }

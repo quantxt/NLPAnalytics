@@ -10,11 +10,13 @@
     "pointed",
     "added",
     "expressed",
+    "disclaim",
     "discussed",
     "published",
     "speak",
     "spoke",
     "reported",
+    "submit",
     "reiterated",
     "announced",
     "emphasized",
@@ -32,7 +34,8 @@
     "called",
     "proposed",
     "signaled",
-    "hinted"
+    "hinted",
+    "acknowledge"
   ],
   "Speculation" : [
     "believe",
@@ -42,7 +45,7 @@
     "think",
     "assume",
     "speculate",
-    "assumed",
+    "estimate",
     "forecasted",
     "predicted"
   ],
@@ -84,7 +87,6 @@
     "failed",
     "made",
     "invested",
-    "bought",
     "retreated",
     "introduced",
     "did",
@@ -94,6 +96,9 @@
     "followed",
     "exceeded",
     "abandon",
+    "agree"
+  ],
+  /*,
     "abate",
     "abduct",
     "ably",
@@ -107,7 +112,7 @@
     "accuse",
     "ache",
     "achieve",
-    "acknowledge",
+
     "acquire",
     "act",
     "activate",
@@ -128,7 +133,6 @@
     "affix",
     "aggressively",
     "agitate",
-    "agree",
     "aid",
     "aim",
     "alert",
@@ -1777,9 +1781,11 @@
     "zap",
     "zip"
   ],
+  */
   "Partnership": [
     "partnered",
     "agreed",
+    "enter",
     "collaborated"
   ],
   "Legal": [
@@ -1792,6 +1798,7 @@
     "granted",
     "cleared",
     "claimed",
+    "amended",
     "jailed",
     "prisoned",
     "questioned",
@@ -1804,7 +1811,7 @@
     "took over",
     "merged"
   ],
-  "Production": [
+  "Development": [
     "unveiled",
     "released",
     "rolled out",
@@ -1819,6 +1826,7 @@
     "made",
     "launched",
     "mocked up",
+    "manufacture",
     "delivered",
     "deployed"
   ],

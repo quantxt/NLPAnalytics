@@ -1,7 +1,7 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
-import com.quantxt.nlp.types.Extraction;
+import com.quantxt.helper.types.Extraction;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 import com.quantxt.types.BaseNameAlts;

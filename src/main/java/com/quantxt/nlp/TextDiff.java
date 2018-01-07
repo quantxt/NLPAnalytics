@@ -20,10 +20,12 @@ public class TextDiff {
     private static Logger logger = LoggerFactory.getLogger(TextDiff.class);
 
     final private TERcost costfunc;
+    final private TERcalc tcalc;
 
     public TextDiff(int delc, int insc, int subc, int shiftc) throws Exception {
         ENDocumentInfo.init(null);
-        TERcalc.setCase(true);
+        tcalc = new TERcalc();
+        tcalc.setCase(true);
         costfunc = new TERcost();
         costfunc._delete_cost = delc;
         costfunc._insert_cost = insc;
@@ -116,7 +118,8 @@ public class TextDiff {
     }
 
     public static TERalignment getAlignment(String sent1, String sent2, TERcost cf){
-        TERalignment result = TERcalc.TER(sent1, sent2, cf);
+        TERcalc tcalc = new TERcalc();
+        TERalignment result = tcalc.TER(sent1, sent2, cf);
         return result;
     }
 
@@ -129,7 +132,7 @@ public class TextDiff {
         sb.append("<html><head><style>.insert {color: blue;}" +
                 "</style></head><body>");
         for (int i=0; i < text1List.size(); i++) {
-            TERalignment result = TERcalc.TER(text1List.get(i), text2List.get(i), costfunc);
+            TERalignment result = tcalc.TER(text1List.get(i), text2List.get(i), costfunc);
             sb.append("<div>");
             char[] alignmentResult = result.alignment;
 

@@ -39,21 +39,6 @@ public class Speaker implements QTExtract {
     private Tagger tagger = null;
     private ConcurrentHashMap<String, Double> tokenRank;
 
-    /*
-    static {
-        Trie.TrieBuilder trie = Trie.builder().onlyWholeWords();
-        try {
-            List<String> lines = IOUtils.readLines(Speaker.class.getClassLoader().getResource("acronym.txt").openStream(), "UTF-8");
-        for (String l : lines){
-            trie.addKeyword(l);
-        }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        acronymTree = trie.build();
-    }
-    */
-
     public Map<String, Double> popTokenRank(List<String> tokens, int nums){
         word2vec w2v = tagger.getW2v();
         if (w2v == null) return null;

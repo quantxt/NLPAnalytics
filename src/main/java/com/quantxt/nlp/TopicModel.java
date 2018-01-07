@@ -1,14 +1,12 @@
 package com.quantxt.nlp;
 
 
-import com.quantxt.QTDocument.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.nlp.comp.TERalignment;
 import com.quantxt.nlp.comp.TERcalc;
 import com.quantxt.nlp.comp.TERcost;
 import com.quantxt.trie.Trie;
 import com.quantxt.types.MapSort;
-import com.quantxt.types.StringDouble;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +51,10 @@ public class TopicModel {
     }
 
     public TopicModel(){
-        TERcalc.setCase(true);
-        TERcalc.setShiftDist(10);
-        TERcalc.setBeamWidth(5);
+        TERcalc tcalc = new TERcalc();
+        tcalc.setCase(true);
+        tcalc.setShiftDist(10);
+        tcalc.setBeamWidth(5);
 
 //        tokenFactor = new LinePreProcess(doc);
 //        tokenFactor.setTokenPreProcessor(new TextPreProcessor());
@@ -73,7 +72,7 @@ public class TopicModel {
 //        pipe = getPipe();
     }
 
-    public StringDouble getBestTag(String str) {
+    public Map.Entry<String, Double> getBestTag(String str) {
         double[] tvec = getSentenceVector(str);
         Map<String, Double> vals = new HashMap<>();
         double avg = 0;
@@ -95,7 +94,7 @@ public class TopicModel {
         if (max < .1 || max / avg < 1.3){
             logger.warn("All tags are likely!.. model is not sharp enough");
         }
-        return new StringDouble(firstEntry.getKey(), firstEntry.getValue());
+        return firstEntry;
     }
 
     /*
@@ -177,7 +176,8 @@ public class TopicModel {
     public double cosineSimilarityTER(String s1, String s2) {
 
         TERcost cf = getCostFunction();
-        TERalignment align = TERcalc.TER(s1, s2, cf);
+        TERcalc tcalc = new TERcalc();
+        TERalignment align = tcalc.TER(s1, s2, cf);
         double wer = align.numEdits / align.numWords;
         if (wer > .8) return 0;
         List<List<String>> l1 = getSentenceVectorSequence(s1);
@@ -185,8 +185,8 @@ public class TopicModel {
 
         if (l1 == null || l2 == null) return 0;
 
-        TERalignment alignP = TERcalc.TER(String.join(" ", l2.get(0)), String.join(" " , l1.get(0)), cf);
-        TERalignment alignN = TERcalc.TER(String.join(" ", l2.get(1)), String.join(" " , l1.get(1)), cf);
+        TERalignment alignP = tcalc.TER(String.join(" ", l2.get(0)), String.join(" " , l1.get(0)), cf);
+        TERalignment alignN = tcalc.TER(String.join(" ", l2.get(1)), String.join(" " , l1.get(1)), cf);
 
         double werP = alignP.numEdits / alignP.numWords;
         double werN = alignN.numEdits / alignN.numWords;
@@ -487,9 +487,9 @@ public class TopicModel {
                 if (!line.matches("^([A-Z]).*")) continue;
                 if (line.length() > 50) continue;
 
-                StringDouble bestTag = getBestTag(line);
+                Map.Entry<String, Double> bestTag = getBestTag(line);
 
-                if (bestTag == null || bestTag.getVal() < .5) continue;
+                if (bestTag == null || bestTag.getValue() < .5) continue;
                 Files.write(Paths.get(phraseFileName), (line + "\n").getBytes(), StandardOpenOption.APPEND);
                 line = line.replaceAll("[_\\-]+", " ");
                 line = line.replaceAll("[^A-Za-z\\s]+", "").trim();

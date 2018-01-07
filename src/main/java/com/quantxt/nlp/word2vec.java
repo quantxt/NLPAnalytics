@@ -155,7 +155,7 @@ public class word2vec {
     }
 
     public static void main(String[] args) throws Exception {
-        FileInputStream fi = new FileInputStream(new File("/Users/matin/git/TxtAlign/skwidalarr"));
+        FileInputStream fi = new FileInputStream(new File("test.txtx"));
         String out = "w2v";
         word2vec w2v = new word2vec(2);
         w2v.train(fi, out, 10, true);

@@ -4,14 +4,12 @@ import java.io.*;
 import java.net.URL;
 import java.util.*;
 
-import com.google.gson.*;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
+import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.nlp.Speaker;
-import com.quantxt.nlp.types.ExtInterval;
-import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
-import com.quantxt.types.NamedEntity;
+import com.quantxt.types.Entity;
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.sentdetect.SentenceDetectorME;
@@ -20,29 +18,26 @@ import opennlp.tools.sentdetect.SentenceModel;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
-import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.snowball.SnowballFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.quantxt.QTDocument.QTHelper.removePrnts;
-
 public class ENDocumentInfo extends QTDocument {
 
 	private static final Logger logger = LoggerFactory.getLogger(ENDocumentInfo.class);
-	private static final Analyzer analyzer = new StandardAnalyzer();
-
-	private String rawText;
-
 	private static SentenceDetectorME sentenceDetector = null;
 	private static POSTaggerME posModel = null;
-	private static CharArraySet stopwords = null;
-
-	private static Trie verbTree   = null;
+	private static Analyzer analyzer;
+	private static CharArraySet stopwords;
+	private static HashSet<String> pronouns;
+	private static Trie verbTree;
 	
 	public ENDocumentInfo (String body, String title) {
 		super(body, title);
@@ -52,7 +47,6 @@ public class ENDocumentInfo extends QTDocument {
 	public ENDocumentInfo (Elements body, String title) {
 		super(body.html(), title);
 		rawText = body.text();
-		language = Language.ENGLISH;
 	}
 
 	public static boolean isStopWord(String p){
@@ -63,6 +57,11 @@ public class ENDocumentInfo extends QTDocument {
 		//Already initialized
 		if (sentenceDetector != null) return;
 
+		pronouns = new HashSet<>();
+		pronouns.add("he");
+		pronouns.add("she");
+
+		analyzer = new StandardAnalyzer();
 		URL url = ENDocumentInfo.class.getClassLoader().getResource("en/en-sent.bin");
 		SentenceModel sentenceModel = new SentenceModel(url.openStream());
 		sentenceDetector = new SentenceDetectorME(sentenceModel);
@@ -83,56 +82,11 @@ public class ENDocumentInfo extends QTDocument {
 		}
 
 		//verbs
-		JsonParser parser = new JsonParser();
-		Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().ignoreCase();
 
-		url = Speaker.class.getClassLoader().getResource("en/context.json");
-
-		byte[] contextArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
-				IOUtils.toByteArray(url.openStream());
-
-
-		JsonElement jsonElement = parser.parse(new String(contextArr, "UTF-8"));
-		JsonObject contextJson = jsonElement.getAsJsonObject();
-		for (Map.Entry<String, JsonElement> entry : contextJson.entrySet()) {
-			String context_key = entry.getKey();
-			DOCTYPE verbTybe = DOCTYPE.Statement;
-			switch (context_key) {
-				case "Speculation" : verbTybe = DOCTYPE.Speculation;
-					break;
-				case "Action" : verbTybe = DOCTYPE.Action;
-					break;
-				case "Partnership" : verbTybe = DOCTYPE.Partnership;
-					break;
-				case "Legal" : verbTybe = DOCTYPE.Legal;
-					break;
-				case "Acquisition" : verbTybe = DOCTYPE.Acquisition;
-					break;
-				case "Production" : verbTybe = DOCTYPE.Production;
-					break;
-				case "Aux" : verbTybe = DOCTYPE.Aux;
-					break;
-				case "Employment" : verbTybe = DOCTYPE.Employment;
-					break;
-			}
-
-			JsonArray context_arr = entry.getValue().getAsJsonArray();
-			for (JsonElement e : context_arr) {
-				String verb = e.getAsString();
-				TokenStream result = analyzer.tokenStream(null, verb);
-				result = new SnowballFilter(result, "English");
-				CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
-				result.reset();
-
-				List<String> tokens = new ArrayList<>();
-				while (result.incrementToken()) {
-					tokens.add(resultAttr.toString());
-				}
-				result.close();
-				verbs.addKeyword(String.join(" ", tokens), verbTybe);
-			}
-		}
-		verbTree = verbs.build();
+		byte[] verbArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
+				IOUtils.toByteArray(ENDocumentInfo.class.getClassLoader().getResource("en/context.json").openStream());
+		QTDocument doc = new ENDocumentInfo("", "");
+		verbTree = doc.buildVerbTree(verbArr);
 		logger.info("English models initiliazed");
 	}
 	
@@ -143,15 +97,33 @@ public class ENDocumentInfo extends QTDocument {
 		return null;
 	}
 
+	@Override
+	public Trie getVerbTree(){
+		return verbTree;
+	}
+
+	@Override
+	public List<String> tokenize(String str) throws IOException {
+		TokenStream result = analyzer.tokenStream(null, str);
+		result = new SnowballFilter(result, "English");
+
+		CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
+		result.reset();
+		List<String> tokens = new ArrayList<>();
+		while (result.incrementToken()) {
+			tokens.add(resultAttr.toString());
+		}
+		result.close();
+		return tokens;
+	}
+
 	public static synchronized ArrayList<String> stemmer(String str){
 		ArrayList<String> postEdit = new ArrayList<>();
 
 		try {
 			TokenStream stream  = analyzer.tokenStream(null, new StringReader(str));
 			stream = new StopFilter(stream, stopwords);
-			//	stream = new SnowballFilter(stream, new SpanishStemmer());
 			CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
-
 			stream.reset();
 			while (stream.incrementToken()) {
 				String term = charTermAttribute.toString();
@@ -173,15 +145,6 @@ public class ENDocumentInfo extends QTDocument {
 	@Override
 	public String normalize(String string)
 	{
-//		string = string.replaceAll("\\\\\"","\"");
-//		string = string.replaceAll("\\\\n","");
-//		string = string.replaceAll("\\\\r","");
-//		string = string.replaceAll("\\\\t","");
-//		string = string.replaceAll("[\\&\\!\\“\\”\\$\\=\\>\\<_\\'\\’\\-\\—\"\\‘\\.\\/\\(\\),?;:\\*\\|\\]\\[\\@\\#\\s+]+", " ");
-//		string = string.replaceAll("\\b\\d+\\b", "");
-//		string = string.replaceAll(" " , " ");
-	//	string = string.toLowerCase().trim();
-
 		ArrayList<String> postEdit = stemmer(string);
 		return String.join(" ", postEdit);
 	}
@@ -218,7 +181,7 @@ public class ENDocumentInfo extends QTDocument {
 		return tags;
 	}
 
-	private static boolean isTagDC(String tag){
+	private boolean isTagDC(String tag){
 		return tag.equals("IN") || tag.equals("TO") || tag.equals("CC") || tag.equals("DT");
 	}
 
@@ -229,6 +192,8 @@ public class ENDocumentInfo extends QTDocument {
 
 
 	//https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
+
+	@Override
 	protected List<ExtInterval> getNounAndVerbPhrases(String orig,
 													  String[] parts){
 		int numTokens = parts.length;
@@ -237,8 +202,8 @@ public class ENDocumentInfo extends QTDocument {
 		List<ExtInterval> phrases = new ArrayList<>();
 		String type = "X";
 		for (int j=numTokens-1; j>=0; j--){
-			String tag = taags[j];
-			String word = parts[j];
+			final String tag = taags[j];
+			final String word = parts[j];
 			if ( isTagDC(tag) ) {
 				int nextIdx = j - 1;
 				if (nextIdx < 0) continue;
@@ -252,7 +217,7 @@ public class ENDocumentInfo extends QTDocument {
 				}
 				continue;
 			}
-			if (tag.startsWith("NN")){
+			if (tag.startsWith("NN") || tag.equals("PRP")){
 				if (!type.equals("N") && tokenList.size() >0){
 					Collections.reverse(tokenList);
 					String str = String.join(" ", tokenList);
@@ -320,242 +285,38 @@ public class ENDocumentInfo extends QTDocument {
 		return phrases;
 	}
 
-	protected DOCTYPE getVerbType(String verbPhs) {
-		TokenStream result = analyzer.tokenStream(null, verbPhs);
+	public static void main(String[] args) throws Exception {
+		ENDocumentInfo.init(null);
+		ESDocumentInfo.init(null);
 
-		try {
-			result = new SnowballFilter(result, "English");
-			CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
-			result.reset();
-			List<String> tokens = new ArrayList<>();
-			while (result.incrementToken()) {
-				tokens.add(resultAttr.toString());
-			}
+		ArrayList<Entity> entityArray1 = new ArrayList<>();
+		entityArray1.add(new Entity("We" , new String[]{"we" , "We", "Company", "company", "We did", "we did", "we've", "we have" , "we will" , "we'll" , "our", "we were"} , true));
+		Map<String, Entity[]> entMap = new HashMap<>();
+		entMap.put("Subject" , entityArray1.toArray(new Entity[entityArray1.size()]));
+		Speaker enx = new Speaker(entMap, (String)null, null);
 
-			result.close();
-			if (tokens.size() == 0) return null;
-			Collection<Emit> emits = verbTree.parseText(String.join(" ", tokens));
-			for (Emit e : emits) {
-				DOCTYPE vType = (DOCTYPE) e.getCustomeData();
-				if (vType == DOCTYPE.Aux) {
-					if (emits.size() == 1) return null;
-					continue;
-				}
-				return vType;
-			}
+		String url = "https://www.sec.gov/Archives/edgar/data/1594337/000155837017009458/R15.htm";
+		String out = Jsoup.connect(url)
+				.followRedirects(true)
+				.referrer("http://www.google.com")
+				.ignoreContentType(true)
+				.timeout(10000)
+				.method(Connection.Method.GET)
+				.get()
+				.body()
+				.text();
 
-		} catch (IOException e){
-			logger.error("Error getVerbType: " + e.getMessage());
+//		String out = "This is a book. To address this unmet medical need, we offer our PEER Online technology to analyze an individual’s digital Quantitative EEG , correlating the individual’s QEEG features with medication outcomes in our proprietary database of over 10,000 unique patients to predict the efficacy of psychotropic medications by class and individual medication .";
+		QTDocument doc = QTDocumentFactory.createQTDoct(out, "MYnd Analytics, Inc.");
+		doc.processDoc();
+
+		ArrayList<QTDocument> qts = doc.extractEntityMentions(enx);
+		for (QTDocument dc : qts){
+			if (dc.getDocType() == null) continue;
+			logger.info(dc.getDocType() + " / " + dc.getTitle());
 		}
 
-		return DOCTYPE.Statement;
+
 	}
-
-	@Override
-	public ArrayList<QTDocument> extractEntityMentions(QTExtract speaker) {
-		ArrayList<QTDocument> quotes = new ArrayList<>();
-		List<String> sents = getSentences();
-		int numSent = sents.size();
-	//	Set<String> entitiesFromNamedFound = new HashSet<>();
-
-		for (int i = 0; i < numSent; i++) {
-			final String orig = removePrnts(sents.get(i)).trim();
-			final String origBefore = i == 0 ? title : removePrnts(sents.get(i - 1)).trim();
-
-			String rawSent_curr = orig;
-			String [] parts = rawSent_curr.split("\\s+");
-			int numTokens = parts.length;
-			if (numTokens < 6 || numTokens > 80) continue;
-/*
-            try {
-                Files.write(Paths.get("snp500.txt"), (orig  +"\n").getBytes(), StandardOpenOption.APPEND);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-*/
-
-			Map<String, Collection<Emit>> name_match_curr = speaker.parseNames(orig);
-
-			if (name_match_curr.size() == 0) {
-				Map<String, Collection<Emit>> name_match_befr = speaker.parseNames(origBefore);
-				for (Map.Entry<String, Collection<Emit>> entType : name_match_befr.entrySet()) {
-					Collection<Emit> ent_set = entType.getValue();
-					if (ent_set.size() != 1) continue;
-					// simple co-ref for now
-					if (parts[0].equalsIgnoreCase("he") || parts[0].equalsIgnoreCase("she")) {
-						Emit matchedName = ent_set.iterator().next();
-						String keyword = matchedName.getKeyword();
-						parts[0] = keyword;
-						rawSent_curr = String.join(" ", parts);
-						Emit shiftedEmit = new Emit(0, keyword.length() - 1, keyword, matchedName.getCustomeData());
-						name_match_curr.put(entType.getKey(), ent_set);
-				//		name_match_curr.add(shiftedEmit);
-					}
-				}
-			}
-
-			//if still no emit continue
-			if (name_match_curr.size() == 0){
-				continue;
-			}
-
-	//		Collection<Emit> titles_emet = speaker.parseTitles(orig);
-
-	//		Map<String, Collection<Emit>> allemits = new HashMap<>();
-	//		allemits.putAll(name_match_curr);
-
-			QTDocument newQuote = getQuoteDoc(orig);
-			//           if (name_match_curr.size() > 0) {
-			List<ExtInterval> tagged = getNounAndVerbPhrases(rawSent_curr, parts);
-			for (Map.Entry<String, Collection<Emit>> entType : name_match_curr.entrySet()){
-				for (Emit matchedName : entType.getValue()) {
-					//       Emit matchedName = name_match_curr.iterator().next();
-					for (int j = 0; j < tagged.size(); j++) {
-						ExtInterval ext = tagged.get(j);
-						if (ext.overlapsWith(matchedName)) {
-							//only if this is a noun type and next one is a verb!
-							if (j + 1 < tagged.size()) {
-								ExtInterval nextExt = tagged.get(j + 1);
-								if (ext.getType().equals("N") && nextExt.getType().equals("V")) {
-									DOCTYPE verbType = getVerbType(rawSent_curr.substring(nextExt.getStart(), nextExt.getEnd()));
-									if (verbType == null) continue;
-									NamedEntity ne = (NamedEntity) matchedName.getCustomeData();
-									newQuote.addEntity(entType.getKey(), ne.getName());
-									newQuote.setDocType(verbType);
-								}
-							} else {
-								if (ext.getType().equals("N")) {
-									DOCTYPE verbType = getVerbType(rawSent_curr);
-									if (verbType == null) continue;
-									NamedEntity ne = (NamedEntity) matchedName.getCustomeData();
-									newQuote.addEntity(entType.getKey(), ne.getName());
-									newQuote.setDocType(verbType);
-								}
-							}
-						}
-					}
-				}
-			}
-
-			/*
-			TODO: enable this?
-			if (newQuote == null) {
-				//If it is not an action then it is an statement and just pick the first found entity
-				Emit matchedName = name_match_curr.iterator().next();
-				entity = (NamedEntity) matchedName.getCustomeData();
-				newQuote = getQuoteDoc(orig, entity);
-				newQuote.setDocType(QTDocument.DOCTYPE.Statement);
-			}
-			*/
-			//          }
-
-			if (newQuote.getEntity() == null) {
-				logger.debug("Entity is still null or Verb type is not detected: " + orig);
-				continue;
-			}
-
-	//		entitiesFromNamedFound.add(entity.getEntity().getName());
-
-			// if this entity is a child and parent hasn't been found then this entity should not be added
-			//          if (!topEntitiesFound.contains(entity.getEntity().getName())){
-			//              continue;
-			//          }
-
-			newQuote.setBody(origBefore + " " + orig);
-			quotes.add(newQuote);
-/*
-			if (titles_emet.size()  != 0) {
-				Iterator<Emit> it = titles_emet.iterator();
-				while (it.hasNext()) {
-					newQuote.addFacts("Title", it.next().getKeyword());
-				}
-			}
-*/		}
-		return quotes;
-	}
-
-	/*
-	@Override
-	public ArrayList<QTDocument> extractEntityMentions(QTExtract speaker) {
-		ArrayList<QTDocument> quotes = new ArrayList<>();
-		List<String> sents = getSentences();
-		int numSent = sents.size();
-
-		for (int i = 0; i < numSent; i++) {
-			final String orig = removePrnts(sents.get(i)).trim();
-			final String origBefore = i == 0 ? title : removePrnts(sents.get(i - 1)).trim();
-
-			String rawSent_curr = orig;
-			String [] parts = rawSent_curr.split("\\s+");
-			int numTokens = parts.length;
-			if (numTokens < 6 || numTokens > 80) continue;
-
-			ArrayList<Emit> name_match_curr = new ArrayList<>(speaker.parseNames(orig));
-
-			if (name_match_curr.size() == 0){
-				Map<String, Collection<Emit>> name_match_befr = speaker.parseNames(origBefore);
-				for (Map.Entry<String, Collection<Emit>> entType : name_match_befr.entrySet()) {
-					Collection<Emit> ent_set = entType.getValue();
-					if (ent_set.size() != 1) continue;
-
-			//	Map<String, Collection<Emit>> name_match_befr = speaker.parseNames(origBefore);
-			//	if (name_match_befr.size() == 1) {
-					// simple co-ref for now
-					if (parts[0].equalsIgnoreCase("he") || parts[0].equalsIgnoreCase("she")) {
-
-						Emit matchedName = ent_set.iterator().next();
-						String keyword = matchedName.getKeyword();
-						parts[0] = keyword;
-						rawSent_curr = String.join(" ", parts);
-						Emit shiftedEmit = new Emit(0, keyword.length() - 1, keyword, matchedName.getCustomeData());
-						name_match_curr.add(shiftedEmit);
-					}
-				}
-			}
-
-	//		List<Emit> allemits = new ArrayList<>();
-	//		allemits.addAll(name_match_curr);
-
-			NamedEntity entity = (name_match_curr != null && name_match_curr.size() > 0) ?
-					(NamedEntity) name_match_curr.get(0).getCustomeData() :
-					null;
-
-			QTDocument newQuote = null;
-			List<ExtInterval> tagged = getNounAndVerbPhrases(rawSent_curr, parts);
-
-			for (int j = 0; j < tagged.size(); j++) {
-				ExtInterval ext = tagged.get(j);
-				//only if this is a noun type and next one is a verb!
-				if (j == tagged.size() - 1) break;
-				ExtInterval nextExt = tagged.get(j + 1);
-				if (ext.getType().equals("N") && nextExt.getType().equals("V")) {
-					DOCTYPE verbType = getVerbType(rawSent_curr.substring(nextExt.getStart(), nextExt.getEnd()));
-					if (verbType == null) continue;
-					newQuote = getQuoteDoc(orig, entity);
-					newQuote.setDocType(verbType);
-					break;
-				}
-			}
-
-			if (newQuote == null) {
-				logger.debug("Entity is still null or Verb type is not detected: " + orig);
-				continue;
-			}
-
-			newQuote.setBody(origBefore + " " + orig);
-			quotes.add(newQuote);
-
-
-	//		if (titles_emet.size()  != 0) {
-	//			Iterator<Emit> it = titles_emet.iterator();
-	//			while (it.hasNext()) {
-	//				newQuote.addFacts("Title", it.next().getKeyword());
-	//			}
-	//		}
-
-		}
-		return quotes;
-	}
-	*/
 }
 

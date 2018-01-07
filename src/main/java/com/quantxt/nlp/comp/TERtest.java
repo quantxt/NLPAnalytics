@@ -133,11 +133,12 @@ public class TERtest {
         if (!verifyFormats(in_ref_format, in_hyp_format, formats)) System.exit(1);
 
         // set options to compute TER
-        TERcalc.setNormalize(normalized);
-        TERcalc.setCase(caseon);
-        TERcalc.setPunct(nopunct);
-        TERcalc.setBeamWidth(beam_width);
-        TERcalc.setShiftDist(shift_dist);
+        TERcalc tcalc = new TERcalc();
+        tcalc.setNormalize(normalized);
+        tcalc.setCase(caseon);
+        tcalc.setPunct(nopunct);
+        tcalc.setBeamWidth(beam_width);
+        tcalc.setShiftDist(shift_dist);
 
         // 5. prepare output streams, xml, pra, and ter
         BufferedWriter xml_out = openFile(formats, "xml", out_pfx, hyp_fn, ref_fn, reflen_fn, caseon);
@@ -361,7 +362,9 @@ public class TERtest {
             System.exit(1);
         }
 
-        TERcalc.setRefLen(reflens);
+        TERcalc tcalc = new TERcalc();
+
+        tcalc.setRefLen(reflens);
     /* For each reference, compute the TER */
         for (int i = 0; i < refs.size(); ++i) {
             ref = (String) refs.get(i);
@@ -369,11 +372,11 @@ public class TERtest {
                 refid = (String) refids.get(i);
 
             if (has_span) {
-                TERcalc.setRefSpan(refspan);
-                TERcalc.setHypSpan(hypspan);
+                tcalc.setRefSpan(refspan);
+                tcalc.setHypSpan(hypspan);
             }
 
-            TERalignment result = TERcalc.TER(hyp, ref, costfunc);
+            TERalignment result = tcalc.TER(hyp, ref, costfunc);
 
             if ((bestresult == null) || (bestresult.numEdits > result.numEdits)) {
                 bestresult = result;

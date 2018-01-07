@@ -4,15 +4,12 @@ import java.io.*;
 import java.net.URL;
 import java.util.*;
 
-import com.google.gson.*;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
-import com.quantxt.nlp.Speaker;
-import com.quantxt.nlp.types.ExtInterval;
+import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.trie.Emit;
-import com.quantxt.trie.Trie;
 
-import com.quantxt.types.NamedEntity;
+import com.quantxt.trie.Trie;
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.sentdetect.SentenceDetectorME;
@@ -30,21 +27,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tartarus.snowball.ext.SpanishStemmer;
 
-import static com.quantxt.QTDocument.QTHelper.removePrnts;
-
 public class ESDocumentInfo extends QTDocument {
 
 	private static final Logger logger = LoggerFactory.getLogger(ESDocumentInfo.class);
-	private static final Analyzer analyzer = new SpanishAnalyzer();
-
-	private static CharArraySet stopwords = null;
-
-	private static Trie verbTree   = null;
-
-	private String rawText;
-
 	private static SentenceDetectorME sentenceDetector = null;
 	private static POSTaggerME posModel = null;
+	private static Analyzer analyzer;
+	private static CharArraySet stopwords;
+	private static HashSet<String> pronouns;
+	private static Trie verbTree;
 
 	public ESDocumentInfo (String body, String title) {
 		super(body, title);
@@ -64,6 +55,11 @@ public class ESDocumentInfo extends QTDocument {
 	public static void init(InputStream contextFile) throws Exception{
 		if( sentenceDetector != null) return;
 
+		pronouns = new HashSet<>();
+		pronouns.add("él");
+		pronouns.add("ella");
+
+		analyzer = new SpanishAnalyzer();
 		URL url = ESDocumentInfo.class.getClassLoader().getResource("en/en-sent.bin");
 		SentenceModel sentenceModel = new SentenceModel(url.openStream());
 		sentenceDetector = new SentenceDetectorME(sentenceModel);
@@ -82,28 +78,13 @@ public class ESDocumentInfo extends QTDocument {
 		} catch (IOException e) {
 			logger.equals(e.getMessage());
 		}
+
 		//verbs
-		JsonParser parser = new JsonParser();
-		Trie.TrieBuilder verbs = Trie.builder().onlyWholeWords().ignoreCase();
+		byte[] verbArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
+				IOUtils.toByteArray(ESDocumentInfo.class.getClassLoader().getResource("es/context.json").openStream());
 
-		url = Speaker.class.getClassLoader().getResource("en/context.json");
-
-		byte[] contextArr = contextFile != null ? IOUtils.toByteArray(contextFile) :
-				IOUtils.toByteArray(url.openStream());
-
-		ESDocumentInfo tmpDoc = new ESDocumentInfo("", "");
-		JsonElement jsonElement = parser.parse(new String(contextArr, "UTF-8"));
-		JsonObject contextJson = jsonElement.getAsJsonObject();
-		for (Map.Entry<String, JsonElement> entry : contextJson.entrySet()) {
-			String context_key = entry.getKey();
-			JsonArray context_arr = entry.getValue().getAsJsonArray();
-			for (JsonElement e : context_arr) {
-				//	String verb = TextNormalizer.normalize(e.getAsString());
-				String verb = tmpDoc.normalize(e.getAsString());
-				verbs.addKeyword(verb, context_key);
-			}
-		}
-		verbTree = verbs.build();
+		QTDocument doc = new ESDocumentInfo("", "");
+		verbTree = doc.buildVerbTree(verbArr);
 
 		logger.info("Spanish models initiliazed");
 	}
@@ -126,6 +107,26 @@ public class ESDocumentInfo extends QTDocument {
 
 		}
 		return postEdit;
+	}
+
+	@Override
+	public Trie getVerbTree(){
+		return verbTree;
+	}
+
+	@Override
+	public List<String> tokenize(String str) throws IOException {
+		TokenStream result = analyzer.tokenStream(null, str);
+		result = new SnowballFilter(result, "Spanish");
+
+		CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
+		result.reset();
+		List<String> tokens = new ArrayList<>();
+		while (result.incrementToken()) {
+			tokens.add(resultAttr.toString());
+		}
+		result.close();
+		return tokens;
 	}
 
 	@Override
@@ -190,7 +191,8 @@ public class ESDocumentInfo extends QTDocument {
 	}
 
 	//https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
-	private List<ExtInterval> getNounAndVerbPhrases(String orig,
+	@Override
+	protected List<ExtInterval> getNounAndVerbPhrases(String orig,
 													String [] parts){
 		int numTokens = parts.length;
 		String [] taags = getPosTags(parts);
@@ -213,7 +215,7 @@ public class ESDocumentInfo extends QTDocument {
 				}
 				continue;
 			}
-			if (tag.startsWith("N")){
+			if ( (tag.startsWith("N") || (tag.startsWith("P"))) ){
 				if (!type.equals("N") && tokenList.size() >0){
 					Collections.reverse(tokenList);
 					String str = String.join(" ", tokenList);
@@ -279,143 +281,5 @@ public class ESDocumentInfo extends QTDocument {
 
 		Collections.reverse(phrases);
 		return phrases;
-	}
-
-	protected DOCTYPE getVerbType(String verbPhs) {
-		TokenStream result = analyzer.tokenStream(null, verbPhs);
-
-		try {
-			result = new SnowballFilter(result, "Spanish");
-			CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
-			result.reset();
-			List<String> tokens = new ArrayList<>();
-			while (result.incrementToken()) {
-				tokens.add(resultAttr.toString());
-			}
-			result.close();
-			if (tokens.size() == 0) return null;
-			Collection<Emit> emits = verbTree.parseText(String.join(" ", tokens));
-			for (Emit e : emits) {
-				DOCTYPE vType = (DOCTYPE) e.getCustomeData();
-				if (vType == DOCTYPE.Aux) {
-					if (emits.size() == 1) return null;
-					continue;
-				}
-				return vType;
-			}
-
-		} catch (IOException e){
-			logger.error("Error getVerbType: " + e.getMessage());
-		}
-
-		return DOCTYPE.Statement;
-	}
-
-	@Override
-	public ArrayList<QTDocument> extractEntityMentions(QTExtract speaker) {
-		ArrayList<QTDocument> quotes = new ArrayList<>();
-		List<String> sents = getSentences();
-		int numSent = sents.size();
-		Set<String> entitiesFromNamedFound = new HashSet<>();
-
-		for (int i = 0; i < numSent; i++) {
-			final String orig = removePrnts(sents.get(i)).trim();
-			final String origBefore = i == 0 ? title : removePrnts(sents.get(i - 1)).trim();
-
-			String rawSent_curr = orig;
-			String [] parts = rawSent_curr.split("\\s+");
-			int numTokens = parts.length;
-			if (numTokens < 6 || numTokens > 80) continue;
-/*
-            try {
-                Files.write(Paths.get("snp500.txt"), (orig  +"\n").getBytes(), StandardOpenOption.APPEND);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-*/
-
-			Map<String, Collection<Emit>> name_match_curr = speaker.parseNames(orig);
-
-			if (name_match_curr.size() == 0) {
-				Map<String, Collection<Emit>> name_match_befr = speaker.parseNames(origBefore);
-				for (Map.Entry<String, Collection<Emit>> entType : name_match_befr.entrySet()) {
-					Collection<Emit> ent_set = entType.getValue();
-					if (ent_set.size() != 1) continue;
-					// simple co-ref for now
-					if (parts[0].equalsIgnoreCase("él") || parts[0].equalsIgnoreCase("el") ||
-							parts[0].equalsIgnoreCase("ella"))
-					{
-						Emit matchedName = ent_set.iterator().next();
-						String keyword = matchedName.getKeyword();
-						parts[0] = keyword;
-						rawSent_curr = String.join(" ", parts);
-						Emit shiftedEmit = new Emit(0, keyword.length() - 1, keyword, matchedName.getCustomeData());
-						name_match_curr.put(entType.getKey(), ent_set);
-						//		name_match_curr.add(shiftedEmit);
-					}
-				}
-			}
-
-			//if still no emit continue
-			if (name_match_curr.size() == 0){
-				continue;
-			}
-
-
-			QTDocument newQuote = getQuoteDoc(orig);
-			//           if (name_match_curr.size() > 0) {
-			List<ExtInterval> tagged = getNounAndVerbPhrases(rawSent_curr, parts);
-			for (Map.Entry<String, Collection<Emit>> entType : name_match_curr.entrySet()){
-				for (Emit matchedName : entType.getValue()) {
-					//       Emit matchedName = name_match_curr.iterator().next();
-					for (int j = 0; j < tagged.size(); j++) {
-						ExtInterval ext = tagged.get(j);
-						if (ext.overlapsWith(matchedName)) {
-							//only if this is a noun type and next one is a verb!
-							if (j + 1 < tagged.size()) {
-								ExtInterval nextExt = tagged.get(j + 1);
-								if (ext.getType().equals("N") && nextExt.getType().equals("V")) {
-									DOCTYPE verbType = getVerbType(rawSent_curr.substring(nextExt.getStart(), nextExt.getEnd()));
-									if (verbType == null) continue;
-									NamedEntity ne = (NamedEntity) matchedName.getCustomeData();
-									newQuote.addEntity(entType.getKey(), ne.getName());
-									newQuote.setDocType(verbType);
-								}
-							} else {
-								if (ext.getType().equals("N")) {
-									DOCTYPE verbType = getVerbType(rawSent_curr);
-									if (verbType == null) continue;
-									NamedEntity ne = (NamedEntity) matchedName.getCustomeData();
-									newQuote.addEntity(entType.getKey(), ne.getName());
-									newQuote.setDocType(verbType);
-								}
-							}
-						}
-					}
-				}
-			}
-
-			if (newQuote.getEntity() == null) {
-				logger.debug("Entity is still null : " + orig);
-				continue;
-			}
-
-			// if this entity is a child and parent hasn't been found then this entity should not be added
-			//          if (!topEntitiesFound.contains(entity.getEntity().getName())){
-			//              continue;
-			//          }
-
-			newQuote.setBody(origBefore + " " + orig);
-			quotes.add(newQuote);
-/*
-			if (titles_emet.size()  != 0) {
-				Iterator<Emit> it = titles_emet.iterator();
-				while (it.hasNext()) {
-					newQuote.addFacts("Title", it.next().getKeyword());
-				}
-			}
-*/
-		}
-		return quotes;
 	}
 }
