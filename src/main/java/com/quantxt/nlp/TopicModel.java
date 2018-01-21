@@ -166,7 +166,6 @@ public class TopicModel {
             }
             for (int i =0; i <numTopics; i++){
                 double d = ldatopic.getWeights()[i];
-//                if (d < .01) continue;
                 probs[i] += d;
             }
         }

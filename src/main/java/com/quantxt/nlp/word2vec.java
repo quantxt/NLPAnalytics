@@ -1,6 +1,6 @@
 package com.quantxt.nlp;
 
-import com.quantxt.QTDocument.ENDocumentInfo;
+import com.quantxt.doc.ENDocumentInfo;
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -143,7 +143,6 @@ public class word2vec {
     //        logger.info("sim: " + sim );
         }
         logger.info("Training word2vec finished.");
-
 
         /*
         double sim = wordVectors.similarity(TextNormalizer.normalize("mobile"), TextNormalizer.normalize("ios"));

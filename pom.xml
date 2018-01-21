@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.quantxt.nlp</groupId>
     <artifactId>doc-analytics</artifactId>
-    <version>1.4.93-SNAPSHOT</version>
+    <version>1.4.98-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Quantxt Core NLP</name>
@@ -172,7 +172,12 @@
         <dependency>
             <groupId>com.quantxt.core</groupId>
             <artifactId>qt-core</artifactId>
-            <version>2.0.22-SNAPSHOT</version>
+            <version>2.0.24-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.annolab.tt4j</groupId>
+            <artifactId>org.annolab.tt4j</artifactId>
+            <version>1.2.1</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -183,6 +188,12 @@
             <groupId>org.apache.opennlp</groupId>
             <artifactId>opennlp-tools</artifactId>
             <version>1.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.2</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>cc.mallet</groupId>
@@ -201,12 +212,6 @@
             <artifactId>nd4j-native</artifactId>
             <version>0.9.1</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

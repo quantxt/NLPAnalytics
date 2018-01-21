@@ -1,7 +1,7 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
-import com.quantxt.QTDocument.ENDocumentInfo;
+import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.types.Tagger;
@@ -34,7 +34,7 @@ public class Speaker implements QTExtract {
 
     private Trie phraseTree = null;
     private Map<String, Trie> nameTree   = new HashMap<>();
-    private Trie titleTree  = null;
+//    private Trie titleTree  = null;
     private List<String> search_terms = new ArrayList<>();
     private Tagger tagger = null;
     private ConcurrentHashMap<String, Double> tokenRank;
@@ -96,6 +96,7 @@ public class Speaker implements QTExtract {
         JsonParser parser = new JsonParser();
 
         //titles
+        /*
         Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().ignoreCase();
         byte[] commonArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("en/common.json").openStream());
         JsonElement commonosnElement = parser.parse(new String(commonArr, "UTF-8"));
@@ -109,15 +110,15 @@ public class Speaker implements QTExtract {
             }
         }
         titleTree = titles.build();
+        */
         Gson gson = new Gson();
 
         //names
         if (entityMap == null){
-            byte[] subjectArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("en/subject.json").openStream());
+            byte[] subjectArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("subject.json").openStream());
             entityMap = new HashMap<>();
             entityMap.put(PERSON, gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class));
         }
-
 
 
         for (Map.Entry<String, Entity[]> e : entityMap.entrySet()) {
@@ -326,7 +327,6 @@ public class Speaker implements QTExtract {
                         Document jsoupDoc = Jsoup.parse(new String(cont), "UTF-8");
                         String content = jsoupDoc.body().text();
                         QTDocument qt = new ENDocumentInfo(content, jsoupDoc.title());
-                        qt.processDoc();
                         List<String> sents = qt.getSentences();
                         for (String s : sents) {
                             Files.write(Paths.get(output), (s + "\n").getBytes(), StandardOpenOption.APPEND);

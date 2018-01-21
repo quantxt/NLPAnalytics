@@ -1,6 +1,6 @@
 package com.quantxt.nlp;
 
-import com.quantxt.QTDocument.ENDocumentInfo;
+import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.nlp.comp.TERalignment;
 import com.quantxt.nlp.comp.TERcalc;
 import com.quantxt.nlp.comp.TERcost;

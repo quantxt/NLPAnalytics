@@ -1,7 +1,7 @@
 package com.quantxt.nlp.comp.meteor;
 
-import com.quantxt.QTDocument.ENDocumentInfo;
-import com.quantxt.QTDocument.ESDocumentInfo;
+import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.ESDocumentInfo;
 import com.quantxt.nlp.comp.meteor.scorer.MeteorConfiguration;
 import com.quantxt.nlp.comp.meteor.scorer.MeteorScorer;
 import com.quantxt.nlp.comp.meteor.scorer.MeteorStats;
