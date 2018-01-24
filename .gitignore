@@ -1,0 +1,13 @@
+.settings/
+.project
+.classpath
+test-output/**
+.springBeans
+*/target/**
+.rar
+.zip
+/target/
+.metadata/
+*.log
+*.diff
+/bin/
