@@ -1,16 +1,20 @@
 package com.quantxt.nlp;
 
-import com.quantxt.doc.ENDocumentInfo;
-import com.quantxt.nlp.comp.TERalignment;
-import com.quantxt.nlp.comp.TERcalc;
-import com.quantxt.nlp.comp.TERcost;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.quantxt.doc.helper.ENDocumentHelper;
+import com.quantxt.nlp.comp.TERalignment;
+import com.quantxt.nlp.comp.TERcalc;
+import com.quantxt.nlp.comp.TERcost;
 
 /**
  * Created by matin on 10/7/16.
@@ -23,7 +27,6 @@ public class TextDiff {
     final private TERcalc tcalc;
 
     public TextDiff(int delc, int insc, int subc, int shiftc) throws Exception {
-        ENDocumentInfo.init(null);
         tcalc = new TERcalc();
         tcalc.setCase(true);
         costfunc = new TERcost();
@@ -54,8 +57,9 @@ public class TextDiff {
     }
 
     public Map<String, List<String>> removeRepSentences(String text1, String text2){
-        String sentences1[] = ENDocumentInfo.getSentences(text1);
-        String sentences2[] = ENDocumentInfo.getSentences(text2);
+        ENDocumentHelper helper = new ENDocumentHelper();
+        String sentences1[] = helper.getSentences(text1);
+        String sentences2[] = helper.getSentences(text2);
 
         int shift = 10;
 

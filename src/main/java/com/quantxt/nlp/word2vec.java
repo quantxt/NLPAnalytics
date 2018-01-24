@@ -1,6 +1,14 @@
 package com.quantxt.nlp;
 
-import com.quantxt.doc.ENDocumentInfo;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -13,10 +21,7 @@ import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import com.quantxt.doc.ENDocumentInfo;
 
 
 /**
@@ -32,11 +37,6 @@ public class word2vec {
     public word2vec(int m)
     {
         minFreq = m;
-        try {
-            ENDocumentInfo.init(null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         tokenizer = new LinePreProcess(new ENDocumentInfo("", ""));
         tokenizer.setTokenPreProcessor(new TextPreProcessor());
     }
