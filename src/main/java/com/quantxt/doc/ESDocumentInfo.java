@@ -16,6 +16,11 @@ public class ESDocumentInfo extends QTDocument {
 
     private static final Logger logger = LoggerFactory.getLogger(ESDocumentInfo.class);
 
+    public ESDocumentInfo(String body, String title, QTDocumentHelper helper) {
+        super(body, title, helper);
+        language = Language.SPANISH;
+    }
+
     public ESDocumentInfo(String body, String title) {
         super(body, title, new ESDocumentHelper());
         language = Language.SPANISH;
@@ -35,7 +40,7 @@ public class ESDocumentInfo extends QTDocument {
                                              : helper.getSentences(rawText);
         List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences){
-            ESDocumentInfo sDoc = new ESDocumentInfo("", s);
+            ESDocumentInfo sDoc = new ESDocumentInfo("", s, helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());
@@ -49,17 +54,6 @@ public class ESDocumentInfo extends QTDocument {
     @Override
     public double[] getVectorizedTitle(QTExtract speaker) {
         return speaker.tag(title);
-    }
-
-    @Override
-    public void processDoc(){
-        // englishTitle = title;
-        // if (body == null || body.isEmpty())
-        // return;
-        //
-        // String sentences[] = rawText == null ? getSentences(body) :
-        // getSentences(rawText);
-        // this.sentences = Arrays.asList(sentences);
     }
 
     @Override

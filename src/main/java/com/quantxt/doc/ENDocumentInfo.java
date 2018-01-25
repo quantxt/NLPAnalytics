@@ -17,6 +17,11 @@ public class ENDocumentInfo extends QTDocument {
 
     private static final Logger logger = LoggerFactory.getLogger(ENDocumentInfo.class);
 
+    public ENDocumentInfo(String body, String title, QTDocumentHelper helper) {
+        super(body, title, helper);
+        language = Language.ENGLISH;
+    }
+
     public ENDocumentInfo(String body, String title) {
         super(body, title, new ENDocumentHelper());
         language = Language.ENGLISH;
@@ -36,7 +41,7 @@ public class ENDocumentInfo extends QTDocument {
                                              : helper.getSentences(rawText);
         List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences) {
-            ENDocumentInfo sDoc = new ENDocumentInfo("", s); //TODO Check if all docs should have new helper instance
+            ENDocumentInfo sDoc = new ENDocumentInfo("", s, helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());
@@ -50,17 +55,6 @@ public class ENDocumentInfo extends QTDocument {
     @Override
     public double[] getVectorizedTitle(QTExtract speaker) {
         return speaker.tag(title);
-    }
-
-    @Override
-    public void processDoc() {
-        // englishTitle = title;
-        // if (body == null || body.isEmpty())
-        // return;
-        //
-        // String sentences[] = rawText == null ? getSentences(body) :
-        // getSentences(rawText);
-        // this.sentences = Arrays.asList(sentences);
     }
 
     @Override

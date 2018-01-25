@@ -8,6 +8,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.es.SpanishAnalyzer;
+import org.apache.lucene.analysis.standard.ClassicAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +41,15 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
     public ESDocumentHelper(InputStream contextFile) {
         super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
                 STOPLIST_FILE_PATH, PRONOUNS);
+
+    }
+
+    @Override
+    public void preInit(){
+        //Analyzer
+        analyzer = new SpanishAnalyzer();
+        //Tokenizer
+        tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
     }
 
     private static boolean isTagDC(String tag){

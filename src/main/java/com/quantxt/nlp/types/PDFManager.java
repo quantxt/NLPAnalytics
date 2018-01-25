@@ -56,7 +56,7 @@ public class PDFManager {
             logger.info("width : " + width);
 
             for (String str : strArr) {
-                str = str.replaceAll("[^\\x00-\\x7F]", "");
+            //    str = str.replaceAll("[^\\x00-\\x7F]", "");
                 str = str.replaceAll(" \\.$", ".");
                 String [] parts = str.split("\\s+");
                 float c = 0;

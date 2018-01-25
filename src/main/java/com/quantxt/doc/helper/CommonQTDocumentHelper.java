@@ -15,7 +15,6 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.StopFilter;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,25 +42,27 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private SentenceDetectorME sentenceDetector = null;
     private POSTaggerME posModel = null;
-    private Analyzer analyzer;
     private CharArraySet stopwords;
     private Set<String> pronouns;
     private Trie verbTree;
 
-    public CommonQTDocumentHelper(InputStream contextFile,
-            String sentencesFilePath, String posFilePath,
-            String stoplistFilePath,
-            Set<String> pronouns) {
+    protected Analyzer analyzer;
+    protected Analyzer tokenizer;
+
+    public CommonQTDocumentHelper(InputStream contextFile, String sentencesFilePath,
+                                  String posFilePath, String stoplistFilePath,
+                                  Set<String> pronouns) {
         try {
             init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
             initVerbTree(contextFile);
         } catch (Exception e) {
-            throw new RuntimeException("Unexpected error on init EN Document helper!", e);
+            throw new RuntimeException("Unexpected error on init Document helper!", e);
         }
     }
 
     public CommonQTDocumentHelper(String sentencesFilePath, String posFilePath,
-            String stoplistFilePath, String verbFilePath, Set<String> pronouns) {
+                                  String stoplistFilePath, String verbFilePath,
+                                  Set<String> pronouns) {
         try {
             init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
             initVerbTree(verbFilePath);
@@ -75,20 +76,20 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return stopwords.contains(p);
     }
 
+    abstract void preInit();
+
     private void init(String sentencesFilePath, String posFilePath,
             String stoplistFilePath, Set<String> pronouns) throws Exception {
 
+        preInit();
         this.pronouns = new HashSet<>(pronouns);
 
-        // String model_base_dir = System.getenv("nlp_model_dir");
         String modelBaseDir = getModelBaseDir();
         if (modelBaseDir == null) {
             String error = DEFAULT_NLP_MODEL_DIR + " is not set!";
             logger.error(error);
             throw new IllegalStateException(error);
         }
-
-        analyzer = new StandardAnalyzer(CharArraySet.EMPTY_SET);
 
         // Sentences
         if (!StringUtil.isEmpty(sentencesFilePath)) {
@@ -151,9 +152,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     public List<String> tokenize(String str) {
         List<String> tokens = new ArrayList<>();
         try {
-            TokenStream result = analyzer.tokenStream(null, str);
-            // result = new SnowballFilter(result, "English");
-
+            TokenStream result = tokenizer.tokenStream(null, str);
             CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
             result.reset();
 

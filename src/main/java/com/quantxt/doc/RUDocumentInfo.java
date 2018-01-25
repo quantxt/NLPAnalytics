@@ -7,17 +7,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.quantxt.types.DateTimeTypeConverter;
 import org.joda.time.DateTime;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import org.jsoup.select.Elements;
 import com.quantxt.doc.helper.RUDocumentHelper;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.nlp.Speaker;
-import com.quantxt.nlp.types.DateTimeTypeConverter;
 import com.quantxt.types.Entity;
 
 /**
@@ -26,6 +26,11 @@ import com.quantxt.types.Entity;
 public class RUDocumentInfo extends QTDocument {
 
     private static final Logger logger = LoggerFactory.getLogger(RUDocumentInfo.class);
+
+    public RUDocumentInfo(String body, String title, QTDocumentHelper helper) {
+        super(body, title, helper);
+        language = Language.RUSSIAN;
+    }
 
     public RUDocumentInfo (String body, String title) {
         super(body, title, new RUDocumentHelper());
@@ -46,7 +51,7 @@ public class RUDocumentInfo extends QTDocument {
                                              : helper.getSentences(rawText);
         List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences){
-            RUDocumentInfo sDoc = new RUDocumentInfo("", s);
+            RUDocumentInfo sDoc = new RUDocumentInfo("", s, helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());
@@ -60,17 +65,6 @@ public class RUDocumentInfo extends QTDocument {
     @Override
     public double [] getVectorizedTitle(QTExtract speaker){
         return speaker.tag(title);
-    }
-
-    @Override
-    public void processDoc(){
-        // englishTitle = title;
-        // if (body == null || body.isEmpty())
-        // return;
-        //
-        // String sentences[] = rawText == null ? getSentences(body) :
-        // getSentences(rawText);
-        // this.sentences = Arrays.asList(sentences);
     }
 
     @Override
@@ -112,7 +106,6 @@ public class RUDocumentInfo extends QTDocument {
                 QTDocument p = JODA_GSON.fromJson(line, QTDocument.class);
                 QTDocument parent = QTDocumentFactory.createQTDoct(p.getBody(), p.getTitle());
                 logger.info("L: " + parent.getLanguage());
-                parent.processDoc();
 
                 // Files.write(Paths.get("o.txt"), (theString + "\n").getBytes(), StandardOpenOption.APPEND);
 

@@ -11,6 +11,10 @@ import java.util.Set;
 
 import org.annolab.tt4j.TokenHandler;
 import org.annolab.tt4j.TreeTaggerWrapper;
+import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.es.SpanishAnalyzer;
+import org.apache.lucene.analysis.ru.RussianAnalyzer;
+import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +34,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     private static final String STOPLIST_FILE_PATH = "/ru/stoplist.txt";
     private static final String VERB_FILE_PATH = "/ru/context.json";
 
-    private TreeTaggerWrapper<String> taggerWrapper;
+ //   private TreeTaggerWrapper<String> taggerWrapper;
 
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays
             .asList("Он", "Его", "Ему", "онá", "oна", "oн", "eму", "eго"));
@@ -38,15 +42,24 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     public RUDocumentHelper() {
         super(SENTENCES_FILE_PATH, null, STOPLIST_FILE_PATH,
                 VERB_FILE_PATH, PRONOUNS);
-        init();
+    //    init();
     }
 
     public RUDocumentHelper(InputStream contextFile) {
         super(contextFile, SENTENCES_FILE_PATH, null,
                 STOPLIST_FILE_PATH, PRONOUNS);
-        init();
+    //    init();
     }
 
+    @Override
+    public void preInit(){
+        //Analyzer
+        analyzer = new RussianAnalyzer();
+        //Tokenizer : TODO: This is not right for russian.. need to build a custome one
+        tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
+    }
+
+    /*
     public void init() {
         taggerWrapper = new TreeTaggerWrapper<>();
         String modelBaseDir = getModelBaseDir();
@@ -57,9 +70,12 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             logger.error("Error on init Russian tagger", e);
         }
     }
+    */
 
+    /*
     @Override
     public String[] getPosTags(String[] text) {
+
         List<String> output = new ArrayList<>();
         try {
             taggerWrapper.setHandler(new TokenHandler<String>() {
@@ -74,6 +90,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
 
         return output.toArray(new String[output.size()]);
     }
+    */
 
     private boolean isTagDC(String tag){
         return tag.equals("C") || tag.equals("I") || tag.startsWith("S");
@@ -159,7 +176,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
                     Collections.reverse(tokenList);
                     ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
                     if (eit == null) {
-                        logger.error("NOT FOUND 3 " + String.join(" ", tokenList));
+                        logger.error("NOT FOUND 3 " + String.join(" ", tokenList) + "' in: " + orig);
                     } else {
                         lowerCase_orig = lowerCase_orig.substring(0, eit.getStart());
                         eit.setType(type);
