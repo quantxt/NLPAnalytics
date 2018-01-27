@@ -364,6 +364,15 @@ public class Speaker implements QTExtract {
     public List<String> getSearhTemrs(){
         return search_terms;
     }
+
+    public Map<String, Trie> getNameTree() {
+        return nameTree;
+    }
+
+    public Tagger getTagger() {
+        return tagger;
+    }
+
 }
 
 
