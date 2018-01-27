@@ -11,7 +11,6 @@ import java.util.Set;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +27,7 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
     private static final String SENTENCES_FILE_PATH = "/en/en-sent.bin";
     //TODO Check with Matin why RUDocumentInfo was initialized with EN sentences
 
-    private static final String POS_FILE_PATH = "/es/es-pos-perceptron-500-0.bin";
+    private static final String POS_FILE_PATH = "/es/es-pos-maxent.bin";
     private static final String STOPLIST_FILE_PATH = "/es/stoplist.txt";
     private static final String VERB_FILE_PATH = "/es/context.json";
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("él", "ella"));

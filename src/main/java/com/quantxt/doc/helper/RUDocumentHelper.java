@@ -29,6 +29,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     private static Logger logger = LoggerFactory.getLogger(RUDocumentHelper.class);
 
     private static final String SENTENCES_FILE_PATH = "/en/en-sent.bin";
+    private static final String POS_FILE_PATH = "/ru/ru-pos-maxent.bin";
     //TODO Check with Matin why RUDocumentInfo was initialized with EN sentences
 
     private static final String STOPLIST_FILE_PATH = "/ru/stoplist.txt";
@@ -40,13 +41,13 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             .asList("Он", "Его", "Ему", "онá", "oна", "oн", "eму", "eго"));
 
     public RUDocumentHelper() {
-        super(SENTENCES_FILE_PATH, null, STOPLIST_FILE_PATH,
+        super(SENTENCES_FILE_PATH, POS_FILE_PATH, STOPLIST_FILE_PATH,
                 VERB_FILE_PATH, PRONOUNS);
     //    init();
     }
 
     public RUDocumentHelper(InputStream contextFile) {
-        super(contextFile, SENTENCES_FILE_PATH, null,
+        super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
                 STOPLIST_FILE_PATH, PRONOUNS);
     //    init();
     }
