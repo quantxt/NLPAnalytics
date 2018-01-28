@@ -66,21 +66,21 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
         List<ExtInterval> phrases = new ArrayList<>();
         String type = "X";
         for (int j = numTokens - 1; j >= 0; j--) {
-            String tag = taags[j];
-            String word = parts[j];
+            final String tag = taags[j];
+            final String word = parts[j];
             if (isTagDC(tag)) {
                 int nextIdx = j - 1;
                 if (nextIdx < 0)
                     continue;
                 String nextTag = taags[nextIdx];
                 if ((tokenList.size() != 0) && (isTagDC(tag))
-                        || (type.equals("N") && nextTag.startsWith("N"))
-                        || (type.equals("V") && nextTag.startsWith("V"))) {
+                        || (type.equals("N") && nextTag.startsWith("NN"))
+                        || (type.equals("V") && nextTag.startsWith("VB"))) {
                     tokenList.add(word);
                 }
                 continue;
             }
-            if ((tag.startsWith("N") || (tag.startsWith("P")))) {
+            if (tag.startsWith("NN") || tag.equals("PRP")) {
                 if (!type.equals("N") && tokenList.size() > 0) {
                     Collections.reverse(tokenList);
                     ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
@@ -94,15 +94,22 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                         eit.setType(type);
                         phrases.add(eit);
                     }
+                    /*
+                     * String str = String.join(" ", tokenList); int start =
+                     * orig.indexOf(str); if (start == -1){
+                     * logger.error("NOT FOUND 1 " + str); } ExtInterval eit =
+                     * new ExtInterval(start, start+str.length());
+                     * eit.setType(type); phrases.add(eit);
+                     */
                     tokenList.clear();
                 }
                 type = "N";
                 tokenList.add(word);
-            } else if (tag.startsWith("A")) {
+            } else if (tag.startsWith("JJ")) {
                 if (tokenList.size() != 0) {
                     tokenList.add(word);
                 }
-            } else if (tag.startsWith("V")) {
+            } else if (tag.startsWith("VB")) {
                 if (!type.equals("V") && tokenList.size() > 0) {
                     Collections.reverse(tokenList);
                     ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
@@ -116,11 +123,18 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                         eit.setType(type);
                         phrases.add(eit);
                     }
+                    /*
+                     * String str = String.join(" ", tokenList); int start =
+                     * orig.indexOf(str); if (start == -1){
+                     * logger.error("NOT FOUND 2 " + str); } ExtInterval eit =
+                     * new ExtInterval(start, start+str.length());
+                     * eit.setType(type); phrases.add(eit);
+                     */
                     tokenList.clear();
                 }
                 type = "V";
                 tokenList.add(word);
-            } else if (tag.startsWith("S") || tag.startsWith("R")) {
+            } else if (tag.startsWith("MD") || tag.startsWith("RB")) {
                 if (tokenList.size() != 0) {
                     tokenList.add(word);
                 }
@@ -137,6 +151,13 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                         eit.setType(type);
                         phrases.add(eit);
                     }
+                    /*
+                     * String str = String.join(" ", tokenList); int start =
+                     * orig.indexOf(str); if (start == -1){
+                     * logger.error("NOT FOUND 3 " + str); } ExtInterval eit =
+                     * new ExtInterval(start, start+str.length());
+                     * eit.setType(type); phrases.add(eit);
+                     */
                     tokenList.clear();
                 }
                 type = "X";
@@ -146,6 +167,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
         if (!type.equals("X") && tokenList.size() > 0) {
             Collections.reverse(tokenList);
             ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
+
             if (eit == null) {
                 logger.error("NOT FOUND 4 '" + String.join(" ", tokenList)
                         + "' in: " + orig);
@@ -153,6 +175,11 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                 eit.setType(type);
                 phrases.add(eit);
             }
+            /*
+             * ExtInterval eit = new ExtInterval(start, start+str.length());
+             * String str = String.join(" ", tokenList); int start =
+             * orig.indexOf(str); eit.setType(type); phrases.add(eit);
+             */
         }
 
         Collections.reverse(phrases);

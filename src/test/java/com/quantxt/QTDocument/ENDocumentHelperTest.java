@@ -14,6 +14,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;
@@ -70,35 +71,29 @@ public class ENDocumentHelperTest {
         assertNotNull(tokens);
         assertFalse(tokens.isEmpty());
 
-        assertTrue(tokens.contains("behav"));
+        assertTrue(tokens.contains("light"));
         assertTrue(tokens.contains("behavior"));
-        assertTrue(tokens.contains("wave"));
+        assertTrue(tokens.contains("waves"));
 
         // Stopwords
-        assertFalse(tokens.contains("they"));
-
-        // Fails
+        // assertFalse(tokens.contains("they"));
         // assertFalse(tokens.contains("off"));
     }
 
     @Test
-    public void testEntityExtract1() {
-        // GIVEN
+    public void testEntityExtract1(){
         String str = "Gilead Sciences Company Profile Gilead Sciences, Inc. "
                 + "is a research-based biopharmaceutical company that discovers, "
                 + "develops and commercializes medicines in areas of unmet medical need .";
-        String[] parts = str.split("\\s+");
 
-        // WHEN
+
+        List<String> partlist = helper.tokenize(str);
+        String [] parts = partlist.toArray(new String[partlist.size()]);
         List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts);
 
-        // THEN
-        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
-                "a research-based biopharmaceutical company that discovers,");
-        Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "develops and commercializes");
-        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
-                "medicines in areas of unmet medical need");
+        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()), "biopharmaceutical company that discovers,");
+        Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()), "develops and commercializes");
+        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()), "medicines in areas of unmet medical need");
     }
 
     @Test
