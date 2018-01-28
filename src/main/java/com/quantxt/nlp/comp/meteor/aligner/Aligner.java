@@ -165,7 +165,7 @@ public class Aligner {
 			// Match with the appropriate module
 			if (matcher == Constants.MODULE_EXACT) {
 				// Exact just needs the alignment object
-				ExactMatcher.match(modNum, a, s);
+				ExactMatcher.match(modNum, s);
 			} else if (matcher == Constants.MODULE_STEM) {
 				// Stem also need the stemmer
 				StemMatcher.match(modNum, a, s, stemmer);
