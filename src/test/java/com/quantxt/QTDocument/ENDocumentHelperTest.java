@@ -1,4 +1,5 @@
 package com.quantxt.QTDocument;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -14,7 +15,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;

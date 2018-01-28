@@ -3,6 +3,7 @@ package com.quantxt.nlp.comp.meteor;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +21,7 @@ public class MeteorComp {
 
 
     public static MeteorStats scorePlaintext(MeteorScorer scorer,
-                                      ArrayList<String> lines1, ArrayList<String> lines2)
-            throws IOException {
+            List<String> lines1, List<String> lines2) throws IOException {
 
         MeteorStats aggStats = new MeteorStats();
 
@@ -39,14 +39,15 @@ public class MeteorComp {
 
     public static void main(String[] args) throws Exception {
 
-        MeteorConfiguration config = new MeteorConfiguration();
+//        MeteorConfiguration config = new MeteorConfiguration();
         // ENDocumentInfo.init(null);
         // ESDocumentInfo.init(null);
         // ENDocumentInfo endoc = new ENDocumentInfo("", "");
 
-        String fileName = "/Users/matin/git/meteor/data/paraphrase-en.gz";
-        config.setParaFileURL(new File(fileName).toURI().toURL());
-        MeteorScorer scorer = new MeteorScorer(config);
+//        String fileName = "/Users/matin/git/meteor/data/paraphrase-en.gz";
+//        config.setParaFileURL(new File(fileName).toURI().toURL());
+
+        MeteorScorer scorer = new MeteorScorer();
         String s1 = "Homeowners in high-tax states like New York, "
                 + "New Jersey and California could be big losers as "
                 + "their ability to deduct their local property taxes "

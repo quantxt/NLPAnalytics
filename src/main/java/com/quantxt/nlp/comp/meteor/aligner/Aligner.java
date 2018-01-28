@@ -1,10 +1,10 @@
 /*
  * Carnegie Mellon University
  * Copyright (c) 2004, 2010
- * 
+ *
  * This software is distributed under the terms of the GNU Lesser General
  * Public License.  See the included COPYING and COPYING.LESSER files.
- * 
+ *
  */
 
 package com.quantxt.nlp.comp.meteor.aligner;
@@ -143,7 +143,7 @@ public class Aligner {
 		return a;
 	}
 
-	private void align(Alignment a) {
+	protected void align(Alignment a) {
 
 		// Set the stage for matching
 		Stage s = new Stage(a.words1, a.words2);
@@ -437,4 +437,16 @@ public class Aligner {
 		int[] cc = { matches1, matches2, chunks };
 		return cc;
 	}
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public ArrayList<Integer> getModules() {
+        return modules;
+    }
+
+    public Comparator<PartialAlignment> getPartialComparator() {
+        return partialComparator;
+    }
 }
