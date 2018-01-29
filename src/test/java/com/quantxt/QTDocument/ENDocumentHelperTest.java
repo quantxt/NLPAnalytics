@@ -14,6 +14,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;
@@ -81,7 +82,7 @@ public class ENDocumentHelperTest {
     }
 
     @Test
-    public void testEntityExtract1() {
+    public void EntestEntityExtract1() {
         // GIVEN
         String str = "Gilead Sciences Company Profile Gilead Sciences, Inc. "
                 + "is a research-based biopharmaceutical company that discovers, "
@@ -101,7 +102,7 @@ public class ENDocumentHelperTest {
     }
 
     @Test
-    public void testEntityExtract2() {
+    public void EntestEntityExtract2() {
         // GIVEN
         String str = "Personal luxury goods growth stalls in ME even as global market rebounds " +
                 "Personal luxury goods growth stalls in ME even as global market " +
@@ -120,7 +121,7 @@ public class ENDocumentHelperTest {
     }
 
     @Test
-    public void testEntityExtract3() {
+    public void EntestEntityExtract3() {
         // GIVEN
         String str = "“The “Creation of an Enabling Regulatory Environment for Blockchain " +
                 "Projects Is Currently Crucial” Artem Tolkachev, Director of Legal Services " +
@@ -143,7 +144,7 @@ public class ENDocumentHelperTest {
 
 
     @Test
-    public void testEntityExtract4() {
+    public void EntestEntityExtract4() {
         // GIVEN
         String str = "The Race Is On To Discover The Most Influential Blockchain Startups " +
                 "Many venture capital firms and investment groups have recently keyed in " +
@@ -165,7 +166,7 @@ public class ENDocumentHelperTest {
 
 
     @Test
-    public void testEntityExtract5() {
+    public void EntestEntityExtract5() {
         // GIVEN
         String str = "Oil imports help feed US export powerhouse Shale revolution and " +
                 "end of curbs contribute to increased flow both ways The US oil industry is " +
