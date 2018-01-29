@@ -185,7 +185,7 @@ public class PDFManager {
 
             List<String> lines = new ArrayList<>();
             for (String text : strArr) {
-                text = text.replaceAll("[^\\x00-\\x7F]", "");
+            //    text = text.replaceAll("[^\\x00-\\x7F]", "");
                 text = text.replaceAll(" \\.$", ".");
                 int lastSpace = -1;
                 while (text.length() > 0) {

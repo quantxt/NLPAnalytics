@@ -30,7 +30,7 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
     private static final String POS_FILE_PATH = "/es/es-pos-maxent.bin";
     private static final String STOPLIST_FILE_PATH = "/es/stoplist.txt";
     private static final String VERB_FILE_PATH = "/es/context.json";
-    private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("él", "ella"));
+    private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("él", "ella" , "Ella", "Él"));
 
     public ESDocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH,
@@ -51,14 +51,24 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
         tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
     }
 
+    @Override
+    public List<String> tokenize(String str) {
+        String tokenized = str.replaceAll("([\",?\\>\\<\\'\\:\\]\\[\\(\\)\\”\\“])" , "$1 ");
+        tokenized = tokenized.replaceAll("([^\\.]+)(\\.+)\\s*$", "$1 $2");
+        String [] parts = tokenized.split("\\s+");
+        return Arrays.asList(parts);
+    }
+
     private static boolean isTagDC(String tag){
-        return tag.equals("CS") || tag.equals("CC") || tag.startsWith("D");
+        return tag.equals("CS") || tag.startsWith("S") ||
+                tag.equals("CC") || tag.startsWith("D");
     }
 
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
     @Override
     public List<ExtInterval> getNounAndVerbPhrases(String orig, String [] parts) {
-        String lowerCase_orig = orig.toLowerCase();
+    //    String lowerCase_orig = orig.toLowerCase();
+        String lowerCase_orig = orig;
         int numTokens = parts.length;
         String[] taags = getPosTags(parts);
         List<String> tokenList = new ArrayList<>();
@@ -71,8 +81,7 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
                 int nextIdx = j - 1;
                 if (nextIdx < 0) continue;
                 String nextTag = taags[nextIdx];
-                if ((tokenList.size() != 0) &&
-                        (isTagDC(tag)) ||
+                if ((tokenList.size() != 0) ||
                         (type.equals("N") && nextTag.startsWith("N")) ||
                         (type.equals("V") && nextTag.startsWith("V"))) {
                     tokenList.add(word);
@@ -95,9 +104,13 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
                 type = "N";
                 tokenList.add(word);
             } else if (tag.startsWith("A")) {
-                if (tokenList.size() != 0) {
+                int nextIdx = j - 1;
+                if (nextIdx < 0) continue;
+                String nextTag = taags[nextIdx];
+                if (nextTag.startsWith("N")) {
                     tokenList.add(word);
                 }
+                type = "N";
             } else if (tag.startsWith("V")) {
                 if (!type.equals("V") && tokenList.size() > 0) {
                     Collections.reverse(tokenList);
@@ -113,7 +126,7 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
                 }
                 type = "V";
                 tokenList.add(word);
-            } else if (tag.startsWith("S") || tag.startsWith("R")) {
+            } else if (tag.startsWith("R") && type.equals("V")) {
                 if (tokenList.size() != 0) {
                     tokenList.add(word);
                 }

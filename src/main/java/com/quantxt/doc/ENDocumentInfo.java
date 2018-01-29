@@ -68,20 +68,4 @@ public class ENDocumentInfo extends QTDocument {
         return false;
     }
 
-    public static void main(String[] args) throws Exception {
-        String title = "Деньги благотворительного фогда пойдут на исследования преимуществ MDMA в области здравоохранения. MDMA –психоактивное соединение из ряда амфетаминов";
-        String body = "В Китае , где расположено 80% мощностей по “добыче” биткоинов, могут запретить майнинг. Представители государственных агентств, опасаясь финансовых рисков, выпустили на прошлой неделе обращение к местным властям с призывом заняться прекращением деятельности, в ходе которой “майнят” криптовалюты, пишет The Wall Street Journal. Речь идет об обращении от имени Leading Group of Internet Financial Risks Remediation — госагентства, занимающегося изучением финансовых рисков в интернете, которое стало инициатором такой идеи. Группа сама по себе не контролирует использование электроэнергии в стране, но это влиятельный политический игрок, возглавляемый заместителем управляющего Народного банка Китая Паном Гоншеном. Представители группы на местах должны отчитываться о прогрессе по устранению майнеров в своем регионе каждый месяц.";
-
-        ENDocumentInfo doc = new ENDocumentInfo(body, title);
-
-        // BufferedReader br = new BufferedReader(new FileReader("/Users/matin/git/TxtAlign/out.txt"));
-        // try {
-        String line = "Bitcoin by the end of the year will cost twice as much - an expert How much will bitcoin cost by the end of 2017, the expert said. The value of the crypto currency on Thursday was $ 14 thousand. BISHKEK, Dec 7 - Sputnik.";
-        // while ((line = br.readLine() ) != null) {
-        logger.info(line);
-        String[] parts = line.split("\\s+");
-        List<ExtInterval> res = doc.getHelper().getNounAndVerbPhrases(line, parts);
-        logger.info("=========");
-    }
-
 }

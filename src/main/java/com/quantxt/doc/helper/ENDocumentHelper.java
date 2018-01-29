@@ -1,5 +1,7 @@
 package com.quantxt.doc.helper;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,8 +10,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.lucene.analysis.CharArraySet;
-import org.apache.lucene.analysis.standard.ClassicAnalyzer;
+import opennlp.tools.tokenize.Tokenizer;
+import opennlp.tools.tokenize.TokenizerME;
+import opennlp.tools.tokenize.TokenizerModel;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,9 +30,12 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     private static final String SENTENCES_FILE_PATH = "/en/en-sent.bin";
     private static final String POS_FILE_PATH = "/en/en-pos-maxent.bin";
     private static final String STOPLIST_FILE_PATH = "/en/stoplist.txt";
+    private static final String TOKENIZER_FILE_PATH = "/en/en-token.bin";
     private static final String VERB_FILE_PATH = "/en/context.json";
     private static final Set<String> PRONOUNS = new HashSet<>(
-            Arrays.asList("he", "she"));
+            Arrays.asList("he", "she", "He", "She"));
+
+    private Tokenizer tokenizer;
 
     public ENDocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH,
@@ -49,17 +55,30 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     }
 
     @Override
-    public void preInit(){
-        //Analyzer
-        analyzer = new StandardAnalyzer();
-        //Tokenizer
-        tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
+    public List<String> tokenize(String str) {
+        String[] toks = tokenizer.tokenize(str);
+        return Arrays.asList(toks);
     }
 
     @Override
+    public void preInit(){
+        //Analyzer
+        analyzer = new StandardAnalyzer();
+
+        try (FileInputStream fis = new FileInputStream(getModelBaseDir() + TOKENIZER_FILE_PATH)) {
+            TokenizerModel tokenizermodel = new TokenizerModel(fis);
+            tokenizer = new TokenizerME(tokenizermodel);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
+    @Override
     public List<ExtInterval> getNounAndVerbPhrases(String orig,
             String[] parts) {
-        String lowerCase_orig = orig.toLowerCase();
+        String lowerCase_orig = orig;
         int numTokens = parts.length;
         String[] taags = getPosTags(parts);
         List<String> tokenList = new ArrayList<>();
@@ -69,12 +88,13 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
             String tag = taags[j];
             String word = parts[j];
             if (isTagDC(tag)) {
+                if (tokenList.size() == 0) continue;
                 int nextIdx = j - 1;
                 if (nextIdx < 0)
                     continue;
                 String nextTag = taags[nextIdx];
-                if ((tokenList.size() != 0) && (isTagDC(tag))
-                        || (type.equals("N") && nextTag.startsWith("N"))
+
+                if ((type.equals("N") && nextTag.startsWith("N"))
                         || (type.equals("V") && nextTag.startsWith("V"))) {
                     tokenList.add(word);
                 }
@@ -98,7 +118,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                 }
                 type = "N";
                 tokenList.add(word);
-            } else if (tag.startsWith("A")) {
+            } else if (tag.startsWith("J")) {
                 if (tokenList.size() != 0) {
                     tokenList.add(word);
                 }
@@ -120,7 +140,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                 }
                 type = "V";
                 tokenList.add(word);
-            } else if (tag.startsWith("S") || tag.startsWith("R")) {
+            } else if (tag.startsWith("R") && type.equals("V")) {
                 if (tokenList.size() != 0) {
                     tokenList.add(word);
                 }

@@ -35,8 +35,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     private static final String STOPLIST_FILE_PATH = "/ru/stoplist.txt";
     private static final String VERB_FILE_PATH = "/ru/context.json";
 
- //   private TreeTaggerWrapper<String> taggerWrapper;
-
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays
             .asList("Он", "Его", "Ему", "онá", "oна", "oн", "eму", "eго"));
 
@@ -49,7 +47,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     public RUDocumentHelper(InputStream contextFile) {
         super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
                 STOPLIST_FILE_PATH, PRONOUNS);
-    //    init();
     }
 
     @Override
@@ -59,39 +56,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
         //Tokenizer : TODO: This is not right for russian.. need to build a custome one
         tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
     }
-
-    /*
-    public void init() {
-        taggerWrapper = new TreeTaggerWrapper<>();
-        String modelBaseDir = getModelBaseDir();
-        System.setProperty("treetagger.home", modelBaseDir + "/ru");
-        try {
-            taggerWrapper.setModel(modelBaseDir + "/ru/russian-utf8.par");
-        } catch (IOException e) {
-            logger.error("Error on init Russian tagger", e);
-        }
-    }
-    */
-
-    /*
-    @Override
-    public String[] getPosTags(String[] text) {
-
-        List<String> output = new ArrayList<>();
-        try {
-            taggerWrapper.setHandler(new TokenHandler<String>() {
-                public void token(String token, String pos, String lemma) {
-                    output.add(pos);
-                }
-            });
-            taggerWrapper.process(text);
-        } catch (Exception e){
-            logger.error("Unexpected error in tagger process text {}", text, e);
-        }
-
-        return output.toArray(new String[output.size()]);
-    }
-    */
 
     private boolean isTagDC(String tag){
         return tag.equals("C") || tag.equals("I") || tag.startsWith("S");
@@ -116,8 +80,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
                 int nextIdx = j - 1;
                 if (nextIdx < 0) continue;
                 String nextTag = taags[nextIdx];
-                if ((tokenList.size() != 0) &&
-                        (isTagDC(tag) ) ||
+                if ((tokenList.size() != 0) ||
                         (type.equals("N") && nextTag.startsWith("N") ) ||
                         (type.equals("V") && nextTag.startsWith("V") ))
                 {
@@ -195,7 +158,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             if (eit == null) {
                 logger.error("NOT FOUND 4 '" + String.join(" ", tokenList) + "' in: " + orig);
             } else {
-                lowerCase_orig = lowerCase_orig.substring(0, eit.getStart());
                 eit.setType(type);
                 phrases.add(eit);
             }

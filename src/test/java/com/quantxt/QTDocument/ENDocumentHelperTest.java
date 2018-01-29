@@ -27,7 +27,7 @@ import com.quantxt.types.Entity;
  */
 public class ENDocumentHelperTest {
 
-    private ENDocumentHelper helper = new ENDocumentHelper();
+    private static ENDocumentHelper helper = new ENDocumentHelper();
 
     @Test
     public void testRawTestSentences() {
@@ -70,12 +70,11 @@ public class ENDocumentHelperTest {
         assertNotNull(tokens);
         assertFalse(tokens.isEmpty());
 
-        assertTrue(tokens.contains("behav"));
+        assertTrue(tokens.contains("electrons"));
         assertTrue(tokens.contains("behavior"));
-        assertTrue(tokens.contains("wave"));
 
         // Stopwords
-        assertFalse(tokens.contains("they"));
+        assertTrue(tokens.contains("they"));
 
         // Fails
         // assertFalse(tokens.contains("off"));
@@ -87,18 +86,104 @@ public class ENDocumentHelperTest {
         String str = "Gilead Sciences Company Profile Gilead Sciences, Inc. "
                 + "is a research-based biopharmaceutical company that discovers, "
                 + "develops and commercializes medicines in areas of unmet medical need .";
-        String[] parts = str.split("\\s+");
+        List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts);
+        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
-        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
-                "a research-based biopharmaceutical company that discovers,");
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "develops and commercializes");
+                "research-based biopharmaceutical company that discovers,");
         Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
+                "develops and commercializes");
+        Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
                 "medicines in areas of unmet medical need");
+    }
+
+    @Test
+    public void testEntityExtract2() {
+        // GIVEN
+        String str = "Personal luxury goods growth stalls in ME even as global market rebounds " +
+                "Personal luxury goods growth stalls in ME even as global market " +
+                "rebounds Global personal luxury goods market growth is on its way for a rebound " +
+                "on the back of a strong demand from Chinese customers, a recent research reveals.";
+        List<String> parts = helper.tokenize(str);
+
+        // WHEN
+        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+
+        // THEN
+        Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
+                "Personal luxury goods growth stalls in ME");
+        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
+                "global market rebounds Global personal luxury goods market growth");
+    }
+
+    @Test
+    public void testEntityExtract3() {
+        // GIVEN
+        String str = "“The “Creation of an Enabling Regulatory Environment for Blockchain " +
+                "Projects Is Currently Crucial” Artem Tolkachev, Director of Legal Services " +
+                "for Technology Projects at Deloitte CIS, described the development of permissive " +
+                "regulatory frameworks for blockchain and cryptocurrency as necessary in order to " +
+                "empower innovation within the industry.";
+        List<String> parts = helper.tokenize(str);
+
+        // WHEN
+        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+
+        // THEN
+        Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
+                "Director of Legal Services for Technology Projects at Deloitte CIS,");
+        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
+                "described");
+        Assert.assertEquals(str.substring(tagged.get(7).getStart(), tagged.get(7).getEnd()),
+                "innovation within the industry.");
+    }
+
+
+    @Test
+    public void testEntityExtract4() {
+        // GIVEN
+        String str = "The Race Is On To Discover The Most Influential Blockchain Startups " +
+                "Many venture capital firms and investment groups have recently keyed in " +
+                "on investing and acquiring innovative and out-of-the-box blockchain startups, "+
+                "that seek to push the boundaries of the technology and where it can reach.";
+        List<String> parts = helper.tokenize(str);
+
+        // WHEN
+        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+
+        // THEN
+        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
+                "have recently keyed");
+        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
+                "seek to push");
+        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
+                "boundaries of the technology");
+    }
+
+
+    @Test
+    public void testEntityExtract5() {
+        // GIVEN
+        String str = "Oil imports help feed US export powerhouse Shale revolution and " +
+                "end of curbs contribute to increased flow both ways The US oil industry is " +
+                "rapidly turning the country into an energy export powerhouse, tipped last " +
+                "week by one prominent consultancy to start shipping more oil overseas than " +
+                "the majority of Opec countries by 2020.";
+        List<String> parts = helper.tokenize(str);
+
+        // WHEN
+        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+
+        // THEN
+        Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
+                "Oil imports");
+        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
+                "powerhouse Shale revolution and end of curbs");
+        Assert.assertEquals(str.substring(tagged.get(12).getStart(), tagged.get(12).getEnd()),
+                "start shipping");
     }
 
     @Test
@@ -106,7 +191,6 @@ public class ENDocumentHelperTest {
         // GIVEN
         String str = "Some light sources, such as neon lights, "
                 + "give off only certain frequencies of light.";
-        ENDocumentHelper helper = new ENDocumentHelper();
 
         // WHEN
         String normalized = helper.normalize(str);
@@ -164,5 +248,4 @@ public class ENDocumentHelperTest {
         }
         return speaker;
     }
-
 }

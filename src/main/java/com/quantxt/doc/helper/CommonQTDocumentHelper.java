@@ -67,7 +67,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
             initVerbTree(verbFilePath);
         } catch (Exception e) {
-            throw new RuntimeException("Unexpected error on init EN Document helper!", e);
+            throw new RuntimeException("Unexpected error on init Common Document helper!", e);
         }
     }
 

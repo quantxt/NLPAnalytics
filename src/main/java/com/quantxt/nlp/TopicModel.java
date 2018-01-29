@@ -21,6 +21,7 @@ import java.io.*;
 /**
  * Created by matin on 7/8/16.
  */
+
 public class TopicModel {
 
     final private static Logger logger = LoggerFactory.getLogger(TopicModel.class);
