@@ -1,17 +1,17 @@
 /*
  * Carnegie Mellon University
  * Copyright (c) 2004, 2010
- * 
+ *
  * This software is distributed under the terms of the GNU Lesser General
  * Public License.  See the included COPYING and COPYING.LESSER files.
- * 
+ *
  */
 
 package com.quantxt.nlp.comp.meteor.aligner;
 
 public class ExactMatcher {
 
-	public static void match(int stage, Alignment a, Stage s) {
+	public static void match(int stage, Stage s) {
 
 		// Simplest possible matcher: test all word keys for equality
 

@@ -191,6 +191,7 @@ public class ENDocumentHelperTest {
         // GIVEN
         String str = "Some light sources, such as neon lights, "
                 + "give off only certain frequencies of light.";
+        ENDocumentHelper helper = new ENDocumentHelper();
 
         // WHEN
         String normalized = helper.normalize(str);
@@ -248,4 +249,5 @@ public class ENDocumentHelperTest {
         }
         return speaker;
     }
+
 }

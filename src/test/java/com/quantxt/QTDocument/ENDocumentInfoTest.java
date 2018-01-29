@@ -63,9 +63,9 @@ public class ENDocumentInfoTest {
         String [] parts = partlist.toArray(new String[partlist.size()]);
         List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts);
 
-        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()), "company that discovers,");
+        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()), "biopharmaceutical company that discovers,");
         Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()), "develops and commercializes");
-        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()), "medicines in areas");
+        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()), "medicines in areas of unmet medical need");
     }
 
     @Test
