@@ -50,7 +50,6 @@ public class ENDocumentHelperTest {
 
         // THEN
         assertNotNull(sentences);
-        assertFalse(sentences.length == 0);
         assertEquals(sentences.length, 3);
     }
 
@@ -262,6 +261,23 @@ public class ENDocumentHelperTest {
         assertFalse(isTag5);
         assertFalse(isTag6);
         assertFalse(isTag7);
+    }
+
+    @Test
+    public void testNounAndVerbPhrases1() {
+        // GIVEN
+        String str = "Oil imports help feed US export powerhouse Shale revolution and " +
+                "end of curbs contribute to increased flow both ways The US oil industry is " +
+                "rapidly turning the country into an energy export powerhouse, tipped last " +
+                "week by one prominent consultancy to start shipping more oil overseas than " +
+                "the majority of Opec countries by 2020.";
+        List<String> parts = helper.tokenize(str);
+
+        // WHEN
+        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+
+        // THEN
+        assertNotNull(tagged);
     }
 
     public static Speaker getSpeaker() {

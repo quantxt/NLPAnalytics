@@ -174,7 +174,7 @@ public class ENDocumentInfoTest {
         assertNotNull(childs);
         assertFalse(childs.isEmpty());
         assertEquals(childs.size(), 3);
-        assertEquals(childs.get(0), "Light behaves in some respects like particles and in other respects like waves");
+        assertEquals(childs.get(0).getTitle(), "Light behaves in some respects like particles and in other respects like waves.");
         assertEquals(childs.get(0).getLink(), doc.getLink());
         assertEquals(childs.get(0).getLogo(), doc.getLogo());
         assertEquals(childs.get(0).getLanguage(), doc.getLanguage());
