@@ -57,7 +57,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
         tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
     }
 
-    private boolean isTagDC(String tag){
+    protected boolean isTagDC(String tag){
         return tag.equals("C") || tag.equals("I") || tag.startsWith("S");
     }
 

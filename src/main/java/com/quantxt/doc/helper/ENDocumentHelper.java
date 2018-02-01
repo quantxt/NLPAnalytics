@@ -49,7 +49,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     }
 
 
-    private boolean isTagDC(String tag) {
+    protected boolean isTagDC(String tag) {
         return tag.equals("IN") || tag.equals("TO") || tag.equals("CC")
                 || tag.equals("DT");
     }

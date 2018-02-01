@@ -1,4 +1,4 @@
-package com.quantxt.QTDocument;
+package com.quantxt.nlp.comp.meteor;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;

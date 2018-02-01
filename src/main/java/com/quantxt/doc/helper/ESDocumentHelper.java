@@ -59,7 +59,7 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
         return Arrays.asList(parts);
     }
 
-    private static boolean isTagDC(String tag){
+    protected boolean isTagDC(String tag){
         return tag.equals("CS") || tag.startsWith("S") ||
                 tag.equals("CC") || tag.startsWith("D");
     }

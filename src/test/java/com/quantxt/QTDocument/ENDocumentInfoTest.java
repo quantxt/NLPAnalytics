@@ -1,5 +1,9 @@
 package com.quantxt.QTDocument;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -136,5 +140,43 @@ public class ENDocumentInfoTest {
         tokens.add("Даугавпилса");
         ExtInterval spans = StringUtil.findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Бывший мэр Даугавпилса");
+    }
+
+    @Test
+    public void testVectorizedTitleNotNullArray() {
+        // GIVEN
+        String str = "Gilead Sciences Company Profile Gilead Sciences, Inc. is a research-based";
+        ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
+
+        // WHEN
+        double[] vectorizedTitle = doc.getVectorizedTitle(enx);
+
+        // THEN
+        assertNotNull(vectorizedTitle);
+    }
+
+    @Test
+    public void testDocumentChildsNotEmptyAndHasEqualProperties() {
+        // GIVEN
+        String str = "Light behaves in some respects like particles and in "
+                + "other respects like waves. Matter—the \"stuff\" of the "
+                + "universe consisting of particles such as electrons and they "
+                + "wavelike behavior too. Some light sources, such as neon "
+                + "lights, give off only certain frequencies of light.";
+        ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
+        doc.setLink("link");
+        doc.setLogo("logo");
+
+        // WHEN
+        List<QTDocument> childs = doc.getChilds();
+
+        // THEN
+        assertNotNull(childs);
+        assertFalse(childs.isEmpty());
+        assertEquals(childs.size(), 3);
+        assertEquals(childs.get(0), "Light behaves in some respects like particles and in other respects like waves");
+        assertEquals(childs.get(0).getLink(), doc.getLink());
+        assertEquals(childs.get(0).getLogo(), doc.getLogo());
+        assertEquals(childs.get(0).getLanguage(), doc.getLanguage());
     }
 }

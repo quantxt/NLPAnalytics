@@ -1,4 +1,5 @@
-package com.quantxt.QTDocument;
+package com.quantxt.doc.helper;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -14,11 +15,9 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;
-import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.types.Entity;
@@ -230,6 +229,39 @@ public class ENDocumentHelperTest {
 
         assertFalse(isStopword4);
         assertFalse(isStopword5);
+    }
+
+    @Test
+    public void testIsTag() {
+        // GIVEN
+        String tag1 = "IN";
+        String tag2 = "TO";
+        String tag3 = "CC";
+        String tag4 = "DT";
+
+        String tag5 = "DD";
+        String tag6 = "CS";
+        String tag7 = "S";
+
+        // WHEN
+        boolean isTag1 = helper.isTagDC(tag1);
+        boolean isTag2 = helper.isTagDC(tag2);
+        boolean isTag3 = helper.isTagDC(tag3);
+        boolean isTag4 = helper.isTagDC(tag4);
+
+        boolean isTag5 = helper.isTagDC(tag5);
+        boolean isTag6 = helper.isTagDC(tag6);
+        boolean isTag7 = helper.isTagDC(tag7);
+
+        // THEN
+        assertTrue(isTag1);
+        assertTrue(isTag2);
+        assertTrue(isTag3);
+        assertTrue(isTag4);
+
+        assertFalse(isTag5);
+        assertFalse(isTag6);
+        assertFalse(isTag7);
     }
 
     public static Speaker getSpeaker() {
