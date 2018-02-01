@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;
@@ -143,6 +144,7 @@ public class ENDocumentInfoTest {
     }
 
     @Test
+    @Ignore
     public void testVectorizedTitleNotNullArray() {
         // GIVEN
         String str = "Gilead Sciences Company Profile Gilead Sciences, Inc. is a research-based";
