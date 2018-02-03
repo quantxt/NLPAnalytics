@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.helper.types.ExtInterval;
 
 /**
  * Created by matin on 1/20/18.
@@ -37,7 +36,7 @@ public class ENDocumentInfo extends QTDocument {
         if (body == null || body.isEmpty())
             return null;
 
-        String sentences[] = rawText == null ? helper.getSentences(body)
+        String[] sentences = rawText == null ? helper.getSentences(body)
                                              : helper.getSentences(rawText);
         List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences) {

@@ -1,6 +1,5 @@
 package com.quantxt.nlp.comp.meteor;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +7,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.nlp.comp.meteor.scorer.MeteorConfiguration;
 import com.quantxt.nlp.comp.meteor.scorer.MeteorScorer;
 import com.quantxt.nlp.comp.meteor.scorer.MeteorStats;
 
@@ -17,8 +15,8 @@ import com.quantxt.nlp.comp.meteor.scorer.MeteorStats;
  */
 public class MeteorComp {
 
-    final private static Logger logger = LoggerFactory.getLogger(MeteorComp.class);
-
+    final private static Logger logger = LoggerFactory
+            .getLogger(MeteorComp.class);
 
     public static MeteorStats scorePlaintext(MeteorScorer scorer,
             List<String> lines1, List<String> lines2) throws IOException {
@@ -26,8 +24,9 @@ public class MeteorComp {
         MeteorStats aggStats = new MeteorStats();
 
         for (int i = 0; i < lines1.size(); i++) {
-            MeteorStats stats = scorer.getMeteorStats(lines1.get(i), lines2.get(i));
-            logger.info("acc: " + stats.score );
+            MeteorStats stats = scorer.getMeteorStats(lines1.get(i),
+                    lines2.get(i));
+            logger.info("acc: " + stats.score);
             logger.info("P:" + stats.precision);
             logger.info("R:" + stats.recall);
             logger.info("F1:" + stats.f1);
@@ -39,13 +38,13 @@ public class MeteorComp {
 
     public static void main(String[] args) throws Exception {
 
-//        MeteorConfiguration config = new MeteorConfiguration();
+        // MeteorConfiguration config = new MeteorConfiguration();
         // ENDocumentInfo.init(null);
         // ESDocumentInfo.init(null);
         // ENDocumentInfo endoc = new ENDocumentInfo("", "");
 
-//        String fileName = "/Users/matin/git/meteor/data/paraphrase-en.gz";
-//        config.setParaFileURL(new File(fileName).toURI().toURL());
+        // String fileName = "/Users/matin/git/meteor/data/paraphrase-en.gz";
+        // config.setParaFileURL(new File(fileName).toURI().toURL());
 
         MeteorScorer scorer = new MeteorScorer();
         String s1 = "Homeowners in high-tax states like New York, "
@@ -53,8 +52,7 @@ public class MeteorComp {
                 + "their ability to deduct their local property taxes "
                 + "and state and local income taxes from their federal tax "
                 + "bills is now capped at $10,000. ";
-        String s2 =
-                "Under the GOP's final tax bill, millions of Americans will "
+        String s2 = "Under the GOP's final tax bill, millions of Americans will "
                 + "lose the tax benefits they enjoy from owning their homes.";
         ArrayList<String> l1 = new ArrayList<>();
         ArrayList<String> l2 = new ArrayList<>();

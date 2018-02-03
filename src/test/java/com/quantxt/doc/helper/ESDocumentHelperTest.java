@@ -1,9 +1,12 @@
-package com.quantxt.QTDocument;
+package com.quantxt.doc.helper;
 
 import com.quantxt.doc.helper.ESDocumentHelper;
 import com.quantxt.helper.types.ExtInterval;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
@@ -75,4 +78,39 @@ public class ESDocumentHelperTest {
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
                 "a los ASICs para minar, hola a las GPUs Bitcoin Gold");
     }
+
+
+    @Test
+    public void testIsTag() {
+        // GIVEN
+        String tag1 = "CS";
+        String tag3 = "CC";
+        String tag2 = "S";
+        String tag4 = "D";
+
+        String tag5 = "TO";
+        String tag6 = "IN";
+        String tag7 = "I";
+
+        // WHEN
+        boolean isTag1 = helper.isTagDC(tag1);
+        boolean isTag2 = helper.isTagDC(tag2);
+        boolean isTag3 = helper.isTagDC(tag3);
+        boolean isTag4 = helper.isTagDC(tag4);
+
+        boolean isTag5 = helper.isTagDC(tag5);
+        boolean isTag6 = helper.isTagDC(tag6);
+        boolean isTag7 = helper.isTagDC(tag7);
+
+        // THEN
+        assertTrue(isTag1);
+        assertTrue(isTag2);
+        assertTrue(isTag3);
+        assertTrue(isTag4);
+
+        assertFalse(isTag5);
+        assertFalse(isTag6);
+        assertFalse(isTag7);
+    }
+
 }
