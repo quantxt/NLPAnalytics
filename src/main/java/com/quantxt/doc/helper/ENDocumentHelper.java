@@ -105,7 +105,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                     Collections.reverse(tokenList);
                     ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
                     if (eit == null) {
-                        logger.error(
+                        logger.debug(
                                 "NOT FOUND 1 '" + String.join(" ", tokenList)
                                         + "' in: " + orig);
                     } else {
@@ -127,7 +127,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                     Collections.reverse(tokenList);
                     ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
                     if (eit == null) {
-                        logger.error(
+                        logger.debug(
                                 "NOT FOUND 2 '" + String.join(" ", tokenList)
                                         + "' in: " + orig);
                     } else {
@@ -149,8 +149,9 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                     Collections.reverse(tokenList);
                     ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
                     if (eit == null) {
-                        logger.error(
-                                "NOT FOUND 3 " + String.join(" ", tokenList));
+                        logger.debug(
+                                "NOT FOUND 3 " + String.join(" ", tokenList)
+                                        + "' in: " + orig);
                     } else {
                         lowerCase_orig = lowerCase_orig.substring(0,
                                 eit.getStart());
@@ -167,7 +168,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
             Collections.reverse(tokenList);
             ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 4 '" + String.join(" ", tokenList)
+                logger.debug("NOT FOUND 4 '" + String.join(" ", tokenList)
                         + "' in: " + orig);
             } else {
                 eit.setType(type);

@@ -32,7 +32,7 @@ public class ESDocumentHelperTest {
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
                 "y buscar mantener");
         Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
-                "el acuerdo comercial.");
+                "el acuerdo comercial");
     }
 
     @Test
@@ -50,8 +50,8 @@ public class ESDocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
-                "firmó");
-        Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
+                "“Las órdenes ejecutivas que Trump");
+        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
                 "señalan que ser indocumentado es");
     }
 

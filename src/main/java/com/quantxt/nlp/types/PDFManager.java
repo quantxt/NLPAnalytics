@@ -9,15 +9,16 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.*;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -172,7 +173,10 @@ public class PDFManager {
         int lc = 0;
 
         PDFont font = PDType1Font.TIMES_ROMAN;
+
+    //    PDFont font = PDType1Font.COURIER;
         try {
+        //    PDFont font = PDTrueTypeFont.loadTTF(document , new File("Times_New_Roman_Normal.ttf"));
             PDPage page = new PDPage();
             document.addPage(page);
             PDPageContentStream contents = new PDPageContentStream(document, page);
@@ -186,7 +190,12 @@ public class PDFManager {
             List<String> lines = new ArrayList<>();
             for (String text : strArr) {
             //    text = text.replaceAll("[^\\x00-\\x7F]", "");
-                text = text.replaceAll(" \\.$", ".");
+            //    logger.info("Befre: " + text);
+                text = text.replaceAll("[^\\x00-\\x7F]", "");
+
+//                text = new String(text.getBytes(StandardCharsets.UTF_8) , "Windows-1252");
+ //               logger.info("After: " + text);
+                text = text.replaceAll(" \\.$", ".").trim();
                 int lastSpace = -1;
                 while (text.length() > 0) {
                     int spaceIndex = text.indexOf(' ', lastSpace + 1);

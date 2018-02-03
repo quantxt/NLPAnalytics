@@ -14,7 +14,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;
@@ -94,7 +93,7 @@ public class ENDocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "research-based biopharmaceutical company that discovers,");
+                "research-based biopharmaceutical company that discovers");
         Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
                 "develops and commercializes");
         Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
@@ -135,11 +134,11 @@ public class ENDocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "Director of Legal Services for Technology Projects at Deloitte CIS,");
+                "Director of Legal Services for Technology Projects at Deloitte CIS");
         Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
                 "described");
         Assert.assertEquals(str.substring(tagged.get(7).getStart(), tagged.get(7).getEnd()),
-                "innovation within the industry.");
+                "innovation within the industry");
     }
 
 

@@ -67,7 +67,6 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
     @Override
     public List<ExtInterval> getNounAndVerbPhrases(String orig, String [] parts) {
-    //    String lowerCase_orig = orig.toLowerCase();
         String lowerCase_orig = orig;
         int numTokens = parts.length;
         String[] taags = getPosTags(parts);

@@ -113,7 +113,7 @@ public class ENDocumentInfoTest {
         tokens.add("a");
         tokens.add("research");
         ExtInterval spans = StringUtil.findSpan(str, tokens);
-        Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "a research-based");
+        Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "a research");
     }
 
     @Test
@@ -121,9 +121,9 @@ public class ENDocumentInfoTest {
         String str = "Gilead Sciences Company Profile Gilead Sciences, Inc. is a research-based";
         List<String> tokens = new ArrayList<>();
         tokens.add("Gilead");
-        tokens.add("Science");
+        tokens.add("Sciences");
         ExtInterval spans = StringUtil.findSpan(str, tokens);
-        Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Gilead Sciences,");
+        Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Gilead Sciences");
     }
 
     @Test
