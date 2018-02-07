@@ -230,6 +230,15 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
+    public boolean isSentence(String str, List<String> tokens) {
+        int numTokens = tokens.size();
+        if (numTokens < 6 || numTokens > 80) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
     public CharArraySet getStopwords() {
         return stopwords;
     }
