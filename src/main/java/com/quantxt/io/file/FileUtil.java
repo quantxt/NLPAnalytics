@@ -99,14 +99,13 @@ public class FileUtil {
      *
      * @throws IOException
      */
-    public static void writeText(String fileName, List<String> lines)
+    public static void writeLines(String fileName, List<String> lines)
             throws IOException {
-        writeText(fileName, lines, ENCODING);
+        writeLines(fileName, lines, ENCODING);
     }
 
     /**
      * Write given list of lines into file.
-     * It is used default encoding {@link StandardCharsets#UTF_8}.
      *
      * @param fileName represents file location
      * @param lines to be written in file
@@ -114,7 +113,7 @@ public class FileUtil {
      *
      * @throws IOException
      */
-    public static void writeText(String fileName, List<String> lines,
+    public static void writeLines(String fileName, List<String> lines,
             Charset encoding)
             throws IOException {
         Path path = Paths.get(fileName);
@@ -123,6 +122,37 @@ public class FileUtil {
                 writer.write(line);
                 writer.newLine();
             }
+        }
+    }
+
+    /**
+     * Write given text into file.
+     * It is used default encoding {@link StandardCharsets#UTF_8}.
+     *
+     * @param fileName represents file location
+     * @param text to be written in file
+     *
+     * @throws IOException
+     */
+    public static void writeText(String fileName, String text)
+            throws IOException {
+        writeText(fileName, text, ENCODING);
+    }
+
+    /**
+     * Write given text into file.
+     *
+     * @param fileName represents file location
+     * @param text to be written in file
+     * @param encoding represents Charset use for encoding
+     *
+     * @throws IOException
+     */
+    public static void writeText(String fileName, String text, Charset encoding)
+            throws IOException {
+        Path path = Paths.get(fileName);
+        try (BufferedWriter writer = Files.newBufferedWriter(path, encoding)) {
+            writer.write(text);
         }
     }
 
