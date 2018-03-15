@@ -240,6 +240,11 @@
             <version>3.9.1</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.smartxls</groupId>
+            <artifactId>api</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
 
 </project>
