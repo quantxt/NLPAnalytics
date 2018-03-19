@@ -243,7 +243,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return stopwords;
     }
 
-    public String getModelBaseDir() {
+    public static String getModelBaseDir() {
         return System.getenv(DEFAULT_NLP_MODEL_DIR);
     }
 

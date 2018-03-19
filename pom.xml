@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.quantxt.nlp</groupId>
     <artifactId>doc-analytics</artifactId>
-    <version>1.5.11-SNAPSHOT</version>
+    <version>1.5.15-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Quantxt Core NLP</name>
@@ -50,6 +50,13 @@
     </distributionManagement>
 
     <repositories>
+        <!-- mkdir lib; mkdir tmp; cd tmp; -->
+        <!-- curl -O 'http://www.smartxls.com/SX.zip'; unzip SX.zip; cd ..;-->
+        <!-- mvn install:install-file -Dfile=tmp/SX.jar -DgroupId=com.smartxls -DartifactId=api -Dversion=1.0 -Dpackaging=jar -DlocalRepositoryPath=lib -->
+        <repository>
+            <id>smartexcel</id>
+            <url>file://${basedir}/lib</url>
+        </repository>
         <repository>
             <id>oss-snapshots</id>
             <name>Sonatype OSS Snapshots</name>
@@ -175,11 +182,6 @@
             <version>2.1.06-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>org.annolab.tt4j</groupId>
-            <artifactId>org.annolab.tt4j</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.5</version>
@@ -193,12 +195,6 @@
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>2.0.8</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>cc.mallet</groupId>
-            <artifactId>mallet</artifactId>
-            <version>2.0.7-RC2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -223,16 +219,12 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>3.17</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.atilika.kuromoji</groupId>
             <artifactId>kuromoji-ipadic</artifactId>
             <version>0.9.0</version>
-        </dependency>
-        <dependency>
-            <groupId>fr.opensagres.xdocreport</groupId>
-            <artifactId>org.apache.poi.xwpf.converter.pdf</artifactId>
-            <version>1.0.6</version>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
@@ -244,6 +236,7 @@
             <groupId>com.smartxls</groupId>
             <artifactId>api</artifactId>
             <version>1.0</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

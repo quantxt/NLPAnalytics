@@ -62,7 +62,7 @@ public class MeteorConfiguration {
 		setTask("default");
 		setBeamSize(Constants.DEFAULT_BEAM_SIZE);
 		setWordFileURL(Constants.getDefaultWordFileURL(langID));
-		setSynDirURL(Constants.DEFAULT_SYN_DIR_URL);
+		setSynDirURL(Constants.getDefaultSynDIRURL(langID));
 		setParaFileURL(Constants.getDefaultParaFileURL(langID));
 		setNormalization(Constants.NO_NORMALIZE);
 		setCharBased(false);
@@ -170,7 +170,7 @@ public class MeteorConfiguration {
 	}
 
 	public ArrayList<Integer> getModules() {
-		return new ArrayList<Integer>(modules);
+		return new ArrayList<>(modules);
 	}
 
 	public String getModulesString() {

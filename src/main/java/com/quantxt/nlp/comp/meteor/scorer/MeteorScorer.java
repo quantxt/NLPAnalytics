@@ -81,7 +81,7 @@ public class MeteorScorer {
 		beta = scorer.beta;
 		gamma = scorer.gamma;
 		delta = scorer.delta;
-		moduleWeights = new ArrayList<Double>(scorer.moduleWeights);
+		moduleWeights = new ArrayList<>(scorer.moduleWeights);
 		aligner = new Aligner(scorer.aligner);
 		charBased = scorer.charBased;
 	}

@@ -38,28 +38,19 @@ public class MeteorComp {
 
     public static void main(String[] args) throws Exception {
 
-        // MeteorConfiguration config = new MeteorConfiguration();
-        // ENDocumentInfo.init(null);
-        // ESDocumentInfo.init(null);
-        // ENDocumentInfo endoc = new ENDocumentInfo("", "");
-
-        // String fileName = "/Users/matin/git/meteor/data/paraphrase-en.gz";
-        // config.setParaFileURL(new File(fileName).toURI().toURL());
-
         MeteorScorer scorer = new MeteorScorer();
-        String s1 = "Homeowners in high-tax states like New York, "
+        String s1 = "homeowners in high-tax states like New York, "
                 + "New Jersey and California could be big losers as "
-                + "their ability to deduct their local property taxes "
-                + "and state and local income taxes from their federal tax "
+                + "their ability to deduct their local home taxes "
+                + "and state and local income tax from their federal tax "
                 + "bills is now capped at $10,000. ";
         String s2 = "Under the GOP's final tax bill, millions of Americans will "
-                + "lose the tax benefits they enjoy from owning their homes.";
+                + "lose the income tax benefits they enjoy from owning their homes.";
         ArrayList<String> l1 = new ArrayList<>();
         ArrayList<String> l2 = new ArrayList<>();
         l1.add(s1);
         l2.add(s2);
         MeteorStats stats = scorePlaintext(scorer, l1, l2);
         logger.info(stats.toString());
-
     }
 }

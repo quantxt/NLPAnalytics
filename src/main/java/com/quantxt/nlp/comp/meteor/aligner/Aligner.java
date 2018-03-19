@@ -17,6 +17,10 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.*;
 
+import static com.quantxt.nlp.comp.meteor.util.Constants.getDefaultParaFileURL;
+import static com.quantxt.nlp.comp.meteor.util.Constants.getDefaultSynDIRURL;
+import static com.quantxt.nlp.comp.meteor.util.Constants.getDefaultWordFileURL;
+
 public class Aligner {
 
 	/* Configuration */
@@ -39,11 +43,10 @@ public class Aligner {
 
 	public Aligner(String language, ArrayList<Integer> modules) {
 		this.beamSize = Constants.DEFAULT_BEAM_SIZE;
+		int langID = Constants.getLanguageID(Constants.normLanguageName(language));
 		this.partialComparator = Constants.PARTIAL_COMPARE_TOTAL;
-		setupModules(language, modules, null, Constants.DEFAULT_WORD_DIR_URL,
-				Constants.DEFAULT_SYN_DIR_URL,
-				Constants.getDefaultParaFileURL(Constants
-						.getLanguageID(Constants.normLanguageName(language))));
+		setupModules(language, modules, null, getDefaultWordFileURL(langID),
+				getDefaultSynDIRURL(langID), getDefaultParaFileURL(langID));
 	}
 
 	public Aligner(String language, ArrayList<Integer> modules,

@@ -66,7 +66,6 @@ public class SynonymMatcher {
 					m.length = 1;
 					m.matchStart = i;
 					m.matchLength = 1;
-
 					// Add this match to the list of matches and mark coverage
 					s.matches.get(j).add(m);
 					s.line1Coverage[i]++;

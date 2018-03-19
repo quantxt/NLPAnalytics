@@ -1,6 +1,5 @@
 package com.quantxt.doc.helper;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,10 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.annolab.tt4j.TokenHandler;
-import org.annolab.tt4j.TreeTaggerWrapper;
 import org.apache.lucene.analysis.CharArraySet;
-import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
