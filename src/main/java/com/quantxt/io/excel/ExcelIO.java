@@ -4,13 +4,22 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.util.UUID;
 
+import org.apache.poi.POIXMLTextExtractor;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.poifs.filesystem.OfficeXmlFileException;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.xssf.binary.XSSFBSharedStringsTable;
+import org.apache.poi.xssf.binary.XSSFBSheetHandler;
+import org.apache.poi.xssf.binary.XSSFBStylesTable;
+import org.apache.poi.xssf.eventusermodel.XSSFBReader;
+import org.apache.poi.xssf.eventusermodel.XSSFSheetXMLHandler;
+import org.apache.poi.xssf.extractor.XSSFBEventBasedExcelExtractor;
+import org.apache.poi.xssf.usermodel.XSSFComment;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,25 +81,77 @@ public class ExcelIO implements ResourceIO<WorkbookData, File, Workbook> {
 
     public static Workbook getXLSBWorkbook(InputStream inputStream)
             throws Exception {
-        com.smartxls.WorkBook wb = new com.smartxls.WorkBook();
-        wb.readXLSB(inputStream);
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet(wb.getSheetName(0));
-        int numRows = wb.getLastRow();
-        if (numRows > 3000) {
-            log.error("File too big too process " + numRows);
-            return null;
+        //sooo hacky
+        String uuid = UUID.randomUUID().toString();
+        String filename = "/tmp/" + uuid.replace("-", "") + ".xlsb";
+
+        log.info("Writing " + filename + " to disk");
+
+        File targetFile = new File(filename);
+        Files.copy(inputStream, targetFile.toPath());
+
+        POIXMLTextExtractor extractor = new XSSFBEventBasedExcelExtractor(filename);
+        OPCPackage pkg = extractor.getPackage();
+
+        XSSFBReader r = new XSSFBReader(pkg);
+        XSSFBSharedStringsTable sst = new XSSFBSharedStringsTable(pkg);
+        XSSFBStylesTable xssfbStylesTable = r.getXSSFBStylesTable();
+        XSSFBReader.SheetIterator it = (XSSFBReader.SheetIterator) r.getSheetsData();
+
+        Workbook wb = new XSSFWorkbook();
+
+        while (it.hasNext()) {
+            InputStream iss = it.next();
+            String name = it.getSheetName();
+            XLSBSheetHandler testSheetHandler = new XLSBSheetHandler();
+            testSheetHandler.setSheet(wb.createSheet(name));
+            XSSFBSheetHandler sheetHandler = new XSSFBSheetHandler(iss,
+                    xssfbStylesTable,
+                    it.getXSSFBSheetComments(),
+                    sst,
+                    testSheetHandler,
+                    new DataFormatter(),
+                    false);
+            sheetHandler.parse();
         }
-        log.info("Num rows: {}", numRows);
-        for (int i = 0; i < numRows; i++) {
-            Row newRow = sheet.createRow(i);
-            int numCol = wb.getLastCol();
-            for (int j = 0; j < numCol; j++) {
-                Cell cell = newRow.createCell(j);
-                cell.setCellValue(wb.getText(i, j));
-            }
+
+        log.info("removing " + filename + " from disk");
+        targetFile.delete();
+        return wb;
+    }
+
+    private static class XLSBSheetHandler implements XSSFSheetXMLHandler.SheetContentsHandler {
+        private Sheet sheet;
+
+        public void setSheet(Sheet sh){
+            this.sheet = sh;
         }
-        return workbook;
+
+        @Override
+        public void startRow(int rowNum) {
+            sheet.createRow(rowNum);
+
+        }
+
+        @Override
+        public void endRow(int i) {
+
+        }
+
+        @Override
+        public void cell(String cellReference, String formattedValue, XSSFComment comment) {
+            formattedValue = (formattedValue == null) ? "" : formattedValue;
+            CellReference ref = new CellReference(cellReference);
+            Row r = sheet.getRow(ref.getRow());
+            Cell c = r.createCell(ref.getCol());
+            c.setCellValue(formattedValue);
+
+        }
+
+        @Override
+        public void headerFooter(String s, boolean b, String s1) {
+
+        }
     }
 
 }
