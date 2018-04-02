@@ -4,17 +4,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.StopFilter;
+import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -239,8 +236,14 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public CharArraySet getStopwords() {
-        return stopwords;
+    public Set<String> getStopwords() {
+        Iterator iter = stopwords.iterator();
+        HashSet<String> set = new HashSet<>();
+        while (iter.hasNext()){
+            Object obj = iter.next();
+            set.add(obj.toString());
+        }
+        return set;
     }
 
     public static String getModelBaseDir() {

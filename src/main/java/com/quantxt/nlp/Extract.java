@@ -1,7 +1,9 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.quantxt.helper.types.Extraction;
+import com.quantxt.nlp.types.SOVAttributes;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 import com.quantxt.types.BaseNameAlts;
@@ -84,7 +86,6 @@ public class Extract {
             e.printStackTrace();
         }
 
-  //      Type customeType = new TypeToken<BaseNameAlts<T>[]>() {}.getType();
         for (Map.Entry<String, List<BaseNameAlts<T>>> e : preTreeMap.entrySet()){
             trie.addKeyword(e.getKey(), e.getValue());
         }
@@ -108,7 +109,6 @@ public class Extract {
                 for (String alt : alts) {
                     trie.addKeyword(alt, bna);
                 }
-
             }
             lookupTrie = trie.build();
         } catch (IOException e) {
@@ -203,5 +203,4 @@ public class Extract {
         return (diff >= 0 && diff < 10);
 
     }
-
 }
