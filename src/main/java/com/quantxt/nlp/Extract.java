@@ -3,7 +3,6 @@ package com.quantxt.nlp;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import com.quantxt.helper.types.Extraction;
-import com.quantxt.nlp.types.SOVAttributes;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 import com.quantxt.types.BaseNameAlts;

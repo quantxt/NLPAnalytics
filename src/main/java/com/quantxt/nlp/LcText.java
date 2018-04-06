@@ -1,13 +1,16 @@
 package com.quantxt.nlp;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.reflect.TypeToken;
-import com.quantxt.helper.types.Extraction;
-import com.quantxt.nlp.types.SOVAttributes;
-import com.quantxt.trie.Emit;
-import com.quantxt.types.BaseNameAlts;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
@@ -15,28 +18,38 @@ import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.*;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
-import org.apache.lucene.document.Field;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.lang.reflect.Type;
-import java.util.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.quantxt.helper.types.Extraction;
+import com.quantxt.trie.Emit;
+import com.quantxt.types.BaseNameAlts;
 
 
 /**
  * Created by matin on 3/28/18.
  */
-public class LcText {
+public class LcText<T> {
 
     final private static Logger logger = LoggerFactory.getLogger(LcText.class);
 
@@ -48,19 +61,14 @@ public class LcText {
     private static Gson gson = new Gson();
 
     private IndexSearcher indexSearcher;
-    private final Type type;
-    HashMap<Long, Object> customeData = new HashMap<>();
+    private Type customeType;
+    private HashMap<Long, BaseNameAlts<T>> customeData = new HashMap<>();
 
-    public LcText(Type type){
-        this.type = type;
+    public LcText(Type type) {
+        this.customeType = type;
     }
 
-    public <T> void loadCategorical(InputStream ins,
-                                    Class<T> dataClass,
-                                    Type customeType,
-                                    boolean includeCategory)
-    {
-
+    public void loadCategorical(InputStream ins, boolean includeCategory) {
         try {
             Map<String, Analyzer> analyzerMap = new HashMap<>();
             analyzerMap.put(Standard, StandardAnalyzer);
@@ -161,7 +169,7 @@ public class LcText {
 
     public static void main(String[] args) throws Exception {
 
-        String search_query = "Description";
+        String search_query = "sprinkler";
         InputStream ins = new FileInputStream(new File("test.json"));
 
         JsonParser parser = new JsonParser();
@@ -177,23 +185,23 @@ public class LcText {
 
         InputStream is = new ByteArrayInputStream(str_arr.getBytes());
 
-        LcText extract = new LcText(new TypeToken<BaseNameAlts<SOVAttributes>>() {}.getType());
-
-        Type customeType = new TypeToken<BaseNameAlts<SOVAttributes>[]>() {}.getType();
-        extract.loadCategorical(is, SOVAttributes.class, customeType, true);
-        Extraction extraction = extract.extract(search_query);
-        Map<Extraction.Extractions, List<Emit>> emitMap = extraction.getExtractions();
-        List<Emit> emets = emitMap.get(Extraction.Extractions.PHRASE);
-
-        if (emets != null ) {
-            for (Emit e : emets) {
-                //exact match
-                ArrayList<BaseNameAlts> cdatas = (ArrayList<BaseNameAlts>) e.getCustomeData();
-                for (BaseNameAlts cdata : cdatas) {
-                    String name = cdata.getName();
-                    logger.info(name);
-                }
-            }
-        }
+//        Type customeType = new TypeToken<BaseNameAlts<SOVAttributes>[]>(){}.getType();
+//        LcText<SOVAttributes> extract = new LcText<>(customeType);
+//
+//        extract.loadCategorical(is, true);
+//        Extraction extraction = extract.extract(search_query);
+//        Map<Extraction.Extractions, List<Emit>> emitMap = extraction.getExtractions();
+//        List<Emit> emets = emitMap.get(Extraction.Extractions.PHRASE);
+//
+//        if (emets != null ) {
+//            for (Emit e : emets) {
+//                //exact match
+//                ArrayList<BaseNameAlts> cdatas = (ArrayList<BaseNameAlts>) e.getCustomeData();
+//                for (BaseNameAlts cdata : cdatas) {
+//                    String name = cdata.getName();
+//                    logger.info(name);
+//                }
+//            }
+//        }
     }
 }
