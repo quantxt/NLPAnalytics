@@ -17,24 +17,14 @@ import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
+import org.apache.lucene.document.*;
+import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.util.BytesRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,19 +43,36 @@ public class LcText<T> {
 
     final private static Logger logger = LoggerFactory.getLogger(LcText.class);
 
-    private static String English  = "english";
-    private static String Standard = "standard";
-    private static String Keyword  = "keyword";
-    private static Analyzer EnglishAnalyzer = new EnglishAnalyzer();
-    private static Analyzer StandardAnalyzer = new StandardAnalyzer();
-    private static Gson gson = new Gson();
+    final private static String English  = "english";
+    final private static String Standard = "standard";
+    final private static String Keyword  = "keyword";
+    final private static Analyzer EnglishAnalyzer = new EnglishAnalyzer();
+    final private static Analyzer StandardAnalyzer = new StandardAnalyzer();
+    final private static Gson gson = new Gson();
+    final private static FieldType QFieldType;
 
     private IndexSearcher indexSearcher;
     private Type customeType;
     private HashMap<Long, BaseNameAlts<T>> customeData = new HashMap<>();
+    boolean orSearch = false;
+
+    static {
+        QFieldType = new FieldType();
+        QFieldType.setStored(true);
+        QFieldType.setStoreTermVectors(true);
+        QFieldType.setStoreTermVectorOffsets(true);
+        QFieldType.setStoreTermVectorPositions(true);
+        QFieldType.setTokenized(true);
+        QFieldType.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
+        QFieldType.freeze();
+    }
 
     public LcText(Type type) {
         this.customeType = type;
+    }
+
+    public void setOrSearch(boolean b){
+        orSearch = b;
     }
 
     public void loadCategorical(InputStream ins, boolean includeCategory) {
@@ -113,25 +120,42 @@ public class LcText<T> {
             doc.add(new StringField("title", title, Field.Store.YES));
         }
         String body = String.join("\n" , content);
-        doc.add(new TextField(English, body, Field.Store.NO));
-        doc.add(new TextField(Standard, body, Field.Store.NO));
+        doc.add(new Field(English, body, QFieldType));
+        doc.add(new Field(Standard, body, QFieldType));
+
+        //      doc.add(new TextField(English, body, Field.Store.NO));
+        //      doc.add(new TextField(Standard, body, Field.Store.NO));
         for (String s : content){
-            doc.add(new TextField(Keyword, s, Field.Store.NO));
+            doc.add(new Field(Keyword, s, QFieldType));
+            //          doc.add(new TextField(Keyword, s, Field.Store.NO));
         }
 
         return doc;
     }
 
-    public <T> Extraction extract(String str){
-        Extraction res = new Extraction();
+    private TopDocs getPhrase(String str,
+                              int num) throws IOException {
 
+        BooleanQuery.Builder bqueryBuilder = new BooleanQuery.Builder();
+        bqueryBuilder.add(new BooleanClause(new PhraseQuery(2, Standard, new BytesRef(str)), BooleanClause.Occur.SHOULD));
+        bqueryBuilder.add(new BooleanClause(new PhraseQuery(2, English,  new BytesRef(str)), BooleanClause.Occur.SHOULD));
+        bqueryBuilder.add(new BooleanClause(new PhraseQuery(2, Keyword,  new BytesRef(str)), BooleanClause.Occur.SHOULD));
+
+        return indexSearcher.search(bqueryBuilder.build(), num);
+    }
+
+    private TopDocs gethists(String str,
+                             int num,
+                             QueryParser.Operator op) throws IOException
+    {
         BooleanQuery.Builder bqueryBuilder = new BooleanQuery.Builder();
         bqueryBuilder.add(new BooleanClause(new TermQuery(new Term(Keyword,str)), BooleanClause.Occur.SHOULD));
 
         QueryParser qp_1 = new QueryParser(Standard, StandardAnalyzer);
         QueryParser qp_2 = new QueryParser(English, EnglishAnalyzer);
-        qp_1.setDefaultOperator(QueryParser.AND_OPERATOR);
-        qp_2.setDefaultOperator(QueryParser.AND_OPERATOR);
+
+        qp_1.setDefaultOperator(op);
+        qp_2.setDefaultOperator(op);
 
         try {
             bqueryBuilder.add(new BooleanClause(qp_1.parse(str), BooleanClause.Occur.SHOULD));
@@ -140,21 +164,65 @@ public class LcText<T> {
             e.printStackTrace();
         }
 
+        return indexSearcher.search(bqueryBuilder.build(), num);
+    }
+
+    public <T> Extraction extract(String str){
+        Extraction res = new Extraction();
         ArrayList<BaseNameAlts> bna = new ArrayList<>();
 
         //hack this doesn't work
         // Type customeType = new TypeToken<BaseNameAlts<T>>() {}.getType();
         // Type customeType = new TypeToken<BaseNameAlts<T>>() {}.getType();
 
+        //escape the query
+        str = QueryParser.escape(str);
+
         try {
-            TopDocs hits = indexSearcher.search(bqueryBuilder.build(), 4);
+            //    TopDocs hits = getPhrase(str, 4);
+            //    if (hits.totalHits == 0 ) {
+            TopDocs hits = gethists(str, 4, QueryParser.Operator.AND);
+            //    }
+            if (orSearch && hits.totalHits == 0){
+                hits = gethists(str, 4, QueryParser.Operator.OR);
+            }
+
+            ScoreDoc[] scorehits = hits.scoreDocs;
+
             float topScore = hits.getMaxScore();
-            for (ScoreDoc hit : hits.scoreDocs){
-                long id = hit.doc;
+            for (ScoreDoc hit : scorehits){
+                int id = hit.doc;
                 float score = hit.score;
+
                 if (score / topScore < .8){
                     break;
                 }
+                //     Fields fields = indexSearcher.getIndexReader().getTermVectors(id);
+                //     Terms terms = fields.terms(Standard);
+
+                //     TermsEnum iter = terms.iterator();
+                //    iter.postings(0);
+
+                /*
+
+                TermFreqVector tfvector = indexSearcher.getIndexReader().document(id);
+                TermPositionVector tpvector = (TermPositionVector)tfvector;
+                // this part works only if there is one term in the query string,
+                // otherwise you will have to iterate this section over the query terms.
+                int termidx = tfvector.indexOf(querystr);
+                int[] termposx = tpvector.getTermPositions(termidx);
+                TermVectorOffsetInfo[] tvoffsetinfo = tpvector.getOffsets(termidx);
+
+                for (int j=0;j<termposx.length;j++) {
+                    System.out.println("termpos : "+termposx[j]);
+                }
+                for (int j=0;j<tvoffsetinfo.length;j++) {
+                    int offsetStart = tvoffsetinfo[j].getStartOffset();
+                    int offsetEnd = tvoffsetinfo[j].getEndOffset();
+                    System.out.println("offsets : "+offsetStart+" "+offsetEnd);
+                }
+                */
+
                 BaseNameAlts<T> data = (BaseNameAlts<T>) customeData.get(id);
                 bna.add(data);
             }
@@ -163,9 +231,9 @@ public class LcText<T> {
         }
         Emit emit = new Emit(0, 0, str, bna);
         res.add(Extraction.Extractions.PHRASE, emit);
-
         return res;
     }
+
 
     public static void main(String[] args) throws Exception {
 
