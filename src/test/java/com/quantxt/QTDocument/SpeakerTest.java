@@ -52,6 +52,7 @@ public class SpeakerTest {
 
         // THEN
         assertNotNull(speaker.getNameTree());
+
         assertFalse(speaker.getNameTree().isEmpty());
     }
 

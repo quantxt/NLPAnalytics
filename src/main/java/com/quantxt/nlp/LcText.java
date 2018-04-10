@@ -9,8 +9,10 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.google.gson.reflect.TypeToken;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
@@ -53,7 +55,7 @@ public class LcText<T> {
 
     private IndexSearcher indexSearcher;
     private Type customeType;
-    private HashMap<Long, BaseNameAlts<T>> customeData = new HashMap<>();
+    private ArrayList<BaseNameAlts<T>> customeData = new ArrayList<>();
     boolean orSearch = false;
 
     static {
@@ -75,7 +77,9 @@ public class LcText<T> {
         orSearch = b;
     }
 
-    public void loadCategorical(InputStream ins, boolean includeCategory) {
+    public void loadCategorical(InputStream ins,
+                                Type customeType,
+                                boolean includeCategory) {
         try {
             Map<String, Analyzer> analyzerMap = new HashMap<>();
             analyzerMap.put(Standard, StandardAnalyzer);
@@ -96,8 +100,8 @@ public class LcText<T> {
                 String name = bna.getName();
                 Document doc = includeCategory ? createDocument(name, alts):
                         createDocument(null, alts);
-                long id = writer.addDocument(doc);
-                customeData.put(id-1, bna);
+                writer.addDocument(doc);
+                customeData.add(bna);
             }
             writer.close();
             DirectoryReader dreader = DirectoryReader.open(ramDirectory);
@@ -238,7 +242,7 @@ public class LcText<T> {
     public static void main(String[] args) throws Exception {
 
         String search_query = "sprinkler";
-        InputStream ins = new FileInputStream(new File("test.json"));
+        InputStream ins = new FileInputStream(new File("/Users/matin/git/qtdocprocess/src/main/resources/SOVNamesMapping.json"));
 
         JsonParser parser = new JsonParser();
         JsonObject sov = null;
@@ -253,23 +257,23 @@ public class LcText<T> {
 
         InputStream is = new ByteArrayInputStream(str_arr.getBytes());
 
-//        Type customeType = new TypeToken<BaseNameAlts<SOVAttributes>[]>(){}.getType();
-//        LcText<SOVAttributes> extract = new LcText<>(customeType);
-//
-//        extract.loadCategorical(is, true);
-//        Extraction extraction = extract.extract(search_query);
-//        Map<Extraction.Extractions, List<Emit>> emitMap = extraction.getExtractions();
-//        List<Emit> emets = emitMap.get(Extraction.Extractions.PHRASE);
-//
-//        if (emets != null ) {
-//            for (Emit e : emets) {
-//                //exact match
-//                ArrayList<BaseNameAlts> cdatas = (ArrayList<BaseNameAlts>) e.getCustomeData();
-//                for (BaseNameAlts cdata : cdatas) {
-//                    String name = cdata.getName();
-//                    logger.info(name);
-//                }
-//            }
-//        }
+        Type customeType = new TypeToken<BaseNameAlts<JsonObject>[]>(){}.getType();
+        LcText<JsonObject> extract = new LcText<>(customeType);
+
+        extract.loadCategorical(is, customeType, true);
+        Extraction extraction = extract.extract(search_query);
+        Map<Extraction.Extractions, List<Emit>> emitMap = extraction.getExtractions();
+        List<Emit> emets = emitMap.get(Extraction.Extractions.PHRASE);
+
+        if (emets != null ) {
+            for (Emit e : emets) {
+                //exact match
+                ArrayList<BaseNameAlts> cdatas = (ArrayList<BaseNameAlts>) e.getCustomeData();
+                for (BaseNameAlts cdata : cdatas) {
+                    String name = cdata.getName();
+                    logger.info(name);
+                }
+            }
+        }
     }
 }

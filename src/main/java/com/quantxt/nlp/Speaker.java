@@ -92,8 +92,6 @@ public class Speaker implements QTExtract {
             phraseTree = phrase.build();
         }
 
-        JsonParser parser = new JsonParser();
-
         //titles
         /*
         Trie.TrieBuilder titles = Trie.builder().onlyWholeWords().ignoreCase();
@@ -118,50 +116,53 @@ public class Speaker implements QTExtract {
             entityMap = new HashMap<>();
             entityMap.put(PERSON, gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class));
         }
-
-
         for (Map.Entry<String, Entity[]> e : entityMap.entrySet()) {
             String entType = e.getKey();
-            Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
+            //    Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
+            Extract ext = new Extract(entType, e.getValue());
             for (Entity entity : e.getValue()) {
                 String entity_name = entity.getName();
-                NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
-                entityNamedEntity.setEntity(entType, entity);
-                entityNamedEntity.setParent(true);
+
+                //    NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
+                //    entityNamedEntity.setEntity(entType, entity);
+                //    entityNamedEntity.setParent(true);
                 search_terms.add(entity_name);
+            /*
+            // include entity as a speaker?
+            if (entity.isSpeaker()) {
+                names.addKeyword(entity_name, entityNamedEntity);
+                names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
 
-                // include entity as a speaker?
-                if (entity.isSpeaker()) {
-                    names.addKeyword(entity_name, entityNamedEntity);
-                    names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
+                String[] alts = entity.getAlts();
+                if (alts != null) {
+                    for (String alt : alts) {
+                        names.addKeyword(alt, entityNamedEntity);
+                        names.addKeyword(alt.toUpperCase(), entityNamedEntity);
 
-                    String[] alts = entity.getAlts();
-                    if (alts != null) {
-                        for (String alt : alts) {
-                            names.addKeyword(alt, entityNamedEntity);
-                            names.addKeyword(alt.toUpperCase(), entityNamedEntity);
-
-                        }
-                    }
-                }
-
-                List<NamedEntity> namedEntities = entity.getNamedEntities();
-                if (namedEntities == null) continue;
-                for (NamedEntity namedEntity : namedEntities) {
-                    namedEntity.setEntity(entType, entity);
-                    String p_name = namedEntity.getName();
-                    names.addKeyword(p_name, namedEntity);
-                    names.addKeyword(p_name.toUpperCase(), namedEntity);
-                    Set<String> nameAlts = namedEntity.getAlts();
-                    if (nameAlts != null) {
-                        for (String alt : namedEntity.getAlts()) {
-                            names.addKeyword(alt, namedEntity);
-                            names.addKeyword(alt.toUpperCase(), namedEntity);
-                        }
                     }
                 }
             }
-            nameTree.put(entType, names.build());
+
+            List<NamedEntity> namedEntities = entity.getNamedEntities();
+            if (namedEntities == null) continue;
+            for (NamedEntity namedEntity : namedEntities) {
+                namedEntity.setEntity(entType, entity);
+                String p_name = namedEntity.getName();
+                names.addKeyword(p_name, namedEntity);
+                names.addKeyword(p_name.toUpperCase(), namedEntity);
+                Set<String> nameAlts = namedEntity.getAlts();
+                if (nameAlts != null) {
+                    for (String alt : namedEntity.getAlts()) {
+                        names.addKeyword(alt, namedEntity);
+                        names.addKeyword(alt.toUpperCase(), namedEntity);
+                    }
+                }
+            }
+            */
+            }
+                //    nameTree.put(entType, names.build());
+            nameTree.put(entType, ext.getLookupTrie());
+
         }
     }
 
@@ -259,9 +260,6 @@ public class Speaker implements QTExtract {
         return summaries;
     }
 */
-    private static boolean isTagDC(String tag){
-        return tag.equals("IN") || tag.equals("TO") || tag.equals("CC") || tag.equals("DT");
-    }
 
     private static String removePrnts(String str){
         str = str.replaceAll("\\([^\\)]+\\)", " ");

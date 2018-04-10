@@ -1,7 +1,6 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 import com.quantxt.helper.types.Extraction;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
@@ -25,9 +24,60 @@ public class Extract {
     final private static Logger logger = LoggerFactory.getLogger(Extract.class);
 
     private Trie lookupTrie  = null;
+    private String name;
+
+    public Extract(String entType, Entity[] entities){
+        Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
+        for (Entity entity : entities) {
+            String entity_name = entity.getName();
+            NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
+            entityNamedEntity.setEntity(entType, entity);
+            entityNamedEntity.setParent(true);
+
+            // include entity as a speaker?
+            if (entity.isSpeaker()) {
+                names.addKeyword(entity_name, entityNamedEntity);
+                names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
+
+                String[] alts = entity.getAlts();
+                if (alts != null) {
+                    for (String alt : alts) {
+                        names.addKeyword(alt, entityNamedEntity);
+                        names.addKeyword(alt.toUpperCase(), entityNamedEntity);
+
+                    }
+                }
+            }
+
+            List<NamedEntity> namedEntities = entity.getNamedEntities();
+            if (namedEntities == null) continue;
+            for (NamedEntity namedEntity : namedEntities) {
+                namedEntity.setEntity(entType, entity);
+                String p_name = namedEntity.getName();
+                names.addKeyword(p_name, namedEntity);
+                names.addKeyword(p_name.toUpperCase(), namedEntity);
+                Set<String> nameAlts = namedEntity.getAlts();
+                if (nameAlts != null) {
+                    for (String alt : namedEntity.getAlts()) {
+                        names.addKeyword(alt, namedEntity);
+                        names.addKeyword(alt.toUpperCase(), namedEntity);
+                    }
+                }
+            }
+        }
+        lookupTrie = names.build();
+    }
 
     public Extract(){
 
+    }
+
+    public String getName(){
+        return name;
+    }
+
+    public Trie getLookupTrie(){
+        return lookupTrie;
     }
 
     public Extract(Trie.TrieBuilder trie){
