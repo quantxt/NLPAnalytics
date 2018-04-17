@@ -1,11 +1,20 @@
-package com.quantxt.nlp.comp.meteor.scorer;
+/*
+ * Carnegie Mellon University
+ * Copyright (c) 2004, 2010
+ * 
+ * This software is distributed under the terms of the GNU Lesser General
+ * Public License.  See the included COPYING and COPYING.LESSER files.
+ * 
+ */
+
+package com.quantxt.nlp.comp.mkin.scorer;
 
 
-import com.quantxt.nlp.comp.meteor.aligner.Aligner;
-import com.quantxt.nlp.comp.meteor.aligner.Alignment;
-import com.quantxt.nlp.comp.meteor.aligner.Match;
-import com.quantxt.nlp.comp.meteor.util.Constants;
-import com.quantxt.nlp.comp.meteor.util.Normalizer;
+import com.quantxt.nlp.comp.mkin.aligner.Aligner;
+import com.quantxt.nlp.comp.mkin.aligner.Alignment;
+import com.quantxt.nlp.comp.mkin.aligner.Match;
+import com.quantxt.nlp.comp.mkin.util.Constants;
+import com.quantxt.nlp.comp.mkin.util.Normalizer;
 
 import java.util.ArrayList;
 
@@ -16,6 +25,7 @@ import java.util.ArrayList;
  * field
  * 
  */
+
 public class MeteorScorer {
 
 	private Aligner aligner;
@@ -48,7 +58,7 @@ public class MeteorScorer {
 
 	/**
 	 * Use a custom configuration
-	 * 
+	 *
 	 * @param config
 	 */
 	public MeteorScorer(MeteorConfiguration config) {
@@ -58,7 +68,7 @@ public class MeteorScorer {
 	/**
 	 * Create a new scorer that shares thread-safe resources with an existing
 	 * scorer
-	 * 
+	 *
 	 * @param scorer
 	 */
 
@@ -79,7 +89,7 @@ public class MeteorScorer {
 
 	/**
 	 * Load configuration (only used by constructor)
-	 * 
+	 *
 	 * @param config
 	 */
 	private void loadConfiguration(MeteorConfiguration config) {
@@ -94,8 +104,11 @@ public class MeteorScorer {
 		moduleWeights = config.getModuleWeights();
 		aligner = new Aligner(language, config.getModules(),
 				config.getModuleWeights(), config.getBeamSize(),
-				config.getStemFileURL(), config.getWordFileURL(),
-				config.getSynDirURL(), config.getParaDirURL(),
+				config.getWordFileURL(),
+				config.getSynDirURL(),
+				config.getParaDirURL(),
+				config.getW2v(),
+				config.getW2vCache(),
 				// Best alignments for evaluation
 				Constants.PARTIAL_COMPARE_TOTAL);
 		// Best weights for evaluation
@@ -117,7 +130,7 @@ public class MeteorScorer {
 
 	/**
 	 * Set normalization type
-	 * 
+	 *
 	 * @param normtype
 	 */
 	private void setNormalize(int normtype) {
@@ -145,7 +158,7 @@ public class MeteorScorer {
 	/**
 	 * Update module weights without reloading resources. This is used for
 	 * tuning and is likely not needed for most applications
-	 * 
+	 *
 	 * @param moduleWeights
 	 */
 	public void updateModuleWeights(ArrayList<Double> moduleWeights) {
@@ -155,20 +168,20 @@ public class MeteorScorer {
 	/**
 	 * Get stats when test and reference are already tokenized and normalized
 	 * (Make sure you know what you're doing)
-	 * 
+	 *
 	 * @param test
 	 * @param reference
 	 * @return
 	 */
 	public MeteorStats getMeteorStats(ArrayList<String> test,
-			ArrayList<String> reference) {
+									  ArrayList<String> reference) {
 		Alignment alignment = aligner.align(test, reference);
 		return getMeteorStats(alignment);
 	}
 
 	/**
 	 * Get the Meteor sufficient statistics for a test / reference pair
-	 * 
+	 *
 	 * @param test
 	 * @param reference
 	 * @return
@@ -192,7 +205,7 @@ public class MeteorScorer {
 
 	/**
 	 * Get the Meteor sufficient statistics for a test give a list of references
-	 * 
+	 *
 	 * @param test
 	 * @param references
 	 * @return
@@ -223,7 +236,7 @@ public class MeteorScorer {
 
 	/**
 	 * Get the Meteor sufficient statistics for an alignment
-	 * 
+	 *
 	 * @param alignment
 	 * @return
 	 */
@@ -242,10 +255,10 @@ public class MeteorScorer {
 				stats.referenceLength += word.length();
 			stats.testFunctionWords = 0;
 			for (int i : alignment.line1FunctionWords)
-				stats.testFunctionWords += alignment.words1.get(i).length();
+				stats.testFunctionWords += alignment.words1[i].length();
 			stats.referenceFunctionWords = 0;
 			for (int i : alignment.line2FunctionWords)
-				stats.referenceFunctionWords += alignment.words2.get(i)
+				stats.referenceFunctionWords += alignment.words2[i]
 						.length();
 
 			// Module and total matches with summed word lengths
@@ -260,22 +273,22 @@ public class MeteorScorer {
 			// Sum these here to avoid pushing character-level operations to the
 			// aligner
 			for (Match m : alignment.matches) {
-				if (m != null) {
-					for (int i = 0; i < m.matchLength; i++)
-						if (alignment.line1FunctionWords.contains(m.matchStart
-								+ i))
-							testStageMatchesFunction[m.module] += alignment.words1
-									.get(m.matchStart + i).length();
-						else
-							testStageMatchesContent[m.module] += alignment.words1
-									.get(m.matchStart + i).length();
-					for (int i = 0; i < m.length; i++)
-						if (alignment.line2FunctionWords.contains(m.start + i))
-							referenceStageMatchesFunction[m.module] += alignment.words2
-									.get(m.start + i).length();
-						else
-							referenceStageMatchesContent[m.module] += alignment.words2
-									.get(m.start + i).length();
+				if (m == null) continue;
+				for (int i = 0; i < m.getMatchStart(); i++) {
+					int index = m.getMatchStart() + i;
+					if (alignment.line1FunctionWords.contains(index)) {
+						testStageMatchesFunction[m.getModule()] += alignment.words1[index].length();
+					} else {
+						testStageMatchesContent[m.getModule()] += alignment.words1[index].length();
+					}
+				}
+				for (int i = 0; i < m.getLength(); i++) {
+					int index = m.getStart() + i;
+					if (alignment.line2FunctionWords.contains(m.getStart() + i)) {
+						referenceStageMatchesFunction[m.getModule()] += alignment.words2[index].length();
+					} else {
+						referenceStageMatchesContent[m.getModule()] += alignment.words2[index].length();
+					}
 				}
 			}
 			for (int i = 0; i < alignment.moduleContentMatches1.size(); i++) {
@@ -291,8 +304,8 @@ public class MeteorScorer {
 		}
 		// Otherwise use word counts
 		else {
-			stats.testLength = alignment.words1.size();
-			stats.referenceLength = alignment.words2.size();
+			stats.testLength = alignment.words1.length;
+			stats.referenceLength = alignment.words2.length;
 			stats.testFunctionWords = alignment.line1FunctionWords.size();
 			stats.referenceFunctionWords = alignment.line2FunctionWords.size();
 

@@ -1,4 +1,4 @@
-package com.quantxt.nlp.comp;
+package com.quantxt.nlp.comp.ter;
 
 
 import java.util.HashMap;
@@ -19,8 +19,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXParseException;
 import org.xml.sax.SAXException;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
 
 public class TERsgml {
   public static enum TAGNAME {

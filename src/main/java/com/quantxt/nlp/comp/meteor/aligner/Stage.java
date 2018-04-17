@@ -29,9 +29,10 @@ public class Stage {
 		words1 = wordsToKeys(wordStrings1);
 		words2 = wordsToKeys(wordStrings2);
 
-		matches = new ArrayList<ArrayList<Match>>();
-		for (int i = 0; i < words2.length; i++)
-			matches.add(new ArrayList<Match>());
+		matches = new ArrayList<>();
+		for (int i = 0; i < words2.length; i++) {
+			matches.add(new ArrayList<>());
+		}
 
 		line1Coverage = new int[words1.length];
 		Arrays.fill(line1Coverage, 0);

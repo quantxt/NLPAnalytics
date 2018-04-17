@@ -48,7 +48,8 @@ public class StemMatcher {
 		int[] keys = new int[words.size()];
 		for (int i = 0; i < words.size(); i++) {
 			// Stem the word before generating a key
-			keys[i] = stemmer.stem(words.get(i)).hashCode();
+			String stem = stemmer.stem(words.get(i));
+			keys[i] = stem.hashCode();
 		}
 		return keys;
 	}

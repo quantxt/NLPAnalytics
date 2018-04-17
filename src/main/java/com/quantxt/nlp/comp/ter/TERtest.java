@@ -1,4 +1,4 @@
-package com.quantxt.nlp.comp;
+package com.quantxt.nlp.comp.ter;
 
 import java.io.*;
 import java.util.regex.*;

@@ -5,13 +5,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.StopFilter;
-import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +36,29 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private static Logger logger = LoggerFactory.getLogger(CommonQTDocumentHelper.class);
 
     protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
+    //Text normalization rules
+
+    private static String alnum = "0-9A-Za-zŠŽšžŸÀ-ÖØ-öø-ž" + "Ѐ-ӿԀ-ԧꙀ-ꙮ꙾-ꚗᴀ-ᵿ";
+
+
+    // Single quotes to normalize
+    private static Pattern r_quote_norm = Pattern.compile("([`‘’])");
+    private static String s_quote_norm = "'";
+    // Double quotes to normalize
+    private static Pattern r_quote_norm2 = Pattern.compile("([“”]|'')");
+    private static String s_quote_norm2 = " \" ";
+
+    // Dashes to normalize
+    private static String s_dash_norm = "–";
+    private static String s_dash_norm2 = "-";
+    private static String s_dash_norm3 = "--";
+
+    private static Pattern r_punct_strip = Pattern.compile("[^" + alnum + "]");
+    private static String s_punct_strip = " ";
+
+    //Unicode spaces
+    private static Pattern r_white = Pattern.compile("[               　 ]+");
+    private static String s_white = " ";
 
     private SentenceDetectorME sentenceDetector = null;
     private POSTaggerME posModel = null;
@@ -168,7 +191,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
         try {
             TokenStream stream  = analyzer.tokenStream(null, new StringReader(str));
-            stream = new StopFilter(stream, stopwords);
+        //    stream = new StopFilter(stream, stopwords);
             CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
             stream.reset();
             while (stream.incrementToken()) {
@@ -184,9 +207,22 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public String normalize(String string) {
-        ArrayList<String> postEdit = stemmer(string);
-        return String.join(" ", postEdit);
+    public String normalize(String workingLine) {
+        // New: Normalize quotes
+        workingLine = r_quote_norm.matcher(workingLine).replaceAll(s_quote_norm);
+        workingLine = r_quote_norm2.matcher(workingLine).replaceAll(s_quote_norm2);
+
+        // New: Normalize dashes
+        workingLine = workingLine.replace(s_dash_norm, s_dash_norm2);
+        workingLine = workingLine.replace(s_dash_norm3, s_dash_norm2);
+
+            workingLine = r_punct_strip.matcher(workingLine).replaceAll(
+                    s_punct_strip);
+
+        // Normalize whitespace
+        workingLine = r_white.matcher(workingLine).replaceAll(s_white).trim();
+
+        return workingLine.toLowerCase();
     }
 
     //sentence detc is NOT thread safe  :-/

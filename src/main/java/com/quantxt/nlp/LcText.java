@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
@@ -30,9 +31,6 @@ import org.apache.lucene.util.BytesRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.quantxt.helper.types.Extraction;
 import com.quantxt.trie.Emit;
 import com.quantxt.types.BaseNameAlts;
@@ -241,8 +239,8 @@ public class LcText<T> {
 
     public static void main(String[] args) throws Exception {
 
-        String search_query = "sprinkler";
-        InputStream ins = new FileInputStream(new File("/Users/matin/git/qtdocprocess/src/main/resources/SOVNamesMapping.json"));
+        String search_query = "Fire Resistive";
+        InputStream ins = new FileInputStream(new File("test"));
 
         JsonParser parser = new JsonParser();
         JsonObject sov = null;
@@ -253,15 +251,41 @@ public class LcText<T> {
             logger.error("SOVMap parsing error " + e.getMessage());
         }
 
-        String str_arr = sov.get("Buildings").getAsJsonArray().toString();
+        Map<String, ArrayList<String>> cat2vars = new HashMap<>();
+        for (Map.Entry<String, JsonElement> e: sov.entrySet()){
+            String text = e.getKey();
+            String category = e.getValue().toString();
+            ArrayList<String> vars = cat2vars.get(category);
+            if (vars == null){
+                cat2vars.put(category, new ArrayList<>());
+                vars = cat2vars.get(category);
+            }
+            vars.add(text);
+        }
 
-        InputStream is = new ByteArrayInputStream(str_arr.getBytes());
+        JsonArray bnas = new JsonArray();
+        Gson gson = new Gson();
+        for (Map.Entry<String, ArrayList<String>> e: cat2vars.entrySet()) {
+            String [] alts = e.getValue().toArray(new String[e.getValue().size()]);
+            JsonObject bna = new JsonObject();
+            bna.addProperty("name" , e.getKey());
+            bna.add("alts" , gson.toJsonTree(alts));
+            bna.addProperty("data" , e.getKey());
+            bnas.add(bna);
+        }
+        LcText lctext = new LcText(String.class);
+        lctext.setOrSearch(true);
 
-        Type customeType = new TypeToken<BaseNameAlts<JsonObject>[]>(){}.getType();
-        LcText<JsonObject> extract = new LcText<>(customeType);
+        Type ct = new TypeToken<BaseNameAlts<String>[]>(){}.getType();
+        try {
+            InputStream is = new ByteArrayInputStream(bnas.toString().getBytes());
+            lctext.loadCategorical(is, ct, false);
 
-        extract.loadCategorical(is, customeType, true);
-        Extraction extraction = extract.extract(search_query);
+        } catch (Exception e){
+            logger.error("ERROR is creating the object... " + e.getMessage());
+        }
+
+        Extraction extraction = lctext.extract(search_query);
         Map<Extraction.Extractions, List<Emit>> emitMap = extraction.getExtractions();
         List<Emit> emets = emitMap.get(Extraction.Extractions.PHRASE);
 

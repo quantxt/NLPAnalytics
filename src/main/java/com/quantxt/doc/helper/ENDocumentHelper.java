@@ -13,6 +13,8 @@ import java.util.Set;
 import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
+import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,8 +65,8 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     @Override
     public void preInit(){
         //Analyzer
-        analyzer = new StandardAnalyzer();
-
+    //    analyzer = new StandardAnalyzer();
+        analyzer = new EnglishAnalyzer();
         try (FileInputStream fis = new FileInputStream(getModelBaseDir() + TOKENIZER_FILE_PATH)) {
             TokenizerModel tokenizermodel = new TokenizerModel(fis);
             tokenizer = new TokenizerME(tokenizermodel);

@@ -1,4 +1,4 @@
-package com.quantxt.nlp.comp;
+package com.quantxt.nlp.comp.ter;
 
 public class TERintpair {
   public int car;

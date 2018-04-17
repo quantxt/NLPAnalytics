@@ -7,16 +7,19 @@
  *
  */
 
-package com.quantxt.nlp.comp.meteor.util;
+package com.quantxt.nlp.comp.mkin.util;
 
+import com.quantxt.doc.QTDocumentHelper;
+import com.quantxt.doc.helper.ENDocumentHelper;
+import com.quantxt.doc.helper.ESDocumentHelper;
+import com.quantxt.doc.helper.JADocumentHelper;
+import com.quantxt.doc.helper.RUDocumentHelper;
 import com.quantxt.nlp.comp.meteor.aligner.LookupTableStemmer;
-import com.quantxt.nlp.comp.meteor.aligner.PartialAlignment;
 import com.quantxt.nlp.comp.meteor.aligner.SnowballStemmerWrapper;
 import com.quantxt.nlp.comp.meteor.aligner.Stemmer;
 import com.quantxt.nlp.comp.meteor.snowball.ext.*;
+import com.quantxt.nlp.comp.mkin.aligner.PartialAlignment;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.DecimalFormat;
@@ -53,6 +56,7 @@ public class Constants {
 	public static final int MODULE_STEM = 1;
 	public static final int MODULE_SYNONYM = 2;
 	public static final int MODULE_PARAPHRASE = 3;
+	public static final int MODULE_W2V = 4;
 
 	public static final int MAX_MODULES = 4;
 
@@ -421,6 +425,18 @@ public class Constants {
 		throw new RuntimeException("Unknown language (" + language + ")");
 	}
 
+	public static QTDocumentHelper newStemmer(String language) throws RuntimeException {
+		switch (language) {
+			case "english" : return new ENDocumentHelper();
+			case "spanish" : return new ESDocumentHelper();
+			case "russian" : return new RUDocumentHelper();
+			case "japanese" : return new JADocumentHelper();
+			default:
+				return new ENDocumentHelper();
+
+		}
+	}
+
 	public static int getLanguageID(String language) throws RuntimeException {
 		if (language.equals("english"))
 			return LANG_EN;
@@ -753,62 +769,6 @@ public class Constants {
 				sb.append("_");
 		}
 		return sb.toString();
-	}
-
-	public static Stemmer newStemmer(String language) throws RuntimeException {
-		return newStemmer(language, null);
-	}
-
-	public static Stemmer newStemmer(String language, URL stemFileURL) throws RuntimeException {
-		// Manually specified stem file
-		if (stemFileURL != null)
-			return new LookupTableStemmer(stemFileURL);
-		// Snowball stemmers
-		if (language.equals("english"))
-			return new SnowballStemmerWrapper(new englishStemmer());
-		if (language.equals("french"))
-			return new SnowballStemmerWrapper(new frenchStemmer());
-		if (language.equals("german"))
-			return new SnowballStemmerWrapper(new germanStemmer());
-		if (language.equals("spanish"))
-			return new SnowballStemmerWrapper(new spanishStemmer());
-		if (language.equals("portuguese"))
-			return new SnowballStemmerWrapper(new portugueseStemmer());
-		if (language.equals("russian"))
-			return new SnowballStemmerWrapper(new russianStemmer());
-		if (language.equals("danish"))
-			return new SnowballStemmerWrapper(new danishStemmer());
-		if (language.equals("romanian"))
-			return new SnowballStemmerWrapper(new romanianStemmer());
-		if (language.equals("hungarian"))
-			return new SnowballStemmerWrapper(new hungarianStemmer());
-		if (language.equals("turkish"))
-			return new SnowballStemmerWrapper(new turkishStemmer());
-		if (language.equals("finnish"))
-			return new SnowballStemmerWrapper(new finnishStemmer());
-		if (language.equals("dutch"))
-			return new SnowballStemmerWrapper(new dutchStemmer());
-		if (language.equals("italian"))
-			return new SnowballStemmerWrapper(new italianStemmer());
-		if (language.equals("norwegian"))
-			return new SnowballStemmerWrapper(new norwegianStemmer());
-		if (language.equals("swedish"))
-			return new SnowballStemmerWrapper(new swedishStemmer());
-		// Legacy Arabic stemmer
-		/*
-		if (language.equals("arabic-buckwalter-reduced")) {
-			try {
-				return new LookupTableStemmer(new URL(
-						DEFAULT_STEM_DIR_URL.toString() + "/" + language
-								+ ".gz"));
-			} catch (IOException ex) {
-				throw new RuntimeException(
-						"Error loading stemmer for language (" + language + ")");
-			}
-		}
-		*/
-		// Not found
-		throw new RuntimeException("No stemmer for language (" + language + ")");
 	}
 
 	public static ArrayList<Integer> getModules(int langID, int taskID)

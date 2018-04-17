@@ -7,7 +7,7 @@
  * 
  */
 
-package com.quantxt.nlp.comp.meteor.util;
+package com.quantxt.nlp.comp.mkin.util;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -130,7 +130,7 @@ public class Normalizer {
 			return nbpDict;
 
 		// New nbp list
-		nbpDict = new Hashtable<String, Integer>();
+		nbpDict = new Hashtable<>();
 		nbpLangID = Constants.LANG_OTHER;
 
 		// Try to load the list
@@ -211,8 +211,10 @@ public class Normalizer {
 		workingLine = r_comma3.matcher(workingLine).replaceAll(s_comma);
 
 		// New: Normalize quotes
-		workingLine = r_quote_norm.matcher(workingLine).replaceAll(s_quote_norm);
-		workingLine = r_quote_norm2.matcher(workingLine).replaceAll(s_quote_norm2);
+		workingLine = r_quote_norm.matcher(workingLine)
+				.replaceAll(s_quote_norm);
+		workingLine = r_quote_norm2.matcher(workingLine).replaceAll(
+				s_quote_norm2);
 
 		// New: Normalize dashes
 		workingLine = workingLine.replace(s_dash_norm, s_dash_norm2);
@@ -245,10 +247,11 @@ public class Normalizer {
 		}
 
 		// Split words, dots still attached
-		StringTokenizer tok = new StringTokenizer(workingLine);
-		String[] words = new String[tok.countTokens()];
-		for (int i = 0; i < words.length; words[i++] = tok.nextToken())
-			;
+	//	StringTokenizer tok = new StringTokenizer(workingLine);
+	//	String[] words = new String[tok.countTokens()];
+	//	for (int i = 0; i < words.length; words[i++] = tok.nextToken())
+	//		;
+		String[] words = workingLine.split("\\s");
 		StringBuilder sb = new StringBuilder();
 
 		// Rebuild line, breaking dots unless cased as nonbreaking

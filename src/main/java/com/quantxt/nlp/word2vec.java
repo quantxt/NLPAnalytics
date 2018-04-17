@@ -154,7 +154,7 @@ public class word2vec {
     }
 
     public static void main(String[] args) throws Exception {
-        FileInputStream fi = new FileInputStream(new File("test.txtx"));
+        FileInputStream fi = new FileInputStream(new File("data.txt"));
         String out = "w2v";
         word2vec w2v = new word2vec(2);
         w2v.train(fi, out, 10, true);

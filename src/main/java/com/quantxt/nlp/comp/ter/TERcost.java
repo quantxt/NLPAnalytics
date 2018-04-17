@@ -1,4 +1,4 @@
-package com.quantxt.nlp.comp;
+package com.quantxt.nlp.comp.ter;
 
 public class TERcost {
   /* For all of these functions, the score should be between 0 and 1

@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.quantxt.nlp</groupId>
     <artifactId>doc-analytics</artifactId>
-    <version>1.5.21-SNAPSHOT</version>
+    <version>1.5.22-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Quantxt Core NLP</name>

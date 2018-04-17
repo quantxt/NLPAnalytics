@@ -2,9 +2,9 @@ package com.quantxt.nlp;
 
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.nlp.comp.TERalignment;
-import com.quantxt.nlp.comp.TERcalc;
-import com.quantxt.nlp.comp.TERcost;
+import com.quantxt.nlp.comp.ter.TERalignment;
+import com.quantxt.nlp.comp.ter.TERcalc;
+import com.quantxt.nlp.comp.ter.TERcost;
 import com.quantxt.trie.Trie;
 import com.quantxt.types.MapSort;
 import org.joda.time.DateTime;
