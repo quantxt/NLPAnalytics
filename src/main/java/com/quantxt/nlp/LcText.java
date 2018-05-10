@@ -232,8 +232,10 @@ public class LcText<T> {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Emit emit = new Emit(0, 0, str, bna);
-        res.add(Extraction.Extractions.PHRASE, emit);
+        if (!bna.isEmpty()) {
+            Emit emit = new Emit(0, 0, str, bna);
+            res.add(Extraction.Extractions.PHRASE, emit);
+        }
         return res;
     }
 
