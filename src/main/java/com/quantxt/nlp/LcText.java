@@ -171,6 +171,7 @@ public class LcText<T> {
 
     public <T> Extraction extract(String str){
         Extraction res = new Extraction();
+        if (str == null || str.isEmpty()) return res;
         ArrayList<BaseNameAlts> bna = new ArrayList<>();
 
         //hack this doesn't work

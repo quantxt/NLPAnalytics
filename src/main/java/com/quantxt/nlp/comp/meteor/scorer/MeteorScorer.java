@@ -2,6 +2,7 @@ package com.quantxt.nlp.comp.meteor.scorer;
 
 
 import com.quantxt.nlp.comp.meteor.aligner.Aligner;
+
 import com.quantxt.nlp.comp.meteor.aligner.Alignment;
 import com.quantxt.nlp.comp.meteor.aligner.Match;
 import com.quantxt.nlp.comp.meteor.util.Constants;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
  * field
  * 
  */
+
 public class MeteorScorer {
 
 	private Aligner aligner;
@@ -96,6 +98,8 @@ public class MeteorScorer {
 				config.getModuleWeights(), config.getBeamSize(),
 				config.getStemFileURL(), config.getWordFileURL(),
 				config.getSynDirURL(), config.getParaDirURL(),
+				config.getW2v(),
+				config.getW2vCache(),
 				// Best alignments for evaluation
 				Constants.PARTIAL_COMPARE_TOTAL);
 		// Best weights for evaluation
@@ -341,7 +345,7 @@ public class MeteorScorer {
 		computeMetrics(stats);
 
 		// Keep underlying alignment
-		stats.alignment = alignment;
+	//	stats.alignment = alignment;
 
 		return stats;
 	}

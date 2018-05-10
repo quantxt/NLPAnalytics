@@ -12,6 +12,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.StopFilter;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,23 +43,23 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
 
     // Single quotes to normalize
-    private static Pattern r_quote_norm = Pattern.compile("([`‘’])");
-    private static String s_quote_norm = "'";
+    protected static Pattern r_quote_norm = Pattern.compile("([`‘’])");
+    protected static String s_quote_norm = "'";
     // Double quotes to normalize
-    private static Pattern r_quote_norm2 = Pattern.compile("([“”]|'')");
-    private static String s_quote_norm2 = " \" ";
+    protected static Pattern r_quote_norm2 = Pattern.compile("([“”]|'')");
+    protected static String s_quote_norm2 = " \" ";
 
     // Dashes to normalize
-    private static String s_dash_norm = "–";
-    private static String s_dash_norm2 = "-";
-    private static String s_dash_norm3 = "--";
+    protected static String s_dash_norm = "–";
+    protected static String s_dash_norm2 = "-";
+    protected static String s_dash_norm3 = "--";
 
-    private static Pattern r_punct_strip = Pattern.compile("[^" + alnum + "]");
-    private static String s_punct_strip = " ";
+    protected static Pattern r_punct_strip = Pattern.compile("[^" + alnum + "]");
+    protected static String s_punct_strip = " ";
 
     //Unicode spaces
-    private static Pattern r_white = Pattern.compile("[               　 ]+");
-    private static String s_white = " ";
+    protected static Pattern r_white = Pattern.compile("[               　 ]+");
+    protected static String s_white = " ";
 
     private SentenceDetectorME sentenceDetector = null;
     private POSTaggerME posModel = null;
@@ -207,7 +208,28 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public String normalize(String workingLine) {
+    public String removeStopWords(String str) {
+        ArrayList<String> postEdit = new ArrayList<>();
+
+        Analyzer wspaceAnalyzer = new WhitespaceAnalyzer();  // this constructor do nothing
+        try {
+            TokenStream stream  = wspaceAnalyzer.tokenStream(null, new StringReader(str));
+            stream = new StopFilter(stream, stopwords);
+            CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
+            stream.reset();
+            while (stream.incrementToken()) {
+                String term = charTermAttribute.toString();
+                postEdit.add(term);
+            }
+            stream.close();
+        } catch (Exception e){
+            logger.error("Error Analyzer tokenStream for input String {}", str, e);
+        }
+
+        return String.join(" ", postEdit);
+    }
+
+    protected static String normBasic(String workingLine){
         // New: Normalize quotes
         workingLine = r_quote_norm.matcher(workingLine).replaceAll(s_quote_norm);
         workingLine = r_quote_norm2.matcher(workingLine).replaceAll(s_quote_norm2);
@@ -216,13 +238,18 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         workingLine = workingLine.replace(s_dash_norm, s_dash_norm2);
         workingLine = workingLine.replace(s_dash_norm3, s_dash_norm2);
 
-            workingLine = r_punct_strip.matcher(workingLine).replaceAll(
-                    s_punct_strip);
+        workingLine = r_punct_strip.matcher(workingLine).replaceAll(
+                s_punct_strip);
 
         // Normalize whitespace
         workingLine = r_white.matcher(workingLine).replaceAll(s_white).trim();
 
-        return workingLine.toLowerCase();
+        return workingLine;
+    }
+
+    @Override
+    public String normalize(String workingLine) {
+        return normBasic(workingLine).toLowerCase();
     }
 
     //sentence detc is NOT thread safe  :-/

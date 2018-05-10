@@ -1,13 +1,9 @@
 package com.quantxt.nlp.comp.mkin.aligner;
 
 import com.quantxt.nlp.TopicModel;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -21,12 +17,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Word2vecMatcher {
 
     final private static Logger logger = LoggerFactory.getLogger(Word2vecMatcher.class);
-    final private  static StandardAnalyzer analyzer = new StandardAnalyzer();
     private static HashMap<String, double[]> word2vMap;
     private static HashMap<String, Double> w2vCache;
 
     final private static int MaxMatchPertoken = 3;
-    final public static double w2vThresh = .5;
+    final private static double w2vThresh = .5;
 
     public static long took = 0;
     public static long took1 = 0;
@@ -38,15 +33,11 @@ public class Word2vecMatcher {
 
         // Get keys for word stems
         long start = System.currentTimeMillis();
-   //     ArrayList<double[]> w2v1 = getwordvectors(String.join(" ", a.words1)); //i
-   //     ArrayList<double[]> w2v2 = getwordvectors(String.join(" ", a.words2)); //j
-
-  //      ArrayList<String> w2v1 = getwordvectors(String.join(" ", a.words1)); //i
-  //      ArrayList<String> w2v2 = getwordvectors(String.join(" ", a.words2)); //j
 
         took += (System.currentTimeMillis() - start);
         ArrayList<List<IdxVal>> allwordmatrix = new ArrayList<>();
 
+        int numAdded = 0;
         for (int i = 0; i < a.words1.length; i++) {
             String w1 = a.words1[i];
             List<IdxVal> vals = new ArrayList<>();
@@ -70,16 +61,11 @@ public class Word2vecMatcher {
                 }
                 if (w == null || w < w2vThresh) continue;
                 vals.add(new IdxVal(j, w));
+                numAdded++;
             }
 
             if (vals.size() > 1) {
-                Collections.sort(vals, new Comparator<IdxVal>() {
-                    @Override
-                    public int compare(IdxVal c1, IdxVal c2) {
-                        return Double.compare(c2.val, c1.val);
-                    }
-                });
-        //        vals = vals.subList(0, Math.min(vals.size()-1 , MaxMatchPertoken-1));
+                Collections.sort(vals, (c1, c2) -> Double.compare(c2.val, c1.val));
             }
             allwordmatrix.add(vals);
         }
@@ -109,46 +95,9 @@ public class Word2vecMatcher {
         took2 += (System.currentTimeMillis() - start);
     }
 
- //   private static ArrayList<double[]> getwordvectors(String t) {
-    private static ArrayList<String> getwordvectors(String t) {
-        TokenStream tokenStream = analyzer.tokenStream(null, new StringReader(t));
-        CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
-
-        ArrayList<String> tokens = new ArrayList<>();
-        try {
-            tokenStream.reset(); // Resets this stream to the beginning. (Required)
-            while (tokenStream.incrementToken()) {
-                String token = termAtt.toString();
-    //            double[] vec = word2vMap.get(token);
-                tokens.add(token);
-    //            tokens.add(vec);
-            }
-            tokenStream.end();   // Perform end-of-stream operations, e.g. set the final offset.
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                tokenStream.close(); // Release resources associated with this stream.
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return tokens;
-    }
-
-    private static ArrayList<double[]> getwordvectors2(String[] t) {
-        ArrayList<double[]> tokens = new ArrayList<>();
-        for (String token : t){
-            double[] vec = word2vMap.get(token);
-            tokens.add(vec);
-        }
-
-        return tokens;
-    }
-
     private static String getKey(String str1 , String str2){
-        if (str1.compareTo(str2) > 0) return (str1+"_" + str2);
-        return (str2+"_" + str1);
+        if (str1.compareTo(str2) > 0) return (str1+ "_" + str2);
+        return (str2+ "_" + str1);
     }
 
     public static void setW2vCache(HashMap<String, Double> map) {

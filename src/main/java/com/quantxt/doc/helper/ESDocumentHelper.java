@@ -64,6 +64,12 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
                 tag.equals("CC") || tag.startsWith("D");
     }
 
+    @Override
+    public String normalize(String workingLine) {
+        workingLine = normBasic(workingLine);
+        return workingLine.toLowerCase();
+    }
+
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
     @Override
     public List<ExtInterval> getNounAndVerbPhrases(String orig, String [] parts) {

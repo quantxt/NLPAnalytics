@@ -1,7 +1,6 @@
 package com.quantxt.nlp.comp.mkin.aligner;
 
 import com.quantxt.doc.QTDocumentHelper;
-import com.quantxt.nlp.comp.mkin.util.Constants;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -9,27 +8,24 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.*;
 
-import static com.quantxt.nlp.comp.mkin.util.Constants.DEFAULT_WEIGHT_PARAPHRASE;
-import static com.quantxt.nlp.comp.mkin.util.Constants.MODULE_PARAPHRASE;
+import static com.quantxt.nlp.comp.mkin.util.Constants.*;
 
 public class Aligner {
 
 	/* Configuration */
 
-	private String language;
-
-	private int moduleCount;
-	private ArrayList<Integer> modules;
+	final private String language;
+	final private int moduleCount;
+	final private ArrayList<Integer> modules;
 	private ArrayList<Double> moduleWeights;
-
-	private int beamSize;
+	final private int beamSize;
 
 	private QTDocumentHelper helper;
-	private HashMap<String, double[]> word2vMap;
-	private HashMap<String, Double> word2vCache;
+	final private HashMap<String, double[]> word2vMap;
+	final private HashMap<String, Double> word2vCache;
 	private SynonymDictionary synonyms;
 	private ParaphraseTransducer paraphrase;
-	private HashSet<String> functionWords;
+	final private HashSet<String> functionWords;
 
 	// Used for sorting partial alignments
 	private Comparator<PartialAlignment> partialComparator;
@@ -42,25 +38,21 @@ public class Aligner {
 				   Comparator<PartialAlignment> partialComparator) {
 		this.beamSize = beamSize;
 		this.partialComparator = partialComparator;
-		setupModules(language, modules, wordFileURL, synDirURL, paraDirURL);
+	//	setupModules(language, modules, wordFileURL, synDirURL, paraDirURL);
 		this.moduleWeights = moduleWeights;
 		this.word2vMap = word2vMap;
 		this.word2vCache = word2vCache;
-	}
-
-	private void setupModules(String language, ArrayList<Integer> modules,
-							  URL wordFileURL, URL synDirURL, URL paraDirURL) {
-		this.language = com.quantxt.nlp.comp.meteor.util.Constants.normLanguageName(language);
+		this.language = normLanguageName(language);
 		this.moduleCount = modules.size();
 		this.modules = modules;
 		this.moduleWeights = new ArrayList<>();
 		for (int module : this.modules) {
-			if (module == com.quantxt.nlp.comp.meteor.util.Constants.MODULE_EXACT) {
-				this.moduleWeights.add(com.quantxt.nlp.comp.meteor.util.Constants.DEFAULT_WEIGHT_EXACT);
-			} else if (module == com.quantxt.nlp.comp.meteor.util.Constants.MODULE_STEM) {
-				this.moduleWeights.add(com.quantxt.nlp.comp.meteor.util.Constants.DEFAULT_WEIGHT_STEM);
-			} else if (module == com.quantxt.nlp.comp.meteor.util.Constants.MODULE_SYNONYM) {
-				this.moduleWeights.add(com.quantxt.nlp.comp.meteor.util.Constants.DEFAULT_WEIGHT_SYNONYM);
+			if (module == MODULE_EXACT) {
+				this.moduleWeights.add(DEFAULT_WEIGHT_EXACT);
+			} else if (module == MODULE_STEM) {
+				this.moduleWeights.add(DEFAULT_WEIGHT_STEM);
+			} else if (module == MODULE_SYNONYM) {
+				this.moduleWeights.add(DEFAULT_WEIGHT_SYNONYM);
 				try {
 					URL excFileURL = new URL(synDirURL.toString() + "/"
 							+ this.language + ".exceptions");
@@ -103,17 +95,17 @@ public class Aligner {
 		this.moduleWeights = new ArrayList<>(aligner.moduleWeights);
 		this.partialComparator = aligner.partialComparator;
 		for (int module : this.modules) {
-			if (module == Constants.MODULE_STEM) {
-				this.helper = Constants.newStemmer(this.language);
-			} else if (module == Constants.MODULE_SYNONYM) {
-				// Dictionaries can be shared
+			if (module == MODULE_STEM) {
+				this.helper = newStemmer(this.language);
+			} else if (module == MODULE_SYNONYM) {
 				this.synonyms = aligner.synonyms;
 			} else if (module == MODULE_PARAPHRASE) {
-				// Dictionaries can be shared
 				this.paraphrase = aligner.paraphrase;
 			}
 		}
 		this.functionWords = aligner.functionWords;
+		this.word2vCache = aligner.word2vCache;
+		this.word2vMap = aligner.word2vMap;
 	}
 
 	public void updateModuleWeights(ArrayList<Double> moduleWeights) {
@@ -141,31 +133,29 @@ public class Aligner {
 		// Special case: if sentences are identical, only exact matches are
 		// needed. This prevents beam search errors.
 		int modsUsed = moduleCount;
-		if (a.words1.length == a.words2.length
-				&& Arrays.equals(s.words1, s.words2)) {
+		if (a.words1.length == a.words2.length && Arrays.equals(s.words1, s.words2)) {
 			modsUsed = 1;
 		}
 
 		// For each module
 		for (int modNum = 0; modNum < modsUsed; modNum++) {
-
 			// Get the matcher for this module
 			int matcher = modules.get(modNum);
 
 			// Match with the appropriate module
-			if (matcher == Constants.MODULE_EXACT) {
+			if (matcher == MODULE_EXACT) {
 				// Exact just needs the alignment object
 				ExactMatcher.match(modNum, s);
-			} else if (matcher == Constants.MODULE_STEM) {
+			} else if (matcher == MODULE_STEM) {
 				// Stem also need the stemmer
 				StemMatcher.match(modNum, a, s, helper);
-			} else if (matcher == Constants.MODULE_SYNONYM) {
+			} else if (matcher == MODULE_SYNONYM) {
 				// Synonym also need the synonym dictionary
 				SynonymMatcher.match(modNum, a, s, synonyms);
 			} else if (matcher == MODULE_PARAPHRASE) {
 				// Paraphrase also need the paraphrase dictionary
 				ParaphraseMatcher.match(modNum, a, s, paraphrase);
-			} else if (matcher == Constants.MODULE_W2V) {
+			} else if (matcher == MODULE_W2V) {
 				// w2v matcher
 				if (word2vCache != null){
 					Word2vecMatcher.setW2vCache(word2vCache);

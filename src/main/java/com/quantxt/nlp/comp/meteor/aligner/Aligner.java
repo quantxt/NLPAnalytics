@@ -10,6 +10,7 @@
 package com.quantxt.nlp.comp.meteor.aligner;
 
 import com.quantxt.nlp.comp.meteor.util.Constants;
+import com.quantxt.nlp.comp.mkin.aligner.Word2vecMatcher;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -38,6 +39,10 @@ public class Aligner {
 	private ParaphraseTransducer paraphrase;
 	private HashSet<String> functionWords;
 
+	private HashMap<String, double[]> word2vMap;
+	private HashMap<String, Double> word2vCache;
+
+
 	// Used for sorting partial alignments
 	private Comparator<PartialAlignment> partialComparator;
 
@@ -52,11 +57,15 @@ public class Aligner {
 	public Aligner(String language, ArrayList<Integer> modules,
 			ArrayList<Double> moduleWeights, int beamSize, URL stemFileURL,
 			URL wordFileURL, URL synDirURL, URL paraDirURL,
+				   HashMap<String, double[]> word2vMap,
+				   HashMap<String, Double> word2vCache,
 			Comparator<PartialAlignment> partialComparator) {
 		this.beamSize = beamSize;
 		this.partialComparator = partialComparator;
 		setupModules(language, modules, stemFileURL, wordFileURL, synDirURL, paraDirURL);
 		this.moduleWeights = moduleWeights;
+		this.word2vMap = word2vMap;
+		this.word2vCache = word2vCache;
 	}
 
 	public Aligner(Aligner aligner) {
@@ -187,10 +196,10 @@ public class Aligner {
 		// for the highest scoring alignment.
 
 		boolean[] line1UsedWords = new boolean[a.words1.size()];
-		Arrays.fill(line1UsedWords, false);
+	//	Arrays.fill(line1UsedWords, false);
 
 		boolean[] line2UsedWords = new boolean[a.words2.size()];
-		Arrays.fill(line2UsedWords, false);
+	//	Arrays.fill(line2UsedWords, false);
 
 		PartialAlignment initialPath = new PartialAlignment(
 				new Match[a.words2.size()], line1UsedWords, line2UsedWords);
@@ -222,13 +231,13 @@ public class Aligner {
 		// Match totals
 		int[] contentMatches1 = new int[moduleCount];
 		int[] contentMatches2 = new int[moduleCount];
-		Arrays.fill(contentMatches1, 0);
-		Arrays.fill(contentMatches2, 0);
+	//	Arrays.fill(contentMatches1, 0);
+	//	Arrays.fill(contentMatches2, 0);
 
 		int[] functionMatches1 = new int[moduleCount];
 		int[] functionMatches2 = new int[moduleCount];
-		Arrays.fill(functionMatches1, 0);
-		Arrays.fill(functionMatches2, 0);
+	//	Arrays.fill(functionMatches1, 0);
+	//	Arrays.fill(functionMatches2, 0);
 
 		// Populate these while summing to avoid rehashing
 		boolean[] isFunctionWord1 = new boolean[a.words1.size()];

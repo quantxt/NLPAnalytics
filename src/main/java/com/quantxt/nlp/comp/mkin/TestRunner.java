@@ -1,9 +1,11 @@
 package com.quantxt.nlp.comp.mkin;
 
 import com.quantxt.nlp.comp.mkin.aligner.Word2vecMatcher;
-import com.quantxt.nlp.comp.mkin.scorer.MeteorConfiguration;
+
+import com.quantxt.nlp.comp.meteor.scorer.MeteorConfiguration;
 import com.quantxt.nlp.comp.mkin.scorer.MeteorScorer;
-import com.quantxt.nlp.comp.mkin.scorer.MeteorStats;
+import com.quantxt.nlp.comp.meteor.scorer.MeteorStats;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,10 +15,10 @@ import java.util.*;
 /**
  * Created by matin on 4/15/18.
  */
+
 public class TestRunner {
 
-    final private static Logger logger = LoggerFactory
-            .getLogger(TestRunner.class);
+    final private static Logger logger = LoggerFactory.getLogger(TestRunner.class);
 
     public static double scorePlaintext(MeteorScorer scorer,
                                         List<String> lines1, List<String> lines2) throws IOException {

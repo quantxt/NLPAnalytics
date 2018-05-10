@@ -26,7 +26,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
 
     private static final String SENTENCES_FILE_PATH = "/en/en-sent.bin";
     private static final String POS_FILE_PATH = "/ru/ru-pos-maxent.bin";
-    //TODO Check with Matin why RUDocumentInfo was initialized with EN sentences
 
     private static final String STOPLIST_FILE_PATH = "/ru/stoplist.txt";
     private static final String VERB_FILE_PATH = "/ru/context.json";
@@ -37,7 +36,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     public RUDocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH, STOPLIST_FILE_PATH,
                 VERB_FILE_PATH, PRONOUNS);
-    //    init();
     }
 
     public RUDocumentHelper(InputStream contextFile) {
@@ -51,6 +49,12 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
         analyzer = new RussianAnalyzer();
         //Tokenizer : TODO: This is not right for russian.. need to build a custome one
         tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
+    }
+
+    @Override
+    public String normalize(String workingLine) {
+        workingLine = normBasic(workingLine);
+        return workingLine.toLowerCase();
     }
 
     protected boolean isTagDC(String tag){

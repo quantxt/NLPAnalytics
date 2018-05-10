@@ -63,6 +63,12 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     }
 
     @Override
+    public String normalize(String workingLine) {
+        workingLine = normBasic(workingLine);
+        return workingLine.toLowerCase();
+    }
+
+    @Override
     public void preInit(){
         //Analyzer
     //    analyzer = new StandardAnalyzer();

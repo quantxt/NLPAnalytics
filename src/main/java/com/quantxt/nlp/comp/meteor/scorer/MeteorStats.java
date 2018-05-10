@@ -71,7 +71,7 @@ public class MeteorStats {
 	/**
 	 * Also keep the underlying alignment if needed
 	 */
-	public Alignment alignment;
+//	public Alignment alignment;
 
 	public MeteorStats() {
 		testLength = 0.0;

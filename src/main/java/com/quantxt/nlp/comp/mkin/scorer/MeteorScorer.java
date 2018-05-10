@@ -10,13 +10,17 @@
 package com.quantxt.nlp.comp.mkin.scorer;
 
 
+import com.quantxt.nlp.comp.meteor.scorer.MeteorConfiguration;
+import com.quantxt.nlp.comp.meteor.scorer.MeteorStats;
+import com.quantxt.nlp.comp.meteor.util.Normalizer;
+
 import com.quantxt.nlp.comp.mkin.aligner.Aligner;
 import com.quantxt.nlp.comp.mkin.aligner.Alignment;
 import com.quantxt.nlp.comp.mkin.aligner.Match;
-import com.quantxt.nlp.comp.mkin.util.Constants;
-import com.quantxt.nlp.comp.mkin.util.Normalizer;
 
 import java.util.ArrayList;
+
+import static com.quantxt.nlp.comp.mkin.util.Constants.*;
 
 /**
  * Entry point class which oversees Meteor scoring. Instantiate with either the
@@ -110,16 +114,16 @@ public class MeteorScorer {
 				config.getW2v(),
 				config.getW2vCache(),
 				// Best alignments for evaluation
-				Constants.PARTIAL_COMPARE_TOTAL);
+				PARTIAL_COMPARE_TOTAL);
 		// Best weights for evaluation
 		ArrayList<Integer> modules = config.getModules();
 		ArrayList<Double> setWeights = new ArrayList<>();
 		for (int module : modules) {
-			if (module == Constants.MODULE_EXACT)
+			if (module == MODULE_EXACT)
 				setWeights.add(1.0);
-			else if (module == Constants.MODULE_STEM)
+			else if (module == MODULE_STEM)
 				setWeights.add(0.5);
-			else if (module == Constants.MODULE_SYNONYM)
+			else if (module == MODULE_SYNONYM)
 				setWeights.add(0.5);
 			else
 				setWeights.add(0.5);
@@ -134,16 +138,16 @@ public class MeteorScorer {
 	 * @param normtype
 	 */
 	private void setNormalize(int normtype) {
-		if (normtype == Constants.NORMALIZE_LC_ONLY) {
+		if (normtype == NORMALIZE_LC_ONLY) {
 			this.normalize = false;
 			this.keepPunctuation = true;
 			this.lowerCase = true;
-		} else if (normtype == Constants.NORMALIZE_KEEP_PUNCT) {
+		} else if (normtype == NORMALIZE_KEEP_PUNCT) {
 			this.normalize = true;
 			this.keepPunctuation = true;
 			this.lowerCase = true;
 
-		} else if (normtype == Constants.NORMALIZE_NO_PUNCT) {
+		} else if (normtype == NORMALIZE_NO_PUNCT) {
 			this.normalize = true;
 			this.keepPunctuation = false;
 			this.lowerCase = true;
@@ -354,7 +358,7 @@ public class MeteorScorer {
 		computeMetrics(stats);
 
 		// Keep underlying alignment
-		stats.alignment = alignment;
+	//	stats.alignment = alignment;
 
 		return stats;
 	}
