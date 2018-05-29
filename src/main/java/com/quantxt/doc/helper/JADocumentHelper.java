@@ -21,9 +21,9 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     //TODO Check with Matin why RUDocumentInfo was initialized with EN sentences
 
     private static final String POS_FILE_PATH = "";
-    private static final String STOPLIST_FILE_PATH = "";
+    private static final String STOPLIST_FILE_PATH = "/ja/stoplist.txt";
     private static final String VERB_FILE_PATH = "/en/context.json";
-    private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("él", "ella", "Ella", "Él"));
+    private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("此奴", "其奴", "彼", "彼女"));
 
     private Tokenizer tokenizer;
     protected Tokenizer analyzer;
@@ -87,6 +87,18 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public String[] getSentences(String text) {
+
+        ArrayList<String> allSents = new ArrayList<>();
+        String [] sentStage1 = super.getSentences(text);
+        for (String s : sentStage1){
+            String [] p = s.split("。");
+            allSents.addAll(Arrays.asList(p));
+        }
+        return allSents.toArray(new String[allSents.size()]);
     }
 
     //http://universaldependencies.org/tagset-conversion/ja-ipadic-uposf.html

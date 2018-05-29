@@ -1,35 +1,33 @@
 package com.quantxt.doc;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
-
+import com.quantxt.doc.helper.FRDocumentHelper;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.doc.helper.ESDocumentHelper;
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
- * Created by matin on 1/20/18.
+ * Created by matin on 5/28/18.
  */
-public class ESDocumentInfo extends QTDocument {
+public class FRDocumentInfo extends QTDocument {
 
-    private static final Logger logger = LoggerFactory.getLogger(ESDocumentInfo.class);
+    private static final Logger logger = LoggerFactory.getLogger(FRDocumentInfo.class);
 
-
-    public ESDocumentInfo(String body, String title, QTDocumentHelper helper) {
+    public FRDocumentInfo(String body, String title, QTDocumentHelper helper) {
         super(body, title, helper);
-        language = Language.SPANISH;
+        language = Language.FRENCH;
     }
 
-    public ESDocumentInfo(String body, String title) {
-        super(body, title, new ESDocumentHelper());
-        language = Language.SPANISH;
+    public FRDocumentInfo(String body, String title) {
+        super(body, title, new FRDocumentHelper());
+        language = Language.FRENCH;
     }
 
-    public ESDocumentInfo(Elements body, String title) {
-        super(body.html(), title, new ESDocumentHelper());
+    public FRDocumentInfo(Elements body, String title) {
+        super(body.html(), title, new FRDocumentHelper());
         rawText = body.text();
     }
 
@@ -39,10 +37,10 @@ public class ESDocumentInfo extends QTDocument {
             return null;
 
         String sentences[] = rawText == null ? helper.getSentences(body)
-                                             : helper.getSentences(rawText);
+                : helper.getSentences(rawText);
         List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences){
-            ESDocumentInfo sDoc = new ESDocumentInfo("", s, helper);
+            FRDocumentInfo sDoc = new FRDocumentInfo("", s, helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());

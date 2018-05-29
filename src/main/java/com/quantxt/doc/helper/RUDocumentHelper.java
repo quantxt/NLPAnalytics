@@ -1,13 +1,11 @@
 package com.quantxt.doc.helper;
 
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import com.quantxt.types.MapSort;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
@@ -20,6 +18,7 @@ import com.quantxt.util.StringUtil;
 /**
  * Created by dejani on 1/24/18.
  */
+
 public class RUDocumentHelper extends CommonQTDocumentHelper {
 
     private static Logger logger = LoggerFactory.getLogger(RUDocumentHelper.class);
@@ -33,6 +32,9 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays
             .asList("Он", "Его", "Ему", "онá", "oна", "oн", "eму", "eго"));
 
+    private static Pattern NounPhrase = Pattern.compile("N([N]*N|N*A+|N*)|A+N+");
+    private static Pattern VerbPhrase = Pattern.compile("V+");
+
     public RUDocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH, STOPLIST_FILE_PATH,
                 VERB_FILE_PATH, PRONOUNS);
@@ -44,11 +46,18 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     }
 
     @Override
-    public void preInit(){
+    public void preInit() {
         //Analyzer
         analyzer = new RussianAnalyzer();
         //Tokenizer : TODO: This is not right for russian.. need to build a custome one
         tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
+    }
+
+    @Override
+    public List<String> tokenize(String str) {
+        String tokenized = str.replaceAll("([\",?\\>\\<\\'\\’\\:\\]\\[\\(\\)\\”\\“»«\\.])" , " $1 ");
+        String [] parts = tokenized.split("\\s+");
+        return Arrays.asList(parts);
     }
 
     @Override
@@ -57,12 +66,66 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
         return workingLine.toLowerCase();
     }
 
-    protected boolean isTagDC(String tag){
+    protected boolean isTagDC(String tag) {
         return tag.equals("C") || tag.equals("I") || tag.startsWith("S");
     }
 
     @Override
     public List<ExtInterval> getNounAndVerbPhrases(String orig, String[] parts) {
+        String[] taags = getPosTags(parts);
+
+//        for (int i = 0; i < parts.length; i++) {
+//            logger.info(parts[i] + "_" + taags[i] + " ");
+//        }
+
+        StringBuilder allTags = new StringBuilder();
+
+        for (String t : taags) {
+            allTags.append(t.substring(0, 1));
+        }
+
+        HashMap<ExtInterval, Integer> intervals = new HashMap<>();
+        Matcher m = NounPhrase.matcher(allTags.toString());
+        while (m.find()) {
+            //         String match = m.group();
+            int s = m.start();
+            int e = m.end();
+            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
+            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            if (eit == null) {
+                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + orig);
+            } else {
+                eit.setType("N");
+                intervals.put(eit, s);
+            }
+        }
+
+        m = VerbPhrase.matcher(allTags.toString());
+        while (m.find()) {
+            int s = m.start();
+            int e = m.end();
+            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
+            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            if (eit == null) {
+                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + orig);
+            } else {
+                eit.setType("V");
+                intervals.put(eit, s);
+            }
+
+        }
+
+        List<ExtInterval> phrases = new ArrayList<>();
+        Map<ExtInterval, Integer> intervalSorted = MapSort.sortByValue(intervals);
+
+        for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()) {
+            ExtInterval eit = e.getKey();
+            phrases.add(eit);
+   //         logger.info(eit.getType() + " -> " + orig.substring(eit.getStart(), eit.getEnd()));
+        }
+        return phrases;
+
+        /*
         String lowerCase_orig = orig.toLowerCase();
         int numTokens = parts.length;
         String [] taags = getPosTags(parts);
@@ -99,18 +162,12 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
                         eit.setType(type);
                         phrases.add(eit);
                     }
-                    /*
-                    String str = String.join(" ", tokenList);
-                    int start = orig.indexOf(str);
-                    if (start == -1){
-                        logger.error("NOT FOUND 1 " + str);
-                    }
-                    ExtInterval eit = new ExtInterval(start, start+str.length());
-                    */
 
-                    tokenList.clear();
+                     tokenList.clear();
                 }
+
                 type = "N";
+
                 tokenList.add(word);
             }  else if ( tag.startsWith("A")){
                 if (tokenList.size() != 0){
@@ -165,5 +222,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
 
         Collections.reverse(phrases);
         return phrases;
+        */
     }
 }

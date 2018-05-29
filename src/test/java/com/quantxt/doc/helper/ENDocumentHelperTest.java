@@ -92,11 +92,11 @@ public class ENDocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "research-based biopharmaceutical company that discovers");
-        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
-                "develops and commercializes");
+                "research-based biopharmaceutical company");
         Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
-                "medicines in areas of unmet medical need");
+                "develops");
+        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
+                "unmet medical need");
     }
 
     @Test
@@ -113,9 +113,9 @@ public class ENDocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
-                "Personal luxury goods growth stalls in ME");
-        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
-                "global market rebounds Global personal luxury goods market growth");
+                "Personal luxury goods growth stalls");
+        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
+                "Chinese customers");
     }
 
     @Test
@@ -132,20 +132,19 @@ public class ENDocumentHelperTest {
         List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
-        Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "Director of Legal Services for Technology Projects at Deloitte CIS");
-        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
-                "described");
-        Assert.assertEquals(str.substring(tagged.get(7).getStart(), tagged.get(7).getEnd()),
-                "innovation within the industry");
+        Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
+                "Director");
+        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
+                "Legal Services");
+        Assert.assertEquals(str.substring(tagged.get(11).getStart(), tagged.get(11).getEnd()),
+                "permissive regulatory frameworks");
     }
 
 
     @Test
     public void EntestEntityExtract4() {
         // GIVEN
-        String str = "The Race Is On To Discover The Most Influential Blockchain Startups " +
-                "Many venture capital firms and investment groups have recently keyed in " +
+        String str = "Many venture capital firms and investment groups have recently keyed in " +
                 "on investing and acquiring innovative and out-of-the-box blockchain startups, "+
                 "that seek to push the boundaries of the technology and where it can reach.";
         List<String> parts = helper.tokenize(str);
@@ -154,12 +153,12 @@ public class ENDocumentHelperTest {
         List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
-        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
                 "have recently keyed");
+        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
+                "acquiring");
         Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
-                "seek to push");
-        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
-                "boundaries of the technology");
+                "boundaries");
     }
 
 
@@ -179,10 +178,10 @@ public class ENDocumentHelperTest {
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
                 "Oil imports");
-        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
-                "powerhouse Shale revolution and end of curbs");
-        Assert.assertEquals(str.substring(tagged.get(12).getStart(), tagged.get(12).getEnd()),
-                "start shipping");
+        Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
+                "powerhouse Shale revolution");
+        Assert.assertEquals(str.substring(tagged.get(10).getStart(), tagged.get(10).getEnd()),
+                "US oil industry");
     }
 
     @Test

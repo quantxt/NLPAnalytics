@@ -1,44 +1,43 @@
 package com.quantxt.doc.helper;
 
-import java.io.InputStream;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.types.MapSort;
+import com.quantxt.util.StringUtil;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.helper.types.ExtInterval;
-import com.quantxt.util.StringUtil;
+import java.io.InputStream;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Created by dejani on 1/24/18.
+ * Created by matin on 5/28/18.
  */
-public class ESDocumentHelper extends CommonQTDocumentHelper {
 
-    private static Logger logger = LoggerFactory.getLogger(ESDocumentHelper.class);
+public class FRDocumentHelper extends CommonQTDocumentHelper {
+    private static Logger logger = LoggerFactory.getLogger(FRDocumentHelper.class);
+
+    private static Pattern NounPhrase = Pattern.compile("(N([LPN]*N|N*A+|N*))|AN+");
+    private static Pattern VerbPhrase = Pattern.compile("V+");
 
     private static final String SENTENCES_FILE_PATH = "/en/en-sent.bin";
     //TODO Check with Matin why RUDocumentInfo was initialized with EN sentences
 
-    private static final String POS_FILE_PATH = "/es/es-pos-maxent.bin";
-    private static final String STOPLIST_FILE_PATH = "/es/stoplist.txt";
-    private static final String VERB_FILE_PATH = "/es/context.json";
-    private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("él", "ella" , "Ella", "Él"));
+    private static final String POS_FILE_PATH = "/fr/fr-pos-maxent.bin";
+    private static final String STOPLIST_FILE_PATH = "/fr/stoplist.txt";
+    private static final String VERB_FILE_PATH = "/fr/context.json";
+    private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("il", "elle", "Elle", "Il"));
 
-    private static Pattern NounPhrase = Pattern.compile("N([SN]*N|N*A+|N*)");
-    private static Pattern VerbPhrase = Pattern.compile("R+V+|V+");
-
-    public ESDocumentHelper() {
+    public FRDocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH,
                 STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS);
     }
 
-    public ESDocumentHelper(InputStream contextFile) {
+    public FRDocumentHelper(InputStream contextFile) {
         super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
                 STOPLIST_FILE_PATH, PRONOUNS);
 
@@ -54,15 +53,15 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
 
     @Override
     public List<String> tokenize(String str) {
-        String tokenized = str.replaceAll("([\",?\\>\\<\\'\\’\\:\\]\\[\\(\\)\\”\\“])" , " $1 ");
+        String tokenized = str.replaceAll("(\\s|^)([ZzTtJjCcNnSsLlDd]|([Mm]a)|([Qq]u))'", "$1$2' ");
+        tokenized = tokenized.replaceAll("([\",?\\>\\<\\’;<>\\\\%\\#`\\{\\}\\:\\]\\[\\(\\)\\”\\“])" , " $1 ");
         tokenized = tokenized.replaceAll("([^\\.]+)(\\.+)\\s*$", "$1 $2");
         String [] parts = tokenized.split("\\s+");
         return Arrays.asList(parts);
     }
 
     protected boolean isTagDC(String tag){
-        return tag.equals("CS") || tag.startsWith("S") ||
-                tag.equals("CC") || tag.startsWith("D");
+        return tag.equals("CS") || tag.startsWith("S") /*|| tag.startsWith("D")*/;
     }
 
     @Override
@@ -74,7 +73,6 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
     @Override
     public List<ExtInterval> getNounAndVerbPhrases(String orig, String [] parts) {
-
         String[] taags = getPosTags(parts);
 
  //       for (int i=0; i < parts.length; i++){
@@ -128,9 +126,8 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
         for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()){
             ExtInterval eit = e.getKey();
             phrases.add(eit);
-    //        logger.info(eit.getType() + " -> " + orig.substring(eit.getStart(), eit.getEnd()));
+   //         logger.info(eit.getType() + " -> " + orig.substring(eit.getStart(), eit.getEnd()));
         }
         return phrases;
     }
-
 }
