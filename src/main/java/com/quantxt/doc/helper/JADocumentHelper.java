@@ -1,6 +1,7 @@
 package com.quantxt.doc.helper;
 
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.types.MapSort;
 import com.quantxt.util.StringUtil;
 import com.atilika.kuromoji.ipadic.Token;
 import com.atilika.kuromoji.ipadic.Tokenizer;
@@ -9,6 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by matin on 2/6/18.
@@ -24,6 +27,9 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     private static final String STOPLIST_FILE_PATH = "/ja/stoplist.txt";
     private static final String VERB_FILE_PATH = "/en/context.json";
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("此奴", "其奴", "彼", "彼女"));
+
+    private static Pattern NounPhrase = Pattern.compile("名+");
+    private static Pattern VerbPhrase = Pattern.compile("動+");
 
     private Tokenizer tokenizer;
     protected Tokenizer analyzer;
@@ -104,6 +110,64 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     //http://universaldependencies.org/tagset-conversion/ja-ipadic-uposf.html
     @Override
     public List<ExtInterval> getNounAndVerbPhrases(String orig, String[] parts) {
+        String[] taags = getPosTagsJa(orig);
+
+ //      for (int i=0; i < parts.length; i++){
+ //          logger.info(parts[i] +"____________" + taags[i] + " ");
+ //      }
+
+        StringBuilder allTags = new StringBuilder();
+
+        for (String t : taags){
+            allTags.append(t.substring(0,1));
+        }
+
+        HashMap<ExtInterval, Integer> intervals = new HashMap<>();
+        Matcher m = NounPhrase.matcher(allTags.toString());
+        while (m.find()){
+            String match = m.group();
+            int s = m.start();
+            int e = m.end();
+   //         if (match.contains("P") && !taags[s].equals(taags[e-1])){
+   //             String tagStr = String.join("_", Arrays.copyOfRange(taags, s , e));
+   //             if (!tagStr.contains("_P_")) continue;
+   //         }
+            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
+            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            if (eit == null) {
+                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + orig);
+            } else {
+                eit.setType("N");
+                intervals.put(eit, s);
+            }
+        }
+
+        m = VerbPhrase.matcher(allTags.toString());
+        while (m.find()){
+            int s = m.start();
+            int e = m.end();
+            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
+            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            if (eit == null) {
+                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + orig);
+            } else {
+                eit.setType("V");
+                intervals.put(eit, s);
+            }
+
+        }
+
+        List<ExtInterval> phrases = new ArrayList<>();
+        Map<ExtInterval, Integer> intervalSorted = MapSort.sortByValue(intervals);
+
+        for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()){
+            ExtInterval eit = e.getKey();
+            phrases.add(eit);
+  //                   logger.info(eit.getType() + " -> " + orig.substring(eit.getStart(), eit.getEnd()));
+        }
+        return phrases;
+
+        /*
         String lowerCase_orig = orig;
         int numTokens = parts.length;
         String[] taags = getPosTagsJa(orig);
@@ -196,5 +260,6 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
         Collections.reverse(phrases);
         return phrases;
+        */
     }
 }
