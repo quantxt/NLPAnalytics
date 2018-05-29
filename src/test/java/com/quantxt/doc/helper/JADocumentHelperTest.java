@@ -4,6 +4,8 @@ import com.quantxt.helper.types.ExtInterval;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -16,6 +18,8 @@ import static org.junit.Assert.assertTrue;
 public class JADocumentHelperTest {
 
     private static JADocumentHelper helper = new JADocumentHelper();
+    private static Logger logger = LoggerFactory.getLogger(JADocumentHelperTest.class);
+
 
     @Test
     public void testEntityExtract1() {
@@ -36,7 +40,6 @@ public class JADocumentHelperTest {
     }
 
     @Test
-    @Ignore
     public void testEntityExtract2() {
         // GIVEN
         String str = "日大アメリカンフットボール部の守備選手による悪質な反則問題で、関東学生連盟は２９日、臨時理事会を開いて関係者への処分を協議した。問題を調査した同学連の規律委員会は反則が内田正人前監督（６２）と井上奨前コーチ（２９）の指示によるものと認定し、両氏に対して処分の中で最も重く永久追放に相当する「除名」処分とした。";
@@ -48,9 +51,9 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
-                "стоимости вариант");
+                "守備選手");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
-                "предложенного аванса");
+                "臨時理事会");
     }
 
     @Test
@@ -195,5 +198,14 @@ public class JADocumentHelperTest {
                 "組み立てる");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
                 "小惑星探査機");
+    }
+
+    @Test
+    @Ignore
+    public void testSentenceDetect11() {
+        // GIVEN
+        String str = "1980年代から1990年代前半にかけてはBit Block Transferをサポートするチップと、描画を高速化するチップは別々のチップとして実装されていたが、チップ処理技術が進化するとともに安価になり、VGAカードをはじめとするグラフィックカード上に実装され、普及していった。1987年のVGA発表とともにリリースされたIBMの8514グラフィックスシステムは、2Dの基本的な描画機能をサポートした最初のPC用グラフィックアクセラレータとなった。AmigaはビデオハードウエアにBlitterを搭載した最初のコンシューマ向けコンピュータであった。";
+        String [] parts = helper.getSentences(str);
+
     }
 }

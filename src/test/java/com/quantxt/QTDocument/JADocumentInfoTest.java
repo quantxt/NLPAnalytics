@@ -25,7 +25,7 @@ public class JADocumentInfoTest {
         List<String> tokens = helper.tokenize(str);
         List<ExtInterval> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
         Assert.assertEquals(intervals.get(2).getType(), "N");
-        Assert.assertEquals(intervals.get(2).toString(), "27:54");
+        Assert.assertEquals(intervals.get(2).toString(), "12:14");
     }
 
     @Test
@@ -44,7 +44,7 @@ public class JADocumentInfoTest {
 //        }
 
         Assert.assertEquals(intervals.get(0).getType(), "N");
-        Assert.assertEquals(intervals.get(0).toString(), "0:35");
+        Assert.assertEquals(intervals.get(0).toString(), "0:9");
     }
 
     @Test

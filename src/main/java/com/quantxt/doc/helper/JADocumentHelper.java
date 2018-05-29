@@ -101,8 +101,10 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         ArrayList<String> allSents = new ArrayList<>();
         String [] sentStage1 = super.getSentences(text);
         for (String s : sentStage1){
-            String [] p = s.split("。");
-            allSents.addAll(Arrays.asList(p));
+            String [] parts = s.split("。");
+            for (String p : parts) {
+                allSents.add(p + "。");
+            }
         }
         return allSents.toArray(new String[allSents.size()]);
     }
