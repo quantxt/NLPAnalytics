@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
+
 /**
  * Created by matin on 4/15/18.
  */
@@ -18,6 +19,7 @@ public class Word2vecMatcher {
 
     final private static Logger logger = LoggerFactory.getLogger(Word2vecMatcher.class);
     private static HashMap<String, double[]> word2vMap;
+
     private static HashMap<String, Double> w2vCache;
 
     final private static int MaxMatchPertoken = 3;
@@ -37,7 +39,6 @@ public class Word2vecMatcher {
         took += (System.currentTimeMillis() - start);
         ArrayList<List<IdxVal>> allwordmatrix = new ArrayList<>();
 
-        int numAdded = 0;
         for (int i = 0; i < a.words1.length; i++) {
             String w1 = a.words1[i];
             List<IdxVal> vals = new ArrayList<>();
@@ -61,7 +62,6 @@ public class Word2vecMatcher {
                 }
                 if (w == null || w < w2vThresh) continue;
                 vals.add(new IdxVal(j, w));
-                numAdded++;
             }
 
             if (vals.size() > 1) {
@@ -72,14 +72,12 @@ public class Word2vecMatcher {
 
         took1 += (System.currentTimeMillis() - start);
 
-        Integer[] idx = new Integer [a.words2.length];
-        for(int k = 0; k < idx.length; k++) {
-            idx[k] = k;
-        }
-
         for (int i = 0; i < a.words1.length; i++) {
             List<IdxVal> data = allwordmatrix.get(i);
-
+  //          if (data.size() >= MaxMatchPertoken){
+  //              Collections.sort(data, (c1, c2) -> Double.compare(c2.val, c1.val));
+  //              data = data.subList(0, MaxMatchPertoken);
+  //          }
             int topS = MaxMatchPertoken;
             for (IdxVal iv : data){
                 if (topS-- <0) break;
@@ -92,6 +90,7 @@ public class Word2vecMatcher {
                 s.line2Coverage[j]++;
             }
         }
+
         took2 += (System.currentTimeMillis() - start);
     }
 

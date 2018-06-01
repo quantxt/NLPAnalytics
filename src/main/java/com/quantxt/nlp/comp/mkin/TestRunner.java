@@ -49,11 +49,13 @@ public class TestRunner {
         config.setModules(modules);
         config.setModuleWeights(modulesWeights);
         File w2vFile = new File("w2v_en.ser");
-        File w2vCache = new File("w2v_mult.ser");
+        File w2vCache = new File("w2vcache.en.ser");
         try {
             if (w2vCache.exists()){
+                logger.info("Loading cache");
                 FileInputStream fic = new FileInputStream(w2vCache);
-                ObjectInputStream oic = new ObjectInputStream(fic);
+        //        new BufferedInputStream(new FileInputStream(file))
+                ObjectInputStream oic = new ObjectInputStream(new BufferedInputStream(fic));
                 HashMap word2vcache = (HashMap) oic.readObject();
                 config.setWord2vCache(word2vcache);
                 oic.close();
@@ -95,35 +97,19 @@ public class TestRunner {
         long now = System.currentTimeMillis();
 
         ArrayList<String> l2 = new ArrayList<>();
-        l2.add("Stock market rises broadly as attention turns to corporate results");
-        l2.add("Stock market rises broadly as attention goes to company results");
-        l2.add("Amidst the continued fervor for cryptocurrencies and blockchain technology, evangelists have claimed it can help replace everything from money itself, to the foundation of many of our digital tools.");
+        l2.add("Apple’s four software platforms — iOS, macOS, watchOS and tvOS — provide seamless experiences across all Apple devices and empower people with breakthrough services including the App Store, Apple Music, Apple Pay and iCloud.");
+        l2.add("“Websites and apps tell us they see twice as many people actually completing a purchase with Apple Pay than with other payment methods.");
+        l2.add("Ever since Apple announced ARKit at its annual developers conference earlier this summer, the app-making community has enthusiastically shown off what it has been able to make with the new framework for augmented reality apps.");
+        l2.add("In addition to getting better data more quickly to Apple Maps with drones, the company is also trying to improve its mapping service’s navigation and is eyeing ways to take images of the inside of buildings, according to Bloomberg.");
+
         for (int i=0; i < l1.size(); i++){
-            logger.info(String.valueOf(i));
+  //          logger.info(String.valueOf(i));
             for (int j=i+1; j < l1.size(); j++){
                 MeteorStats stats = scorer.getMeteorStats(l1.get(j),
                         l1.get(i));
             }
         }
 
-        /*
-        for (int i=0; i < l2.size(); i++){
-        //    logger.info(String.valueOf(i));
-            Map<Integer, Double> scores = new HashMap<>();
-            for (int j=0; j < l1.size(); j++){
-                MeteorStats stats = scorer.getMeteorStats(l1.get(j),
-                        l2.get(i));
-                scores.put(j, stats.score);
-            }
-            Map<Integer, Double> sorted = MapSort.sortdescByValue(scores);
-            int topN = 5;
-            for (Map.Entry<Integer, Double> e : sorted.entrySet()){
-                if (topN-- <0) break;
-                logger.info(l1.get(e.getKey()) + " : " + e.getValue());
-            }
-            logger.info("\n\n");
-        }
-        */
         long took = System.currentTimeMillis() - now;
         logger.info("Took: " + took);
         logger.info("Took: " + Word2vecMatcher.took);

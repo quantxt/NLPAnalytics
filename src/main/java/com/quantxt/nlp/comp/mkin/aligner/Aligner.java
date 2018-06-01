@@ -82,8 +82,7 @@ public class Aligner {
 			}
 			in.close();
 		} catch (IOException ex) {
-			throw new RuntimeException("No function word list ("
-					+ wordFileURL.toString() + ")");
+			throw new RuntimeException("No function word list (" + wordFileURL.toString() + ")");
 		}
 	}
 
