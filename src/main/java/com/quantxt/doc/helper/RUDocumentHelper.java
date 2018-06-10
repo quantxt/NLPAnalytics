@@ -55,7 +55,8 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
 
     @Override
     public List<String> tokenize(String str) {
-        String tokenized = str.replaceAll("([\",?\\>\\<\\'\\’\\:\\]\\[\\(\\)\\”\\“»«\\.])" , " $1 ");
+        String tokenized = str.replaceAll("([\",?\\>\\<\\'\\’\\:\\]\\[\\(\\)\\”\\“«»])" , " $1 ");
+        tokenized = tokenized.replaceAll("([^\\.]+)(\\.+)\\s*$", "$1 $2").trim();
         String [] parts = tokenized.split("\\s+");
         return Arrays.asList(parts);
     }

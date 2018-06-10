@@ -55,7 +55,7 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
     public List<String> tokenize(String str) {
         String tokenized = str.replaceAll("(\\s|^)([ZzTtJjCcNnSsLlDd]|([Mm]a)|([Qq]u))'", "$1$2' ");
         tokenized = tokenized.replaceAll("([\",?\\>\\<\\’;<>\\\\%\\#`\\{\\}\\:\\]\\[\\(\\)\\”\\“])" , " $1 ");
-        tokenized = tokenized.replaceAll("([^\\.]+)(\\.+)\\s*$", "$1 $2");
+        tokenized = tokenized.replaceAll("([^\\.]+)(\\.+)\\s*$", "$1 $2").trim();
         String [] parts = tokenized.split("\\s+");
         return Arrays.asList(parts);
     }

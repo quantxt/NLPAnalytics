@@ -37,7 +37,7 @@ public class word2vec {
     public word2vec(int m)
     {
         minFreq = m;
-        tokenizer = new LinePreProcess(new ENDocumentInfo("", ""));
+        tokenizer = new LinePreProcess();
         tokenizer.setTokenPreProcessor(new TextPreProcessor());
     }
 
@@ -121,13 +121,14 @@ public class word2vec {
 
             Word2Vec vec = new Word2Vec.Builder()
                     .minWordFrequency(minFreq)
-                    .iterations(1)
+                    .iterations(10)
+                    .workers(8)
                     .layerSize(dim)
                     .seed(42)
                     .epochs(1)
-                    .batchSize(1)
                     .windowSize(5)
                     .lookupTable(table)
+                    .batchSize(512)
     //                .stopWords(getStopWords())
                     .vocabCache(cache)
                     .iterate(iter)
@@ -140,6 +141,10 @@ public class word2vec {
                 WordVectorSerializer.writeWordVectors(vec, w2vecOutputFilename);
             }
             w2v = WordVectorSerializer.fromTableAndVocab(table, cache);
+
+            logger.info("Sim is " +  vec.wordsNearest("research", 10));
+
+
     //        logger.info("sim: " + sim );
         }
         logger.info("Training word2vec finished.");
@@ -155,8 +160,11 @@ public class word2vec {
 
     public static void main(String[] args) throws Exception {
         FileInputStream fi = new FileInputStream(new File("data.txt"));
-        String out = "w2v";
-        word2vec w2v = new word2vec(2);
-        w2v.train(fi, out, 10, true);
+        String out = "w2v.txt";
+        word2vec w2v = new word2vec(4);
+        long start = System.currentTimeMillis();
+        w2v.train(fi, out, 25, false);
+        long took = System.currentTimeMillis() - start;
+        logger.info("run in " + took);
     }
 }

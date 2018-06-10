@@ -85,7 +85,8 @@ public class Extract {
     }
 
     public void loadFlatTree(InputStream ins){
-        Trie.TrieBuilder trie = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
+        Trie.TrieBuilder trie = Trie.builder().onlyWholeWords()
+                .ignoreCase().ignoreOverlaps();
         String line;
         BufferedReader br = new BufferedReader(new InputStreamReader(ins));
         try {

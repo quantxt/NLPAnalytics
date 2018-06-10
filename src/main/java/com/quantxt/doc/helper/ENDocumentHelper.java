@@ -11,9 +11,7 @@ import com.quantxt.types.MapSort;
 import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
-import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +83,8 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
 
     //https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(String orig,
+    public List<ExtInterval> getNounAndVerbPhrases(
+            String orig,
             String[] parts)
     {
         String[] taags = getPosTags(parts);

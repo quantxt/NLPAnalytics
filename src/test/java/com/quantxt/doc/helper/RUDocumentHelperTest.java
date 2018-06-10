@@ -66,7 +66,7 @@ public class RUDocumentHelperTest {
                 "поместили");
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
                 "изолированную комнату центра содержания");
-        Assert.assertEquals(str.substring(tagged.get(7).getStart(), tagged.get(7).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
                 "числе телефон");
     }
 
@@ -102,9 +102,9 @@ public class RUDocumentHelperTest {
         Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
                 "приняли");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
-                "дополнительные водозаборы");
+                "реконструировали");
         Assert.assertEquals(str.substring(tagged.get(12).getStart(), tagged.get(12).getEnd()),
-                "имеющейся");
+                "воды");
     }
 
     @Test
@@ -154,9 +154,9 @@ public class RUDocumentHelperTest {
         // THEN
         Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
                 "Лаборатории Касперского");
-        Assert.assertEquals(str.substring(tagged.get(12).getStart(), tagged.get(12).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(11).getStart(), tagged.get(11).getEnd()),
                 "английском языке");
-        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
                 "направлялась");
     }
 

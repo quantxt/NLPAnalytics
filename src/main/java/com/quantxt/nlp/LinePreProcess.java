@@ -1,6 +1,5 @@
 package com.quantxt.nlp;
 
-import com.quantxt.doc.QTDocument;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultStreamTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
@@ -18,14 +17,11 @@ public class LinePreProcess implements TokenizerFactory {
 
     final private static Logger logger = LoggerFactory.getLogger(LinePreProcess.class);
     private TokenPreProcess tokenPreProcess;
-//    private QTDocument qt;
 
-    public LinePreProcess(QTDocument doc) {
-        /*qt = doc;*/
+    public LinePreProcess() {
     }
 
     public Tokenizer create(String toTokenize) {
-    //    toTokenize = qt.normalize(toTokenize);
         DefaultTokenizer t = new DefaultTokenizer(toTokenize.trim());
         t.setTokenPreProcessor(this.tokenPreProcess);
         return t;
