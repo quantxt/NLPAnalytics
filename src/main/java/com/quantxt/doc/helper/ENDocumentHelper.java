@@ -1,17 +1,25 @@
 package com.quantxt.doc.helper;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTDocumentHelper;
+import com.quantxt.types.DateTimeTypeConverter;
 import com.quantxt.types.MapSort;
 import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,4 +140,68 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
         }
         return phrases;
     }
+
+    private static class TagRun implements Runnable{
+
+        CommonQTDocumentHelper helper;
+        String origin;
+        String [] parts;
+        public TagRun(ENDocumentHelper helper,
+                      String origin,
+                      String [] parts){
+            this.helper = helper;
+            this.origin = origin;
+            this.parts = parts;
+        }
+        @Override
+        public void run() {
+            if (helper == null) {
+                logger.info("helper is null");
+                return;
+            }
+            if (this.parts == null) {
+                logger.info("parts is null");
+                return;
+            }
+            this.helper.getNounAndVerbPhrases(this.origin, this.parts);
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        File file = new File("o.txt");
+        ENDocumentHelper helper = new ENDocumentHelper();
+   //     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+ //       for (int i=0 ; i<10 ; i++) {
+            FileReader fileReader = new FileReader(file);
+            BufferedReader bufferedReader = new BufferedReader(fileReader);
+            String line;
+        final Gson JODA_GSON = new GsonBuilder()
+                .registerTypeAdapter(DateTime.class, new DateTimeTypeConverter())
+                .create();
+        int n = 100;
+            while ((line = bufferedReader.readLine()) != null) {
+                if (n-- <0) break;
+                QTDocument p = JODA_GSON.fromJson(line, ENDocumentInfo.class);
+                QTDocument parent = new ENDocumentInfo(p.getBody(), p.getTitle(), helper);
+                parent.extractEntityMentions(null);
+    //            List<String> toks = helper.tokenize(line);
+       //         String [] parts = toks.toArray(new String[toks.size()]);
+       //         executor.execute(new TagRun(helper, line, parts));
+        //        String[] tags = helper.getPosTags(parts);
+         //       helper.getNounAndVerbPhrases(line, parts);
+
+    //            if (executor.getActiveCount() > 20){
+    //                Thread.sleep(1000);
+    //            }
+    //        }
+     //       logger.info(String.valueOf(i) + "...");
+
+
+        }
+        fileReader.close();
+   //     executor.awaitTermination(120, TimeUnit.SECONDS);
+        logger.info("Done");
+
+    }
+
 }

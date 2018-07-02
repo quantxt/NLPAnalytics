@@ -33,12 +33,39 @@ public class word2vec {
     private WordVectors w2v;
     private TokenizerFactory tokenizer;
     private int minFreq = 4;
+    private int dim;
+    private AbstractCache cache;
+    private WeightLookupTable table;
 
-    public word2vec(int m)
+    public word2vec(int dim)
+    {
+        tokenizer = new LinePreProcess();
+        tokenizer.setTokenPreProcessor(new TextPreProcessor());
+        cache = new AbstractCache();
+        this.dim = dim;
+        table = new InMemoryLookupTable.Builder()
+                .vectorLength(dim)
+                .useAdaGrad(false)
+                .cache(cache)
+                .build();
+    }
+
+    public word2vec(int m, int dim)
     {
         minFreq = m;
         tokenizer = new LinePreProcess();
         tokenizer.setTokenPreProcessor(new TextPreProcessor());
+        cache = new AbstractCache();
+        this.dim = dim;
+        table = new InMemoryLookupTable.Builder()
+                .vectorLength(dim)
+                .useAdaGrad(false)
+                .cache(cache)
+                .build();
+    }
+
+    public void setMinFreq(int m){
+        minFreq = m;
     }
 
     public void load(final File f) throws FileNotFoundException, UnsupportedEncodingException {
@@ -99,7 +126,6 @@ public class word2vec {
 
     public void train(final InputStream is,
                       final String w2vecOutputFilename,
-                      final int dim,
                       boolean write) throws Exception {
         File serializedFile = new File(w2vecOutputFilename);
         if (serializedFile.exists()) {
@@ -111,13 +137,6 @@ public class word2vec {
 
             SentenceIterator iter = new BasicLineIterator(is);
             // Split on white spaces in the line to get words
-
-            AbstractCache cache = new AbstractCache();
-            WeightLookupTable table = new InMemoryLookupTable.Builder()
-                    .vectorLength(dim)
-                    .useAdaGrad(false)
-                    .cache(cache)
-                    .build();
 
             Word2Vec vec = new Word2Vec.Builder()
                     .minWordFrequency(minFreq)
@@ -161,9 +180,9 @@ public class word2vec {
     public static void main(String[] args) throws Exception {
         FileInputStream fi = new FileInputStream(new File("data.txt"));
         String out = "w2v.txt";
-        word2vec w2v = new word2vec(4);
+        word2vec w2v = new word2vec(4, 25);
         long start = System.currentTimeMillis();
-        w2v.train(fi, out, 25, false);
+        w2v.train(fi, out, false);
         long took = System.currentTimeMillis() - start;
         logger.info("run in " + took);
     }

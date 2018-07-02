@@ -24,20 +24,19 @@ public class Extract {
     final private static Logger logger = LoggerFactory.getLogger(Extract.class);
 
     private Trie lookupTrie  = null;
-    private String name;
 
     public Extract(String entType, Entity[] entities){
         Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
         for (Entity entity : entities) {
-            String entity_name = entity.getName();
-            NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
-            entityNamedEntity.setEntity(entType, entity);
-            entityNamedEntity.setParent(true);
-
             // include entity as a speaker?
+
             if (entity.isSpeaker()) {
-                names.addKeyword(entity_name, entityNamedEntity);
-                names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
+                String entity_name = entity.getName();
+                NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
+                entityNamedEntity.setEntity(entType, entity);
+                entityNamedEntity.setParent(true);
+    //            names.addKeyword(entity_name, entityNamedEntity);
+    //            names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
 
                 String[] alts = entity.getAlts();
                 if (alts != null) {
@@ -46,6 +45,9 @@ public class Extract {
                         names.addKeyword(alt.toUpperCase(), entityNamedEntity);
 
                     }
+                } else {
+                    names.addKeyword(entity_name, entityNamedEntity);
+                    names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
                 }
             }
 
@@ -72,9 +74,11 @@ public class Extract {
 
     }
 
+    /*
     public String getName(){
         return name;
     }
+    */
 
     public Trie getLookupTrie(){
         return lookupTrie;
@@ -170,6 +174,13 @@ public class Extract {
     public void loadArrayTree(InputStream ins){
         Trie.TrieBuilder trie = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
         JsonParser parser = new JsonParser();
+        /*
+            {
+                "key1" : [val11, val12]
+                "key2" : [val21, val 22]
+            }
+
+         */
 
         try {
             byte[] contextArr = IOUtils.toByteArray(ins);

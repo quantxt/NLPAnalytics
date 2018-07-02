@@ -260,11 +260,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     //pos tagger is NOT thread safe  :-/
     @Override
     public String[] getPosTags(String [] text) {
-        String [] tags;
-        synchronized (posModel)	{
-            tags = posModel.tag(text);
-        }
-        return tags;
+        return posModel.tag(text);
+    //    String [] tags;
+    //    synchronized (posModel)	{
+    //        tags = posModel.tag(text);
+    //    }
+    //    return tags;
     }
 
     public DOCTYPE getVerbType(String verbPhs) {

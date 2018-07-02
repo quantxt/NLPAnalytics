@@ -662,7 +662,7 @@ public class FastWord2Vec extends FastSequenceVectors<VocabWord> {
         FastWord2Vec vec = new FastWord2Vec.Builder()
                 .minWordFrequency(minFreq)
                 .iterations(10)
-                .workers(50)
+                .workers(8)
                 .layerSize(dim)
                 .seed(42)
                 .epochs(1)
