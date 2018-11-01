@@ -30,7 +30,7 @@ public class ESDocumentInfo extends QTDocument {
 
     public ESDocumentInfo(Elements body, String title) {
         super(body.html(), title, new ESDocumentHelper());
-        rawText = body.text();
+        rawTitle = body.text();
     }
 
     @Override
@@ -38,8 +38,8 @@ public class ESDocumentInfo extends QTDocument {
         if (body == null || body.isEmpty())
             return null;
 
-        String sentences[] = rawText == null ? helper.getSentences(body)
-                                             : helper.getSentences(rawText);
+        String sentences[] = rawTitle == null ? helper.getSentences(body)
+                                             : helper.getSentences(rawTitle);
         List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences){
             ESDocumentInfo sDoc = new ESDocumentInfo("", s, helper);

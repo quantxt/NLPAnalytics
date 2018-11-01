@@ -1,6 +1,9 @@
 package com.quantxt.doc.helper;
 
+import com.quantxt.doc.JADocumentInfo;
+import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.trie.Emit;
 import com.quantxt.types.MapSort;
 import com.quantxt.util.StringUtil;
 import com.atilika.kuromoji.ipadic.Token;
@@ -25,7 +28,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
     private static final String POS_FILE_PATH = "";
     private static final String STOPLIST_FILE_PATH = "/ja/stoplist.txt";
-    private static final String VERB_FILE_PATH = "/en/context.json";
+    private static final String VERB_FILE_PATH = "/ja/context.json";
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("此奴", "其奴", "彼", "彼女"));
 
     private static Pattern NounPhrase = Pattern.compile("名+");
@@ -83,7 +86,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     }
 
     protected boolean isTagDC(String tag) {
-        return tag.equals("助詞") || tag.startsWith("接") || tag.equals("記号");
+        return tag.equals("助詞") || tag.startsWith("接") || tag.startsWith("記号");
     }
 
     @Override
@@ -109,15 +112,38 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         return allSents.toArray(new String[allSents.size()]);
     }
 
+    @Override
+    public String normalize(String workingLine) {
+
+        // New: Normalize quotes
+        workingLine = r_quote_norm.matcher(workingLine).replaceAll(s_quote_norm);
+        workingLine = r_quote_norm2.matcher(workingLine).replaceAll(s_quote_norm2);
+
+        // New: Normalize dashes
+        workingLine = workingLine.replace(s_dash_norm, s_dash_norm2);
+        workingLine = workingLine.replace(s_dash_norm3, s_dash_norm2);
+
+        // Normalize whitespace
+        workingLine = r_white.matcher(workingLine).replaceAll(s_white).trim();
+
+        return workingLine;
+    }
+
+    @Override
+    public List<ExtInterval> getNounAndVerbPhrases(String str, String[] parts) {
+        QTDocument doc = new JADocumentInfo("", str, this);
+        doc.setRawTitle(str);
+        return getNounAndVerbPhrases(doc, parts);
+    }
+
     //http://universaldependencies.org/tagset-conversion/ja-ipadic-uposf.html
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(String orig, String[] parts) {
-        String[] taags = getPosTagsJa(orig);
+    public List<ExtInterval> getNounAndVerbPhrases(QTDocument doc, String[] parts) {
+    //    orig = orig.replaceAll("[\\p{Cf}]", "");
 
- //      for (int i=0; i < parts.length; i++){
- //          logger.info(parts[i] +"____________" + taags[i] + " ");
- //      }
-
+        String tokenized_title = doc.getTitle();
+        tokenized_title = StringUtil.removePrnts(tokenized_title).trim();
+        String[] taags = getPosTagsJa(tokenized_title);
         StringBuilder allTags = new StringBuilder();
 
         for (String t : taags){
@@ -127,23 +153,31 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         HashMap<ExtInterval, Integer> intervals = new HashMap<>();
         Matcher m = NounPhrase.matcher(allTags.toString());
         while (m.find()){
-            String match = m.group();
             int s = m.start();
             int e = m.end();
-   //         if (match.contains("P") && !taags[s].equals(taags[e-1])){
-   //             String tagStr = String.join("_", Arrays.copyOfRange(taags, s , e));
-   //             if (!tagStr.contains("_P_")) continue;
-   //         }
             List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("N");
                 intervals.put(eit, s);
             }
         }
 
+        // find verbs differently and by just regex search
+
+        String raw_title = doc.getRawTitle();
+        Collection<Emit> detectedVerbs = getVerbTree().parseText(raw_title);
+        if (detectedVerbs != null && detectedVerbs.size() >0){
+            for (Emit dv : detectedVerbs){
+                ExtInterval eit = new ExtInterval(dv.getStart(), dv.getEnd());
+                eit.setType("V");
+                intervals.put(eit, dv.getStart());
+            }
+        }
+
+        /*
         m = VerbPhrase.matcher(allTags.toString());
         while (m.find()){
             int s = m.start();
@@ -158,6 +192,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
             }
 
         }
+        */
 
         List<ExtInterval> phrases = new ArrayList<>();
         Map<ExtInterval, Integer> intervalSorted = MapSort.sortByValue(intervals);
@@ -165,103 +200,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()){
             ExtInterval eit = e.getKey();
             phrases.add(eit);
-  //                   logger.info(eit.getType() + " -> " + orig.substring(eit.getStart(), eit.getEnd()));
         }
         return phrases;
-
-        /*
-        String lowerCase_orig = orig;
-        int numTokens = parts.length;
-        String[] taags = getPosTagsJa(orig);
-        List<String> tokenList = new ArrayList<>();
-        List<ExtInterval> phrases = new ArrayList<>();
-        String type = "X";
-        for (int j = numTokens - 1; j >= 0; j--) {
-            String tag = taags[j];
-            String word = parts[j];
-            if (isTagDC(tag)) {
-                int nextIdx = j - 1;
-                if (nextIdx < 0) continue;
-                String nextTag = taags[nextIdx];
-                if ((tokenList.size() != 0) ||
-                        (type.equals("N") && nextTag.startsWith("名")) ||
-                        (type.equals("V") && ( nextTag.startsWith("動") || nextTag.equals("助動詞")))) {
-                    tokenList.add(word);
-                }
-                continue;
-            }
-            if ((tag.startsWith("名") )) {
-                if (!type.equals("N") && tokenList.size() > 0) {
-                    Collections.reverse(tokenList);
-                    ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
-                    if (eit == null) {
-                        logger.error("NOT FOUND 1 '" + String.join(" ", tokenList) + "' in: " + orig);
-                    } else {
-                        lowerCase_orig = lowerCase_orig.substring(0, eit.getStart());
-                        eit.setType(type);
-                        phrases.add(eit);
-                    }
-                    tokenList.clear();
-                }
-                type = "N";
-                tokenList.add(word);
-            } else if (tag.startsWith("形")) {
-                int nextIdx = j - 1;
-                if (nextIdx < 0) continue;
-                String nextTag = taags[nextIdx];
-                if (nextTag.startsWith("名")) {
-                    tokenList.add(word);
-                }
-                type = "N";
-            } else if ( (tag.equals("助動詞")) || (tag.startsWith("動"))) {
-                if (!type.equals("V") && tokenList.size() > 0) {
-                    Collections.reverse(tokenList);
-                    ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
-                    if (eit == null) {
-                        logger.error("NOT FOUND 2 '" + String.join(" ", tokenList) + "' in: " + orig);
-                    } else {
-                        lowerCase_orig = lowerCase_orig.substring(0, eit.getStart());
-                        eit.setType(type);
-                        phrases.add(eit);
-                    }
-                    tokenList.clear();
-                }
-                type = "V";
-                tokenList.add(word);
-            } else if (tag.startsWith("副") && type.equals("V")) {
-                if (tokenList.size() != 0) {
-                    tokenList.add(word);
-                }
-            } else {
-                if (!type.equals("X") && tokenList.size() > 0) {
-                    Collections.reverse(tokenList);
-                    ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
-                    if (eit == null) {
-                        logger.error("NOT FOUND 3 " + String.join(" ", tokenList));
-                    } else {
-                        lowerCase_orig = lowerCase_orig.substring(0, eit.getStart());
-                        eit.setType(type);
-                        phrases.add(eit);
-                    }
-                    tokenList.clear();
-                }
-                type = "X";
-            }
-        }
-
-        if (!type.equals("X") && tokenList.size() > 0) {
-            Collections.reverse(tokenList);
-            ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
-            if (eit == null) {
-                logger.error("NOT FOUND 4 '" + String.join(" ", tokenList) + "' in: " + orig);
-            } else {
-                eit.setType(type);
-                phrases.add(eit);
-            }
-        }
-
-        Collections.reverse(phrases);
-        return phrases;
-        */
     }
 }

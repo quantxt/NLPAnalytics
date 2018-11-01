@@ -21,6 +21,8 @@ import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.types.Entity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by dejani on 1/25/18.
@@ -28,6 +30,7 @@ import com.quantxt.types.Entity;
 public class ENDocumentHelperTest {
 
     private static ENDocumentHelper helper = new ENDocumentHelper();
+    private static Logger logger = LoggerFactory.getLogger(ENDocumentHelperTest.class);
 
     @Test
     public void testRawTestSentences() {
@@ -122,7 +125,7 @@ public class ENDocumentHelperTest {
     public void EntestEntityExtract3() {
         // GIVEN
         String str = "“The “Creation of an Enabling Regulatory Environment for Blockchain " +
-                "Projects Is Currently Crucial” Artem Tolkachev, Director of Legal Services " +
+                "Projects is currently crucial” Artem Tolkachev, Director of Legal Services " +
                 "for Technology Projects at Deloitte CIS, described the development of permissive " +
                 "regulatory frameworks for blockchain and cryptocurrency as necessary in order to " +
                 "empower innovation within the industry.";
@@ -130,7 +133,6 @@ public class ENDocumentHelperTest {
 
         // WHEN
         List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
-
         // THEN
         Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
                 "Director");
@@ -185,7 +187,7 @@ public class ENDocumentHelperTest {
     }
 
     @Test
-    public void testNormalize() {
+    public void testNormalize1() {
         // GIVEN
         String str = "Some light sources, such as neon lights, "
                 + "give off only certain frequencies of light.";
@@ -201,6 +203,23 @@ public class ENDocumentHelperTest {
         assertFalse(normalized.contains("."));
         assertFalse(normalized.contains("Some"));
     //    assertFalse(normalized.contains("off"));
+    }
+
+    @Test
+    public void testNormalize2() {
+        // GIVEN
+        String str = "AT&T and Johsnson & Johnson are biggest U.S. companaies";
+        ENDocumentHelper helper = new ENDocumentHelper();
+
+        // WHEN
+        String normalized = helper.normalize(str);
+
+        // THEN
+        assertNotNull(normalized);
+        assertFalse(normalized.isEmpty());
+        assertTrue(normalized.contains("at&t"));
+        assertTrue(normalized.contains("u.s."));
+        //    assertFalse(normalized.contains("off"));
     }
 
     @Test

@@ -39,7 +39,7 @@ public class RUDocumentInfo extends QTDocument {
 
     public RUDocumentInfo (Elements body, String title) {
         super(body.html(), title, new RUDocumentHelper());
-        rawText = body.text();
+        rawTitle = body.text();
     }
 
     @Override
@@ -47,8 +47,8 @@ public class RUDocumentInfo extends QTDocument {
         if (body == null || body.isEmpty())
             return null;
 
-        String sentences[] = rawText == null ? helper.getSentences(body)
-                                             : helper.getSentences(rawText);
+        String sentences[] = rawTitle == null ? helper.getSentences(body)
+                                             : helper.getSentences(rawTitle);
         List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences){
             RUDocumentInfo sDoc = new RUDocumentInfo("", s, helper);
@@ -79,8 +79,8 @@ public class RUDocumentInfo extends QTDocument {
     }
 
     //http://corpus.leeds.ac.uk/mocky/ru-table.tab
-    public List<ExtInterval> hack(String orig, String[] parts) {
-        return helper.getNounAndVerbPhrases(orig, parts);
+    public List<ExtInterval> hack(QTDocument doc, String[] parts) {
+        return helper.getNounAndVerbPhrases(doc, parts);
     }
 
     public static void main(String[] args) throws Exception {

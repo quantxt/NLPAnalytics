@@ -9,6 +9,10 @@ import java.util.regex.Pattern;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.ESDocumentInfo;
+import com.quantxt.doc.JADocumentInfo;
+import com.quantxt.doc.QTDocument;
 import com.quantxt.types.MapSort;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
@@ -73,9 +77,17 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
         return workingLine.toLowerCase();
     }
 
+    @Override
+    public List<ExtInterval> getNounAndVerbPhrases(String str, String[] parts) {
+        QTDocument doc = new ESDocumentInfo("", str, this);
+        return getNounAndVerbPhrases(doc, parts);
+    }
+
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(String orig, String [] parts) {
+    public List<ExtInterval> getNounAndVerbPhrases(QTDocument doc, String [] parts) {
+
+        String tokenized_title = doc.getTitle().trim();
 
         String[] taags = getPosTags(parts);
  //       for (int i=0; i < parts.length; i++){
@@ -93,16 +105,12 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
         while (m.find()){
             int s = m.start();
             int e = m.end();
-      //      if (match.contains("P") && !taags[s].equals(taags[e-1])){
-      //          String tagStr = String.join("_", Arrays.copyOfRange(taags, s , e));
-      //          if (!tagStr.contains("_P_")) continue;
-      //      }
+
             List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            String tmpStr = String.join(" ", tokenList);
-            if (tmpStr.length() == 0) continue;
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("N");
                 intervals.put(eit, s);
@@ -114,9 +122,9 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end();
             List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("V");
                 intervals.put(eit, s);
@@ -134,6 +142,7 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
         }
         return phrases;
     }
+
     public static void main(String[] args) throws Exception
     {
         ESDocumentHelper helper = new ESDocumentHelper();
@@ -149,7 +158,8 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
                 logger.info(ttl);
                 for (String str : sents) {
                     List<String> parts = helper.tokenize(str);
-                    List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+                    ESDocumentInfo sDoc = new ESDocumentInfo("", str, helper);
+                    List<ExtInterval> tagged = helper.getNounAndVerbPhrases(sDoc, parts.toArray(new String[parts.size()]));
                 }
             }
         }

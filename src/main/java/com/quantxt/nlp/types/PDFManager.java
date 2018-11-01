@@ -2,6 +2,9 @@ package com.quantxt.nlp.types;
 
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.helper.DateResolver;
+import com.quantxt.interval.Interval;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
@@ -17,13 +20,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.List;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by matin on 6/28/16.
@@ -260,10 +265,115 @@ public class PDFManager {
     }
 
     public static void main(String[] args) throws Exception {
-        Path path = Paths.get("Whitiff ACORD.pdf");
+        Path path = Paths.get("/Users/matin/Downloads/ICAT.pdf");
         byte[] data = Files.readAllBytes(path);
         QTDocument doc = pdf2QT(data);
-        logger.info(doc.getBody());
+
+        Pattern MONEY   = Pattern.compile("([\\s+|^]\\$\\s*((\\d[,\\.\\d]*)|(\\(\\d[,\\.\\d]*\\))))(?:\\s*(hundred|thousand|million|billion|M|B)[\\s,\\.;]+)?");
+        Pattern PERCENT = Pattern.compile("[\\.\\d]+\\%");
+        Pattern NUMBER  = Pattern.compile("([\\s+|^](\\d[,\\.\\d]*)|(\\(\\d[,\\d]*\\)))(?:\\s*(hundred|thousand|million|billion|M|B)[\\s,\\.;]+)?");
+        Pattern TAG = Pattern.compile("^[A-Z][a-z,\\.\\)\\(]+");
+
+        Pattern MULT_SPACE = Pattern.compile("\\s{2,}");
+
+        String [] lines = doc.getBody().split("\n");
+
+        int id = 0;
+
+        for (String l : lines){
+            String original = l ;
+            String l_copy = l;
+            Matcher m = TAG.matcher(l);
+            if (!m.find()) continue;
+            ArrayList<Interval> money = new ArrayList<>();
+            ArrayList<Interval> perc = new ArrayList<>();
+            ArrayList<Interval> numb = new ArrayList<>();
+
+            m = MONEY.matcher(l_copy);
+            StringBuffer sb = new StringBuffer(l_copy.length());
+            String space =  " ";
+            while (m.find()){
+        //        String tagid = " __MON__"+id++ + " ";
+                String tagid = String.join("", Collections.nCopies(m.end() - m.start(), " "));
+                m.appendReplacement(sb, Matcher.quoteReplacement(tagid));
+                money.add(new Interval(m.start(), m.end()));
+            }
+            m.appendTail(sb);
+
+            l_copy = sb.toString();
+            m = PERCENT.matcher(l_copy);
+            sb = new StringBuffer(l_copy.length());
+
+            while (m.find()){
+            //    String tagid = " __PERC__"+id++ + " ";
+                String tagid = String.join("", Collections.nCopies(m.end() - m.start(), " "));
+                m.appendReplacement(sb, Matcher.quoteReplacement(tagid));
+                perc.add(new Interval(m.start(), m.end()));
+            }
+            m.appendTail(sb);
+
+            l_copy = sb.toString();
+            m = NUMBER.matcher(l_copy);
+            sb = new StringBuffer(l_copy.length());
+
+            while (m.find()){
+            //    String tagid = " __NUM__"+id++ + " ";
+                String tagid = String.join("", Collections.nCopies(m.end() - m.start(), " "));
+                m.appendReplacement(sb, Matcher.quoteReplacement(tagid));
+                numb.add(new Interval(m.start(), m.end()));
+            }
+
+            m.appendTail(sb);
+            if ((numb.size() + money.size() + perc.size()) == 0) continue;
+            int min_idx = 10000;
+            int max_idx = 0;
+            ArrayList<Interval> allIntervals = new ArrayList<>();
+            allIntervals.addAll(money);
+            allIntervals.addAll(numb);
+            allIntervals.addAll(perc);
+            for (Interval it : allIntervals){
+                if (it.getStart() < min_idx){
+                    min_idx = it.getStart();
+                }
+                if (it.getEnd() > max_idx){
+                    max_idx = it.getEnd();
+                }
+            }
+            String l_end = l_copy.substring(max_idx).trim();
+            if (l_end.length() != 0) continue;
+            l_copy = sb.toString().trim();
+            m = MULT_SPACE.matcher(l_copy);
+            if (m.find()) continue;
+            l_copy = l_copy.replaceAll("\\b-\\b" , "").trim();
+
+            ArrayList<String> vals = new ArrayList<>();
+            vals.add(l_copy);
+            if (money.size() > 0) {
+                for (Interval it : money) {
+                    int s = it.getStart();
+                    int en = it.getEnd();
+                    vals.add(l.substring(s, en).replace(" ", "").trim());
+                }
+                logger.info("Money: " + String.join("\t", vals));
+            } else if (perc.size() > 0){
+                for (Interval it : perc) {
+                    int s = it.getStart();
+                    int en = it.getEnd();
+                    vals.add(l.substring(s, en).replace(" ", "").trim());
+                }
+                logger.info("Perc: " + String.join("\t", vals));
+            } else if (numb.size() > 0){
+                for (Interval it : numb) {
+                    int s = it.getStart();
+                    int en = it.getEnd();
+                    vals.add(l.substring(s, en).replace(" ", "").trim());
+                }
+                logger.info("Number: " + String.join("\t", vals));
+            }
+
+
+        }
+
     }
 }
 

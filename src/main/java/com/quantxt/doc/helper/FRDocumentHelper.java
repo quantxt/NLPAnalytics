@@ -1,5 +1,8 @@
 package com.quantxt.doc.helper;
 
+import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.FRDocumentInfo;
+import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.types.MapSort;
 import com.quantxt.util.StringUtil;
@@ -70,9 +73,18 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
         return workingLine.toLowerCase();
     }
 
+    @Override
+    public List<ExtInterval> getNounAndVerbPhrases(String str, String[] parts) {
+        QTDocument doc = new FRDocumentInfo("", str, this);
+        return getNounAndVerbPhrases(doc, parts);
+    }
+
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(String orig, String [] parts) {
+    public List<ExtInterval> getNounAndVerbPhrases(QTDocument doc, String [] parts) {
+
+        String tokenized_title = doc.getTitle().trim();
+  //      tokenized_title = StringUtil.removePrnts(tokenized_title).trim();
         String[] taags = getPosTags(parts);
 
  //       for (int i=0; i < parts.length; i++){
@@ -96,9 +108,9 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
                 if (!tagStr.contains("_P_")) continue;
             }
             List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("N");
                 intervals.put(eit, s);
@@ -110,9 +122,9 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end();
             List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("V");
                 intervals.put(eit, s);

@@ -2,17 +2,14 @@ package com.quantxt.doc.helper;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.JADocumentInfo;
 import com.quantxt.doc.QTDocument;
-import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.types.DateTimeTypeConverter;
 import com.quantxt.types.MapSort;
 import opennlp.tools.tokenize.Tokenizer;
@@ -29,6 +26,7 @@ import com.quantxt.util.StringUtil;
 /**
  * Created by dejani on 1/24/18.
  */
+
 public class ENDocumentHelper extends CommonQTDocumentHelper {
 
     private static Logger logger = LoggerFactory.getLogger(ENDocumentHelper.class);
@@ -48,7 +46,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
 
     public ENDocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH,
-                    STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS);
+                STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS);
 
     }
 
@@ -76,41 +74,46 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     }
 
     @Override
-    public void preInit(){
+    public void preInit() {
         //Analyzer
-    //    analyzer = new StandardAnalyzer();
         analyzer = new EnglishAnalyzer();
         try (FileInputStream fis = new FileInputStream(getModelBaseDir() + TOKENIZER_FILE_PATH)) {
             TokenizerModel tokenizermodel = new TokenizerModel(fis);
             tokenizer = new TokenizerME(tokenizermodel);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    @Override
+    public List<ExtInterval> getNounAndVerbPhrases(String str, String[] parts) {
+        QTDocument doc = new ENDocumentInfo("", str, this);
+        return getNounAndVerbPhrases(doc, parts);
+    }
+
     //https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(
-            String orig,
-            String[] parts)
-    {
+    public List<ExtInterval> getNounAndVerbPhrases(QTDocument doc, String[] parts) {
+        String tokenized_title = doc.getTitle();
+        tokenized_title = tokenized_title.replaceAll("\\([^\\)]+\\)", " ");
+        tokenized_title = tokenized_title.replaceAll("([\\.])+$", " $1");
+
         String[] taags = getPosTags(parts);
         StringBuilder allTags = new StringBuilder();
 
-        for (String t : taags){
-            allTags.append(t.substring(0,1));
+        for (String t : taags) {
+            allTags.append(t.substring(0, 1));
         }
 
         HashMap<ExtInterval, Integer> intervals = new HashMap<>();
         Matcher m = NounPhrase.matcher(allTags.toString());
-        while (m.find()){
+        while (m.find()) {
             int s = m.start();
             int e = m.end();
-            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND: '" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("N");
                 intervals.put(eit, s);
@@ -118,13 +121,13 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
         }
 
         m = VerbPhrase.matcher(allTags.toString());
-        while (m.find()){
+        while (m.find()) {
             int s = m.start();
             int e = m.end();
-            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("V");
                 intervals.put(eit, s);
@@ -134,72 +137,46 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
         List<ExtInterval> phrases = new ArrayList<>();
         Map<ExtInterval, Integer> intervalSorted = MapSort.sortByValue(intervals);
 
-        for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()){
+        for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()) {
             ExtInterval eit = e.getKey();
             phrases.add(eit);
         }
         return phrases;
     }
 
-    private static class TagRun implements Runnable{
-
-        CommonQTDocumentHelper helper;
-        String origin;
-        String [] parts;
-        public TagRun(ENDocumentHelper helper,
-                      String origin,
-                      String [] parts){
-            this.helper = helper;
-            this.origin = origin;
-            this.parts = parts;
-        }
-        @Override
-        public void run() {
-            if (helper == null) {
-                logger.info("helper is null");
-                return;
-            }
-            if (this.parts == null) {
-                logger.info("parts is null");
-                return;
-            }
-            this.helper.getNounAndVerbPhrases(this.origin, this.parts);
-        }
-    }
-
     public static void main(String[] args) throws Exception {
         File file = new File("o.txt");
         ENDocumentHelper helper = new ENDocumentHelper();
-   //     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
- //       for (int i=0 ; i<10 ; i++) {
-            FileReader fileReader = new FileReader(file);
-            BufferedReader bufferedReader = new BufferedReader(fileReader);
-            String line;
+        //     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+        //       for (int i=0 ; i<10 ; i++) {
+        FileReader fileReader = new FileReader(file);
+        BufferedReader bufferedReader = new BufferedReader(fileReader);
+        String line;
         final Gson JODA_GSON = new GsonBuilder()
                 .registerTypeAdapter(DateTime.class, new DateTimeTypeConverter())
                 .create();
         int n = 100;
-            while ((line = bufferedReader.readLine()) != null) {
-                if (n-- <0) break;
-                QTDocument p = JODA_GSON.fromJson(line, ENDocumentInfo.class);
-                QTDocument parent = new ENDocumentInfo(p.getBody(), p.getTitle(), helper);
-                parent.extractEntityMentions(null);
-    //            List<String> toks = helper.tokenize(line);
-       //         String [] parts = toks.toArray(new String[toks.size()]);
-       //         executor.execute(new TagRun(helper, line, parts));
-        //        String[] tags = helper.getPosTags(parts);
-         //       helper.getNounAndVerbPhrases(line, parts);
+        while ((line = bufferedReader.readLine()) != null) {
+            if (n-- < 0) break;
+            QTDocument p = JODA_GSON.fromJson(line, ENDocumentInfo.class);
+            QTDocument parent = new ENDocumentInfo(p.getBody(), p.getTitle(), helper);
+            parent.extractEntityMentions(null);
+            //            List<String> toks = helper.tokenize(line);
+            //         String [] parts = toks.toArray(new String[toks.size()]);
+            //         executor.execute(new TagRun(helper, line, parts));
+            //        String[] tags = helper.getPosTags(parts);
+            //       helper.getNounAndVerbPhrases(line, parts);
 
-    //            if (executor.getActiveCount() > 20){
-    //                Thread.sleep(1000);
-    //            }
-    //        }
-     //       logger.info(String.valueOf(i) + "...");
+            //            if (executor.getActiveCount() > 20){
+            //                Thread.sleep(1000);
+            //            }
+            //        }
+            //       logger.info(String.valueOf(i) + "...");
 
 
         }
         fileReader.close();
-   //     executor.awaitTermination(120, TimeUnit.SECONDS);
+        //     executor.awaitTermination(120, TimeUnit.SECONDS);
         logger.info("Done");
 
     }

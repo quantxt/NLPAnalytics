@@ -5,8 +5,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.quantxt.doc.QTDocument;
+import com.quantxt.helper.types.ExtInterval;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
@@ -41,7 +44,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private static String alnum = "0-9A-Za-zŠŽšžŸÀ-ÖØ-öø-ž" + "Ѐ-ӿԀ-ԧꙀ-ꙮ꙾-ꚗᴀ-ᵿ";
 
-
     // Single quotes to normalize
     protected static Pattern r_quote_norm = Pattern.compile("([`‘’])");
     protected static String s_quote_norm = "'";
@@ -49,12 +51,15 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static Pattern r_quote_norm2 = Pattern.compile("([“”]|'')");
     protected static String s_quote_norm2 = " \" ";
 
+    protected static Pattern UTF8_TOKEN = Pattern.compile("^(?:[a-zA-Z]\\.){2,}|([\\p{L}\\p{N}]+[\\.\\&]{0,1}[\\p{L}\\p{N}])");
+
+
     // Dashes to normalize
     protected static String s_dash_norm = "–";
     protected static String s_dash_norm2 = "-";
     protected static String s_dash_norm3 = "--";
 
-    protected static Pattern r_punct_strip = Pattern.compile("[^" + alnum + "]");
+    protected static Pattern r_punct_strip = Pattern.compile("([^" + alnum + "])|([" + alnum + "]+[\\&\\.]+[" + alnum+ "]*)");
     protected static String s_punct_strip = " ";
 
     //Unicode spaces
@@ -164,7 +169,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         });
     }
 
-    @Override
+        @Override
     public Trie getVerbTree() {
         return verbTree;
     }
@@ -238,13 +243,24 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         workingLine = workingLine.replace(s_dash_norm, s_dash_norm2);
         workingLine = workingLine.replace(s_dash_norm3, s_dash_norm2);
 
-        workingLine = r_punct_strip.matcher(workingLine).replaceAll(
-                s_punct_strip);
-
         // Normalize whitespace
         workingLine = r_white.matcher(workingLine).replaceAll(s_white).trim();
 
-        return workingLine;
+        String [] parts = workingLine.split("\\s+");
+        ArrayList<String> normParts = new ArrayList<>();
+        for (String p : parts){
+            Matcher m = UTF8_TOKEN.matcher(p);
+            if (m.find()){
+                normParts.add(m.group());
+            }
+        }
+    //    workingLine = workingLine.replaceAll("^([{\\p{L}\\p{N}]+[\\.\\&]*[{\\p{L}\\p{N}]+[\\.]*)" , "");
+        return String.join(" ", normParts);
+     //   workingLine = r_punct_strip.matcher(workingLine).replaceAll(s_punct_strip);
+
+
+
+        //return workingLine;
     }
 
     @Override

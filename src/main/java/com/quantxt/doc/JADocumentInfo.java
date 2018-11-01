@@ -31,40 +31,45 @@ public class JADocumentInfo extends QTDocument {
 
     public JADocumentInfo (Elements body, String title) {
         super(body.html(), title, new JADocumentHelper());
-        rawText = body.text();
+        rawTitle = body.text();
     }
 
     @Override
     public List<QTDocument> getChilds() {
+        List<QTDocument> childs = new ArrayList<>();
         if (body == null || body.isEmpty())
-            return null;
+            return childs;
 
-        ArrayList<String> sentences = new ArrayList<>();
         List<String> tokens = helper.tokenize(body);
         String [] postags = ((JADocumentHelper)helper).getPosTagsJa(body);
         ArrayList<String> sentTokens = new ArrayList();
+        JADocumentInfo sDoc;
         for (int i=0; i< postags.length; i++){
             String token = tokens.get(i);
             String tag = postags[i];
             sentTokens.add(token);
-            if (token.equals("。")){  // japanese preiod.
-                sentences.add(String.join(" ", sentTokens));
-                sentTokens = new ArrayList<>();
-            }else if (tag.equals("記号-句点")){
-                sentences.add(String.join(" ", sentTokens));
-                sentTokens = new ArrayList<>();
-            } else if (tag.equals("記号") && ( puntuations.contains(token))) {
-                sentences.add(String.join(" ", sentTokens));
-                sentTokens = new ArrayList<>();
+            if (token.equals("。") || puntuations.contains(token)
+                    || tag.equals("記号-句点") || tag.equals("記号-括弧閉") || tag.equals("記号-括弧開")
+                    || tag.equals("記号-空白") || tag.equals("記号-読点") ) // japanese preiod.
+            {
+                String raw = String.join("", sentTokens);
+                String spaced = String.join(" ", sentTokens);
+                sDoc = new JADocumentInfo("", spaced, helper);
+                sDoc.rawTitle = raw;
+                sDoc.setDate(getDate());
+                sDoc.setLink(getLink());
+                sDoc.setLogo(getLogo());
+                sDoc.setSource(getSource());
+                sDoc.setLanguage(getLanguage());
+                childs.add(sDoc);
             }
         }
-        if (sentTokens.size() > 0){
-            sentences.add(String.join(" ", sentTokens));
-        }
 
-        List<QTDocument> childs = new ArrayList<>();
-        for (String s : sentences){
-            JADocumentInfo sDoc = new JADocumentInfo("", s, helper);
+        if (sentTokens.size() > 0){
+            String raw = String.join("", sentTokens);
+            String spaced = String.join(" ", sentTokens);
+            sDoc = new JADocumentInfo("", spaced, helper);
+            sDoc.rawTitle = raw;
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());
@@ -72,6 +77,7 @@ public class JADocumentInfo extends QTDocument {
             sDoc.setLanguage(getLanguage());
             childs.add(sDoc);
         }
+
         return childs;
     }
 

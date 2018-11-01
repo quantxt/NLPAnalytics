@@ -28,17 +28,19 @@ public class ENDocumentInfo extends QTDocument {
 
     public ENDocumentInfo(Elements body, String title) {
         super(body.html(), title, new ENDocumentHelper());
-        rawText = body.text();
+        rawTitle = body.text();
     }
 
     @Override
     public List<QTDocument> getChilds() {
-        if (body == null || body.isEmpty())
-            return null;
-
-        String[] sentences = rawText == null ? helper.getSentences(body)
-                                             : helper.getSentences(rawText);
         List<QTDocument> childs = new ArrayList<>();
+        if (body == null || body.isEmpty()) {
+            return childs;
+        }
+
+        String[] sentences = rawTitle == null ? helper.getSentences(body)
+                                             : helper.getSentences(rawTitle);
+
         for (String s : sentences) {
             ENDocumentInfo sDoc = new ENDocumentInfo("", s, helper);
             sDoc.setDate(getDate());

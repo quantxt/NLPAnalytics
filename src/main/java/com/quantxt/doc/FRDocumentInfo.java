@@ -28,7 +28,7 @@ public class FRDocumentInfo extends QTDocument {
 
     public FRDocumentInfo(Elements body, String title) {
         super(body.html(), title, new FRDocumentHelper());
-        rawText = body.text();
+        rawTitle = body.text();
     }
 
     @Override
@@ -36,8 +36,8 @@ public class FRDocumentInfo extends QTDocument {
         if (body == null || body.isEmpty())
             return null;
 
-        String sentences[] = rawText == null ? helper.getSentences(body)
-                : helper.getSentences(rawText);
+        String sentences[] = rawTitle == null ? helper.getSentences(body)
+                : helper.getSentences(rawTitle);
         List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences){
             FRDocumentInfo sDoc = new FRDocumentInfo("", s, helper);

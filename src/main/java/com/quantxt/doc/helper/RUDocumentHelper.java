@@ -5,6 +5,9 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.RUDocumentInfo;
 import com.quantxt.types.MapSort;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
@@ -71,8 +74,17 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
         return tag.equals("C") || tag.equals("I") || tag.startsWith("S");
     }
 
+
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(String orig, String[] parts) {
+    public List<ExtInterval> getNounAndVerbPhrases(String str, String[] parts) {
+        QTDocument doc = new RUDocumentInfo("", str, this);
+        return getNounAndVerbPhrases(doc, parts);
+    }
+
+    @Override
+    public List<ExtInterval> getNounAndVerbPhrases(QTDocument doc, String[] parts) {
+
+        String tokenized_title = doc.getTitle().trim();
         String[] taags = getPosTags(parts);
 
 //        for (int i = 0; i < parts.length; i++) {
@@ -92,9 +104,9 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end();
             List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("N");
                 intervals.put(eit, s);
@@ -106,9 +118,9 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end();
             List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
+            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             if (eit == null) {
-                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + orig);
+                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + tokenized_title);
             } else {
                 eit.setType("V");
                 intervals.put(eit, s);
