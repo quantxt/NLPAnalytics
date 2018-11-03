@@ -1,10 +1,7 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.doc.JADocumentInfo;
-import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.trie.Emit;
-import com.quantxt.types.MapSort;
 import com.quantxt.util.StringUtil;
 import com.atilika.kuromoji.ipadic.Token;
 import com.atilika.kuromoji.ipadic.Tokenizer;
@@ -15,6 +12,7 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 
 /**
  * Created by matin on 2/6/18.
@@ -39,12 +37,12 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
     public JADocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS);
+                STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS, true);
     }
 
     public JADocumentHelper(InputStream contextFile) {
         super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, PRONOUNS);
+                STOPLIST_FILE_PATH, PRONOUNS, true);
 
     }
 
@@ -58,13 +56,9 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         return tokStrings;
     }
 
-    public String[] getPosTagsJa(String text) {
-        List<String> tokStrings = new ArrayList<>();
+    public List<Token> getPosTagsJa(String text) {
         List<Token> tokens = tokenizer.tokenize(text);
-        for (Token e : tokens){
-            tokStrings.add(e.getPartOfSpeechLevel1());
-        }
-        return tokStrings.toArray(new String[tokStrings.size()]);
+        return tokens;
     }
 
     @Override
@@ -102,9 +96,9 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     public String[] getSentences(String text) {
 
         ArrayList<String> allSents = new ArrayList<>();
-        String [] sentStage1 = super.getSentences(text);
-        for (String s : sentStage1){
-            String [] parts = s.split("。");
+        String[] sentStage1 = super.getSentences(text);
+        for (String s : sentStage1) {
+            String[] parts = s.split("。");
             for (String p : parts) {
                 allSents.add(p + "。");
             }
@@ -116,6 +110,8 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     public String normalize(String workingLine) {
 
         // New: Normalize quotes
+        List<String> tokens = tokenize(workingLine);
+        workingLine = String.join(" ", tokens);
         workingLine = r_quote_norm.matcher(workingLine).replaceAll(s_quote_norm);
         workingLine = r_quote_norm2.matcher(workingLine).replaceAll(s_quote_norm2);
 
@@ -129,78 +125,47 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         return workingLine;
     }
 
-    @Override
-    public List<ExtInterval> getNounAndVerbPhrases(String str, String[] parts) {
-        QTDocument doc = new JADocumentInfo("", str, this);
-        doc.setRawTitle(str);
-        return getNounAndVerbPhrases(doc, parts);
-    }
-
     //http://universaldependencies.org/tagset-conversion/ja-ipadic-uposf.html
-    @Override
-    public List<ExtInterval> getNounAndVerbPhrases(QTDocument doc, String[] parts) {
-    //    orig = orig.replaceAll("[\\p{Cf}]", "");
+    public List<ExtInterval> getNounAndVerbPhrases(final String orig_str,
+                                                   String[] tokens) {
 
-        String tokenized_title = doc.getTitle();
-        tokenized_title = StringUtil.removePrnts(tokenized_title).trim();
-        String[] taags = getPosTagsJa(tokenized_title);
+        List<Token> taags = getPosTagsJa(orig_str);
+
         StringBuilder allTags = new StringBuilder();
+        ExtInterval [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
 
-        for (String t : taags){
-            allTags.append(t.substring(0,1));
+        for (Token t : taags) {
+            allTags.append(t.getPartOfSpeechLevel1().substring(0, 1));
         }
 
-        HashMap<ExtInterval, Integer> intervals = new HashMap<>();
+        List<ExtInterval> intervals = new ArrayList<>();
         Matcher m = NounPhrase.matcher(allTags.toString());
-        while (m.find()){
+        while (m.find()) {
             int s = m.start();
-            int e = m.end();
-            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
-            if (eit == null) {
-                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + tokenized_title);
-            } else {
-                eit.setType("N");
-                intervals.put(eit, s);
-            }
+            int e = m.end() - 1;
+            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            eit.setType("N");
+            intervals.add(eit);
         }
 
         // find verbs differently and by just regex search
 
-        String raw_title = doc.getRawTitle();
-        Collection<Emit> detectedVerbs = getVerbTree().parseText(raw_title);
-        if (detectedVerbs != null && detectedVerbs.size() >0){
+        Collection<Emit> detectedVerbs = getVerbTree().parseText(orig_str);
+        if (detectedVerbs != null && detectedVerbs.size() > 0){
             for (Emit dv : detectedVerbs){
-                ExtInterval eit = new ExtInterval(dv.getStart(), dv.getEnd());
+                // special case
+                ExtInterval eit = new ExtInterval(dv.getStart(), dv.getEnd()+1);
                 eit.setType("V");
-                intervals.put(eit, dv.getStart());
+                intervals.add(eit);
             }
         }
 
-        /*
-        m = VerbPhrase.matcher(allTags.toString());
-        while (m.find()){
-            int s = m.start();
-            int e = m.end();
-            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s , e));
-            ExtInterval eit = StringUtil.findSpan(orig, tokenList);
-            if (eit == null) {
-                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + orig);
-            } else {
-                eit.setType("V");
-                intervals.put(eit, s);
-            }
+        return intervals;
+    }
 
-        }
-        */
-
-        List<ExtInterval> phrases = new ArrayList<>();
-        Map<ExtInterval, Integer> intervalSorted = MapSort.sortByValue(intervals);
-
-        for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()){
-            ExtInterval eit = e.getKey();
-            phrases.add(eit);
-        }
-        return phrases;
+    public static void main(String[] args) throws Exception {
+        String str = "コーディング・フリスCEOは「消費者はシンプルなデザインを好むようになっており、われわれの予測よりも需要が低かった」と語った。";
+        String substr = str.substring(59, 61+1);
+        logger.info("'" + substr + "'");
     }
 }

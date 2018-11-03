@@ -3,6 +3,7 @@ package com.quantxt.nlp;
 import com.google.gson.*;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;

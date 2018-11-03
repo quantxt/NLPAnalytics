@@ -1,5 +1,6 @@
 package com.quantxt.QTDocument;
 
+import com.atilika.kuromoji.ipadic.Token;
 import com.quantxt.doc.JADocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.JADocumentHelper;
@@ -34,7 +35,7 @@ public class JADocumentInfoTest {
         List<String> tokens = helper.tokenize(str);
         List<ExtInterval> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
 
-        String [] tagss = helper.getPosTagsJa(str);
+   //     List<Token> tagss = helper.getPosTagsJa(str);
 
 //        for (int i =0; i<tagss.length; i++){
 //            logger.info(tokens.get(i) + " | " + tagss[i]);

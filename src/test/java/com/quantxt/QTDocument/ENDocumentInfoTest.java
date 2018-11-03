@@ -41,7 +41,7 @@ public class ENDocumentInfoTest {
         }
         try {
             ArrayList<Entity> entityArray1 = new ArrayList<>();
-            entityArray1.add(new Entity("Gilead Sciences, Inc." , null , true));
+            entityArray1.add(new Entity("Gilead Sciences, Inc." , new String[]{"Gilead Sciences , Inc."} , true));
             entityArray1.add(new Entity("Amazon Inc." , new String[]{"Amazon"} , true));
             ArrayList<Entity> entityArray2 = new ArrayList<>();
             entityArray2.add(new Entity("Director" , new String[]{"Director"} , true));
@@ -49,8 +49,8 @@ public class ENDocumentInfoTest {
             Map<String, Entity[]> entMap = new HashMap<>();
             entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
             entMap.put("Title" , entityArray2.toArray(new Entity[entityArray2.size()]));
-            enx = new Speaker(entMap, (String)null, null);
             helper = new ENDocumentHelper();
+            enx = new Speaker(entMap, (String)null, null);
             setUpIsDone = true;
         } catch (Exception e) {
             e.printStackTrace();

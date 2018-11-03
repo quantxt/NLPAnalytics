@@ -1,10 +1,16 @@
 package com.quantxt.doc;
 
+import com.atilika.kuromoji.ipadic.Token;
+import com.google.gson.Gson;
 import com.quantxt.doc.helper.JADocumentHelper;
+import com.quantxt.helper.types.ExtInterval;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -41,35 +47,37 @@ public class JADocumentInfo extends QTDocument {
             return childs;
 
         List<String> tokens = helper.tokenize(body);
-        String [] postags = ((JADocumentHelper)helper).getPosTagsJa(body);
+        List<Token> postags = ((JADocumentHelper)helper).getPosTagsJa(body);
         ArrayList<String> sentTokens = new ArrayList();
         JADocumentInfo sDoc;
-        for (int i=0; i< postags.length; i++){
+        int start = 0;
+
+        for (int i=0; i< postags.size(); i++){
             String token = tokens.get(i);
-            String tag = postags[i];
+            Token PosTag = postags.get(i);
+            String tag = PosTag.getPartOfSpeechLevel1();
             sentTokens.add(token);
             if (token.equals("。") || puntuations.contains(token)
                     || tag.equals("記号-句点") || tag.equals("記号-括弧閉") || tag.equals("記号-括弧開")
                     || tag.equals("記号-空白") || tag.equals("記号-読点") ) // japanese preiod.
             {
-                String raw = String.join("", sentTokens);
-                String spaced = String.join(" ", sentTokens);
-                sDoc = new JADocumentInfo("", spaced, helper);
-                sDoc.rawTitle = raw;
+                int end = PosTag.getPosition()+ token.length();
+                String raw = body.substring(start, end);
+                start = end;
+                sDoc = new JADocumentInfo("", raw, helper);
                 sDoc.setDate(getDate());
                 sDoc.setLink(getLink());
                 sDoc.setLogo(getLogo());
                 sDoc.setSource(getSource());
                 sDoc.setLanguage(getLanguage());
                 childs.add(sDoc);
+                sentTokens = new ArrayList();
             }
         }
 
         if (sentTokens.size() > 0){
-            String raw = String.join("", sentTokens);
-            String spaced = String.join(" ", sentTokens);
-            sDoc = new JADocumentInfo("", spaced, helper);
-            sDoc.rawTitle = raw;
+            String raw = body.substring(start);
+            sDoc = new JADocumentInfo("", raw, helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());
@@ -95,5 +103,35 @@ public class JADocumentInfo extends QTDocument {
     @Override
     public boolean isStatement(String s) {
         return false;
+    }
+
+    public static void main(String[] args) throws Exception {
+        JADocumentHelper helper = new JADocumentHelper();
+        File file = new File("/Users/matin/git/QTCurat/o.txt");
+
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        Gson gson = new Gson();
+
+        String st;
+        while ((st = br.readLine()) != null){
+            try {
+                JADocumentInfo doc = gson.fromJson(st, JADocumentInfo.class);
+                doc.setHelper(helper);
+                List<QTDocument> childs = doc.getChilds();
+                logger.info(doc.getTitle());
+                for (QTDocument d : childs) {
+                    String str = d.getTitle();
+                    List<String> p = helper.tokenize(d.getTitle());
+                    String[] parts = p.toArray(new String[p.size()]);
+                    List<ExtInterval> nvs = helper.getNounAndVerbPhrases(str, parts);
+                    for (ExtInterval ext : nvs){
+                        logger.info("\t\t" + ext.getType() + " | " + str.substring(ext.getStart(), ext.getEnd()));
+                    }
+                }
+            } catch (Exception e){
+                logger.error(st);
+            }
+        }
+
     }
 }

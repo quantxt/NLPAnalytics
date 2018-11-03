@@ -117,7 +117,7 @@ public class ENDocumentHelperTest {
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
                 "Personal luxury goods growth stalls");
-        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(12).getStart(), tagged.get(12).getEnd()),
                 "Chinese customers");
     }
 
@@ -297,24 +297,4 @@ public class ENDocumentHelperTest {
         // THEN
         assertNotNull(tagged);
     }
-
-    public static Speaker getSpeaker() {
-        Speaker speaker = null;
-        try {
-            ArrayList<Entity> entityArray1 = new ArrayList<>();
-            entityArray1.add(new Entity("Gilead Sciences, Inc.", null, true));
-            entityArray1.add(new Entity("Amazon Inc.", new String[] { "Amazon" }, true));
-            ArrayList<Entity> entityArray2 = new ArrayList<>();
-            entityArray2.add(new Entity("Director", new String[] { "Director" }, true));
-            entityArray2.add(new Entity("Senior Director", new String[] { "Senior Director" }, true));
-            Map<String, Entity[]> entMap = new HashMap<>();
-            entMap.put("Company", entityArray1.toArray(new Entity[entityArray1.size()]));
-            entMap.put("Title", entityArray2.toArray(new Entity[entityArray2.size()]));
-            speaker = new Speaker(entMap, (String) null, null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return speaker;
-    }
-
 }

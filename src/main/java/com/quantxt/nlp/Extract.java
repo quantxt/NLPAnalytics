@@ -1,6 +1,7 @@
 package com.quantxt.nlp;
 
 import com.google.gson.*;
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.helper.types.Extraction;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
@@ -35,8 +36,6 @@ public class Extract {
                 NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
                 entityNamedEntity.setEntity(entType, entity);
                 entityNamedEntity.setParent(true);
-    //            names.addKeyword(entity_name, entityNamedEntity);
-    //            names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
 
                 String[] alts = entity.getAlts();
                 if (alts != null) {

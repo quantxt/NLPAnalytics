@@ -13,7 +13,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.quantxt.trie.Trie;
+import com.quantxt.doc.QTDocumentHelper;
+import com.quantxt.doc.helper.ENDocumentHelper;
 import org.junit.Test;
 
 import com.quantxt.nlp.Speaker;

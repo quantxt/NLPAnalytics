@@ -40,12 +40,12 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
 
     public RUDocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH, STOPLIST_FILE_PATH,
-                VERB_FILE_PATH, PRONOUNS);
+                VERB_FILE_PATH, PRONOUNS, false);
     }
 
     public RUDocumentHelper(InputStream contextFile) {
         super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, PRONOUNS);
+                STOPLIST_FILE_PATH, PRONOUNS, false);
     }
 
     @Override
@@ -74,167 +74,44 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
         return tag.equals("C") || tag.equals("I") || tag.startsWith("S");
     }
 
-
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(String str, String[] parts) {
-        QTDocument doc = new RUDocumentInfo("", str, this);
-        return getNounAndVerbPhrases(doc, parts);
-    }
-
-    @Override
-    public List<ExtInterval> getNounAndVerbPhrases(QTDocument doc, String[] parts) {
-
-        String tokenized_title = doc.getTitle().trim();
-        String[] taags = getPosTags(parts);
-
-//        for (int i = 0; i < parts.length; i++) {
-//            logger.info(parts[i] + "_" + taags[i] + " ");
-//        }
-
+    public List<ExtInterval> getNounAndVerbPhrases(final String orig_str,
+                                                   String[] tokens) {
+        String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
+        ExtInterval [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
 
         for (String t : taags) {
             allTags.append(t.substring(0, 1));
         }
 
-        HashMap<ExtInterval, Integer> intervals = new HashMap<>();
+        List<ExtInterval> intervals = new ArrayList<>();
         Matcher m = NounPhrase.matcher(allTags.toString());
         while (m.find()) {
-            //         String match = m.group();
             int s = m.start();
-            int e = m.end();
-            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
-            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
-            if (eit == null) {
-                logger.error("NOT FOUND 1" + String.join(" ", tokenList) + "' in: " + tokenized_title);
-            } else {
-                eit.setType("N");
-                intervals.put(eit, s);
-            }
+            int e = m.end() - 1;
+            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            eit.setType("N");
+            intervals.add(eit);
         }
 
         m = VerbPhrase.matcher(allTags.toString());
         while (m.find()) {
             int s = m.start();
-            int e = m.end();
-            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
-            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
-            if (eit == null) {
-                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + tokenized_title);
-            } else {
-                eit.setType("V");
-                intervals.put(eit, s);
+            int e = m.end() - 1;
+            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            eit.setType("V");
+            intervals.add(eit);
+        }
+
+        Collections.sort(intervals, new Comparator<ExtInterval>(){
+            public int compare(ExtInterval p1, ExtInterval p2){
+                Integer s1 = p1.getStart();
+                Integer s2 = p2.getStart();
+                return s1.compareTo(s2);
             }
+        });
 
-        }
-
-        List<ExtInterval> phrases = new ArrayList<>();
-        Map<ExtInterval, Integer> intervalSorted = MapSort.sortByValue(intervals);
-
-        for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()) {
-            ExtInterval eit = e.getKey();
-            phrases.add(eit);
-   //         logger.info(eit.getType() + " -> " + orig.substring(eit.getStart(), eit.getEnd()));
-        }
-        return phrases;
-
-        /*
-        String lowerCase_orig = orig.toLowerCase();
-        int numTokens = parts.length;
-        String [] taags = getPosTags(parts);
-        if (taags.length != parts.length) {
-            logger.error("Number of tags and parts is not the same: " + orig);
-            return null;
-        }
-        List<String> tokenList= new ArrayList<>();
-        List<ExtInterval> phrases = new ArrayList<>();
-        String type = "X";
-        for (int j = numTokens-1; j>=0; j--) {
-            final String tag = taags[j];
-            final String word = parts[j];
-            if ( isTagDC(tag) ) {
-                int nextIdx = j - 1;
-                if (nextIdx < 0) continue;
-                String nextTag = taags[nextIdx];
-                if ((tokenList.size() != 0) ||
-                        (type.equals("N") && nextTag.startsWith("N") ) ||
-                        (type.equals("V") && nextTag.startsWith("V") ))
-                {
-                    tokenList.add(word);
-                }
-                continue;
-            }
-            if (tag.startsWith("N") || tag.startsWith("P-")){
-                if (!type.equals("N") && tokenList.size() >0){
-                    Collections.reverse(tokenList);
-                    ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
-                    if (eit == null) {
-                        logger.error("NOT FOUND 1 '" + String.join(" ", tokenList) + "' in: " + orig);
-                    } else {
-                        lowerCase_orig = lowerCase_orig.substring(0, eit.getStart());
-                        eit.setType(type);
-                        phrases.add(eit);
-                    }
-
-                     tokenList.clear();
-                }
-
-                type = "N";
-
-                tokenList.add(word);
-            }  else if ( tag.startsWith("A")){
-                if (tokenList.size() != 0){
-                    tokenList.add(word);
-                }
-            } else if (tag.startsWith("V")){
-                if (!type.equals("V") && tokenList.size() >0){
-                    Collections.reverse(tokenList);
-                    ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
-                    if (eit == null) {
-                        logger.error("NOT FOUND 2 '" + String.join(" ", tokenList) + "' in: " + orig);
-                    } else {
-                        lowerCase_orig = lowerCase_orig.substring(0, eit.getStart());
-                        eit.setType(type);
-                        phrases.add(eit);
-                    }
-                    tokenList.clear();
-                }
-                type = "V";
-                tokenList.add(word);
-            } else if (tag.startsWith("Q") || tag.startsWith("R")){
-                if (tokenList.size() != 0){
-                    tokenList.add(word);
-                }
-            }  else {
-                if (!type.equals("X") && tokenList.size() >0){
-                    Collections.reverse(tokenList);
-                    ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
-                    if (eit == null) {
-                        logger.error("NOT FOUND 3 " + String.join(" ", tokenList) + "' in: " + orig);
-                    } else {
-                        lowerCase_orig = lowerCase_orig.substring(0, eit.getStart());
-                        eit.setType(type);
-                        phrases.add(eit);
-                    }
-                    tokenList.clear();
-                }
-                type = "X";
-            }
-        }
-
-        if (!type.equals("X") && tokenList.size() >0){
-            Collections.reverse(tokenList);
-            ExtInterval eit = StringUtil.findSpan(lowerCase_orig, tokenList);
-            if (eit == null) {
-                logger.error("NOT FOUND 4 '" + String.join(" ", tokenList) + "' in: " + orig);
-            } else {
-                eit.setType(type);
-                phrases.add(eit);
-            }
-        }
-
-        Collections.reverse(phrases);
-        return phrases;
-        */
+        return intervals;
     }
 }

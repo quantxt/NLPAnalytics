@@ -152,11 +152,11 @@ public class RUDocumentHelperTest {
         List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
-        Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
                 "Лаборатории Касперского");
-        Assert.assertEquals(str.substring(tagged.get(11).getStart(), tagged.get(11).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(14).getStart(), tagged.get(14).getEnd()),
                 "английском языке");
-        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(11).getStart(), tagged.get(11).getEnd()),
                 "направлялась");
     }
 
@@ -174,7 +174,7 @@ public class RUDocumentHelperTest {
                 "продолжился");
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
                 "апреля нерезиденты");
-        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
                 "вывели");
     }
 
@@ -190,9 +190,9 @@ public class RUDocumentHelperTest {
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
                 "вопрос");
-        Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
                 "прорабатывается");
-        Assert.assertEquals(str.substring(tagged.get(7).getStart(), tagged.get(7).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
                 "продолжится");
     }
 

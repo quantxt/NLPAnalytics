@@ -44,14 +44,14 @@ public class RUDocumentInfo extends QTDocument {
 
     @Override
     List<QTDocument> getChilds() {
+        List<QTDocument> childs = new ArrayList<>();
         if (body == null || body.isEmpty())
-            return null;
+            return childs;
 
         String sentences[] = rawTitle == null ? helper.getSentences(body)
                                              : helper.getSentences(rawTitle);
-        List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences){
-            RUDocumentInfo sDoc = new RUDocumentInfo("", s, helper);
+            RUDocumentInfo sDoc = new RUDocumentInfo("", s.trim(), helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());
@@ -80,80 +80,6 @@ public class RUDocumentInfo extends QTDocument {
 
     //http://corpus.leeds.ac.uk/mocky/ru-table.tab
     public List<ExtInterval> hack(QTDocument doc, String[] parts) {
-        return helper.getNounAndVerbPhrases(doc, parts);
+        return helper.getNounAndVerbPhrases(doc.getTitle(), parts);
     }
-
-    public static void main(String[] args) throws Exception {
-        // String title = "Силуанов: законопроект, запрещающий россиянам пользоваться криптовалютами уже готов Биткоин против Apple: экономисты прогнозируют рост объема торгов криптовалютой до уровня торга акициями IT-гиганта Биткоин продолжает рост и уже превысил $14 000 <a href=\"\" title=\"\"> <abbr title=\"\"> <acronym title=\"\"> <b> <blockquote cite=\"\"> <cite> <code> <del datetime=\"\"> <em> <i> <q cite=\"\"> <strike> <strong> Copyright © 2018 Русский Еврей - All Rights Reserved Powered by WordPress & Atahualpa";
-        // String body = "В Китае , где расположено 80% мощностей по “добыче” биткоинов, могут запретить майнинг. Представители государственных агентств, опасаясь финансовых рисков, выпустили на прошлой неделе обращение к местным властям с призывом заняться прекращением деятельности, в ходе которой “майнят” криптовалюты, пишет The Wall Street Journal. Речь идет об обращении от имени Leading Group of Internet Financial Risks Remediation — госагентства, занимающегося изучением финансовых рисков в интернете, которое стало инициатором такой идеи. Группа сама по себе не контролирует использование электроэнергии в стране, но это влиятельный политический игрок, возглавляемый заместителем управляющего Народного банка Китая Паном Гоншеном. Представители группы на местах должны отчитываться о прогрессе по устранению майнеров в своем регионе каждый месяц.";
-
-        // RUDocumentInfo doc = new RUDocumentInfo("", "");
-
-        Map<String, Entity[]> entMap = new HashMap<>();
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
-        entityArray1.add(new Entity("Bitcoin" , new String[]{"Bitcoin" , "Биткоин"} , true));
-        entMap.put("Bitcoin" , entityArray1.toArray(new Entity[entityArray1.size()]));
-        QTExtract enx = new Speaker(entMap, (String)null, null);
-
-        Gson JODA_GSON = new GsonBuilder()
-                .registerTypeAdapter(DateTime.class, new DateTimeTypeConverter())
-                .create();
-        BufferedReader br = new BufferedReader(new FileReader("/Users/matin/git/TxtAlign/o.txt"));
-        try {
-            String line = null;
-            while ((line = br.readLine() ) != null) {
-
-                QTDocument p = JODA_GSON.fromJson(line, QTDocument.class);
-                QTDocument parent = QTDocumentFactory.createQTDoct(p.getBody(), p.getTitle());
-                logger.info("L: " + parent.getLanguage());
-
-                // Files.write(Paths.get("o.txt"), (theString + "\n").getBytes(), StandardOpenOption.APPEND);
-
-                parent.setDate(p.getDate());
-                parent.setLink(p.getLink());
-                parent.setSource(p.getSource());
-
-                ArrayList<QTDocument> children = null;
-                synchronized (enx) {
-                    children = parent.extractEntityMentions(enx);
-                }
-                logger.info("size: " + children.size());
-				/*
-
-				List<String> p2 = doc.tokenize(line);
-				logger.info(line);
-
-				List<ExtInterval> res = doc.hack(line, p2.toArray(new String[p2.size()]));
-
-				if (res == null) continue;
-				*/
-                logger.info("=========");
-
-            }
-        } finally {
-            br.close();
-        }
-
-		/*
-
-		QTDocument doc = QTDocumentFactory.createQTDoct(body, title);
-		logger.info("lang is: " + doc.getLanguage());
-		doc.processDoc();
-
-		ArrayList<Entity> entityArray1 = new ArrayList<>();
-		entityArray1.add(new Entity("Wall Street" , null , true));
-		entityArray1.add(new Entity("China" , new String[]{"Китае"} , true));
-
-		Map<String, Entity[]> entMap = new HashMap<>();
-		entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
-		QTExtract enx = new Speaker(entMap, (String)null, null);
-		ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
-		Gson gson =new Gson();
-		for (QTDocument d : docs){
-			Map<String, LinkedHashSet<String>> entityMap = d.getEntity();
-			logger.info(d.getDocType() + " / " + gson.toJson(entityMap));
-		}
-		*/
-    }
-
 }

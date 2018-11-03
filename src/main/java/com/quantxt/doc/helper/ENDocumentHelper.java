@@ -8,10 +8,8 @@ import java.util.regex.Pattern;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.quantxt.doc.ENDocumentInfo;
-import com.quantxt.doc.JADocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.types.DateTimeTypeConverter;
-import com.quantxt.types.MapSort;
 import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
@@ -46,13 +44,13 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
 
     public ENDocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS);
+                STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS, false);
 
     }
 
     public ENDocumentHelper(InputStream contextFile) {
         super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, PRONOUNS);
+                STOPLIST_FILE_PATH, PRONOUNS, false);
     }
 
 
@@ -85,63 +83,52 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
         }
     }
 
-    @Override
-    public List<ExtInterval> getNounAndVerbPhrases(String str, String[] parts) {
-        QTDocument doc = new ENDocumentInfo("", str, this);
-        return getNounAndVerbPhrases(doc, parts);
-    }
-
     //https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(QTDocument doc, String[] parts) {
-        String tokenized_title = doc.getTitle();
-        tokenized_title = tokenized_title.replaceAll("\\([^\\)]+\\)", " ");
-        tokenized_title = tokenized_title.replaceAll("([\\.])+$", " $1");
-
-        String[] taags = getPosTags(parts);
+    public List<ExtInterval> getNounAndVerbPhrases(final String orig_str,
+                                                   String[] tokens) {
+        String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
+        ExtInterval [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
 
         for (String t : taags) {
             allTags.append(t.substring(0, 1));
         }
 
-        HashMap<ExtInterval, Integer> intervals = new HashMap<>();
+        List<ExtInterval> intervals = new ArrayList<>();
         Matcher m = NounPhrase.matcher(allTags.toString());
         while (m.find()) {
             int s = m.start();
-            int e = m.end();
-            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
-            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
-            if (eit == null) {
-                logger.error("NOT FOUND: '" + String.join(" ", tokenList) + "' in: " + tokenized_title);
-            } else {
+            int e = m.end() - 1;
+            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+    //        List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
+    //        ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
+    //        if (eit == null) {
+    //            logger.error("NOT FOUND: '" + String.join(" ", tokenList) + "' in: " + orig_str);
+    //        } else {
                 eit.setType("N");
-                intervals.put(eit, s);
-            }
+                intervals.add(eit);
+    //        }
         }
 
         m = VerbPhrase.matcher(allTags.toString());
         while (m.find()) {
             int s = m.start();
-            int e = m.end();
-            List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
-            ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
-            if (eit == null) {
-                logger.error("NOT FOUND 2" + String.join(" ", tokenList) + "' in: " + tokenized_title);
-            } else {
-                eit.setType("V");
-                intervals.put(eit, s);
+            int e = m.end() - 1;
+            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            eit.setType("V");
+            intervals.add(eit);
+        }
+
+        Collections.sort(intervals, new Comparator<ExtInterval>(){
+            public int compare(ExtInterval p1, ExtInterval p2){
+                Integer s1 = p1.getStart();
+                Integer s2 = p2.getStart();
+                return s1.compareTo(s2);
             }
+        });
 
-        }
-        List<ExtInterval> phrases = new ArrayList<>();
-        Map<ExtInterval, Integer> intervalSorted = MapSort.sortByValue(intervals);
-
-        for (Map.Entry<ExtInterval, Integer> e : intervalSorted.entrySet()) {
-            ExtInterval eit = e.getKey();
-            phrases.add(eit);
-        }
-        return phrases;
+        return intervals;
     }
 
     public static void main(String[] args) throws Exception {

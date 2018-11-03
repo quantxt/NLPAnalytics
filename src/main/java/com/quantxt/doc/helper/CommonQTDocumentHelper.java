@@ -1,13 +1,14 @@
 package com.quantxt.doc.helper;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
+import java.io.*;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.atilika.kuromoji.ipadic.Token;
+import com.atilika.kuromoji.ipadic.Tokenizer;
+import com.google.gson.*;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.ExtInterval;
 import org.apache.commons.io.IOUtils;
@@ -75,12 +76,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     protected Analyzer analyzer;
     protected Analyzer tokenizer;
 
-    public CommonQTDocumentHelper(InputStream contextFile, String sentencesFilePath,
+    public CommonQTDocumentHelper(InputStream verbFilePath, String sentencesFilePath,
                                   String posFilePath, String stoplistFilePath,
-                                  Set<String> pronouns) {
+                                  Set<String> pronouns, boolean isSimple) {
         try {
             init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
-            initVerbTree(contextFile);
+            initVerbTree(verbFilePath, isSimple);
         } catch (Exception e) {
             throw new RuntimeException("Unexpected error on init Document helper!", e);
         }
@@ -88,10 +89,10 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     public CommonQTDocumentHelper(String sentencesFilePath, String posFilePath,
                                   String stoplistFilePath, String verbFilePath,
-                                  Set<String> pronouns) {
+                                  Set<String> pronouns, boolean isSimple) {
         try {
             init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
-            initVerbTree(verbFilePath);
+            initVerbTree(verbFilePath, isSimple);
         } catch (Exception e) {
             throw new RuntimeException("Unexpected error on init Common Document helper!", e);
         }
@@ -148,28 +149,28 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         logger.info("Models initiliazed");
     }
 
-    private void initVerbTree(String verbFilePath) throws Exception {
+    private void initVerbTree(String verbFilePath, boolean isSimple) throws Exception {
         try (FileInputStream fis = new FileInputStream(getModelBaseDir() + verbFilePath)) {
             byte[] verbArr = IOUtils.toByteArray(fis);
-            initVerbTree(verbArr);
+            initVerbTree(verbArr, isSimple);
         } catch (Exception e) {
             logger.error("Error on initialize verbTree with for verbFilePath: {} with message: {}",
                     verbFilePath, e.getMessage());
         }
     }
 
-    private void initVerbTree(InputStream contextFile) throws Exception {
+    private void initVerbTree(InputStream contextFile, boolean isSimple) throws Exception {
         byte[] verbArr = IOUtils.toByteArray(contextFile);
-        initVerbTree(verbArr);
+        initVerbTree(verbArr, isSimple);
     }
 
-    private void initVerbTree(byte[] verbArr) throws IOException {
-        this.verbTree = TrieUtil.buildVerbTree(verbArr, (str) -> {
+    private void initVerbTree(byte[] verbArr, boolean isSimple) throws IOException {
+        this.verbTree = TrieUtil.buildVerbTree(verbArr, isSimple, (str) -> {
             return tokenize(str);
         });
     }
 
-        @Override
+    @Override
     public Trie getVerbTree() {
         return verbTree;
     }
@@ -256,11 +257,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         }
     //    workingLine = workingLine.replaceAll("^([{\\p{L}\\p{N}]+[\\.\\&]*[{\\p{L}\\p{N}]+[\\.]*)" , "");
         return String.join(" ", normParts);
-     //   workingLine = r_punct_strip.matcher(workingLine).replaceAll(s_punct_strip);
-
-
-
-        //return workingLine;
     }
 
     @Override
@@ -286,10 +282,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     public DOCTYPE getVerbType(String verbPhs) {
 
-        List<String> tokens = tokenize(verbPhs);
-        if (tokens.size() == 0) return null;
+  //      List<String> tokens = tokenize(verbPhs);
+  //      if (tokens.size() == 0) return null;
 
-        Collection<Emit> emits = getVerbTree().parseText(String.join(" ", tokens));
+  //      Collection<Emit> emits = getVerbTree().parseText(String.join(" ", tokens));
+
+        Collection<Emit> emits = getVerbTree().parseText(verbPhs);
         for (Emit e : emits) {
             DOCTYPE vType = (DOCTYPE) e.getCustomeData();
             if (vType == DOCTYPE.Aux) {
@@ -328,6 +326,21 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     public static String getModelBaseDir() {
         return System.getenv(DEFAULT_NLP_MODEL_DIR);
+    }
+
+    public static List<String> tokenizeJA( Tokenizer tokenizer, String str) {
+        List<Token> tokens = tokenizer.tokenize(str);
+        List<String> tokStrings = new ArrayList<>();
+        for (Token e : tokens){
+            tokStrings.add(e.getSurface());
+        }
+        return tokStrings;
+    }
+
+    public static void main(String[] args) throws Exception {
+        File file = new File("/Users/matin/git/QTCurat/o.txt");
+
+
     }
 
 }

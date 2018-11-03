@@ -77,7 +77,7 @@ public class ESDocumentHelperTest {
                 "itcoin Gold");
         Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
                 "adiós");
-        Assert.assertEquals(str.substring(tagged.get(11).getStart(), tagged.get(11).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(12).getStart(), tagged.get(12).getEnd()),
                 "está minando");
     }
 
@@ -95,9 +95,9 @@ public class ESDocumentHelperTest {
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
                 "Golden State Warriors");
-        Assert.assertEquals(str.substring(tagged.get(7).getStart(), tagged.get(7).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
                 "Cleveland Cavaliers");
-        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(10).getStart(), tagged.get(10).getEnd()),
                 "NBA");
     }
 

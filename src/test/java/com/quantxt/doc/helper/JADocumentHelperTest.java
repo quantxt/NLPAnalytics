@@ -35,7 +35,7 @@ public class JADocumentHelperTest {
                 "韓国");
         Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
                 "北京");
-        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(10).getStart(), tagged.get(10).getEnd()),
                 "2000年以降");
     }
 
@@ -103,10 +103,10 @@ public class JADocumentHelperTest {
         List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
-        Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
-                "年か");
-        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
-                "米国");
+        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
+                "スマートスピーカー所有率");
+        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
+                "公式ブログ");
 
     }
 
@@ -120,9 +120,9 @@ public class JADocumentHelperTest {
         List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
-        Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
                 "自動車修理店");
-        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
+        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
                 "返納");
     }
 

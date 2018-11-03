@@ -33,14 +33,14 @@ public class FRDocumentInfo extends QTDocument {
 
     @Override
     List<QTDocument> getChilds() {
+        List<QTDocument> childs = new ArrayList<>();
         if (body == null || body.isEmpty())
-            return null;
+            return childs;
 
         String sentences[] = rawTitle == null ? helper.getSentences(body)
                 : helper.getSentences(rawTitle);
-        List<QTDocument> childs = new ArrayList<>();
         for (String s : sentences){
-            FRDocumentInfo sDoc = new FRDocumentInfo("", s, helper);
+            FRDocumentInfo sDoc = new FRDocumentInfo("", s.trim(), helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());
