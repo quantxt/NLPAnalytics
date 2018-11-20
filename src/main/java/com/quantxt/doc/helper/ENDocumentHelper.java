@@ -61,8 +61,10 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
 
     @Override
     public List<String> tokenize(String str) {
-        String[] toks = tokenizer.tokenize(str.replaceAll("([”“])", " $1 "));
-        return Arrays.asList(toks);
+        synchronized (tokenizer) {
+            String[] toks = tokenizer.tokenize(str.replaceAll("([”“])", " $1 "));
+            return Arrays.asList(toks);
+        }
     }
 
     @Override

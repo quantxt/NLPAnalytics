@@ -265,7 +265,7 @@ public class PDFManager {
     }
 
     public static void main(String[] args) throws Exception {
-        Path path = Paths.get("/Users/matin/Downloads/ICAT.pdf");
+        Path path = Paths.get("/Users/matin/Downloads/amg.pdf");
         byte[] data = Files.readAllBytes(path);
         QTDocument doc = pdf2QT(data);
 

@@ -266,18 +266,17 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     //sentence detc is NOT thread safe  :-/
     public String[] getSentences(String text) {
-        return sentenceDetector.sentDetect(text);
+        synchronized (sentenceDetector) {
+            return sentenceDetector.sentDetect(text);
+        }
     }
 
     //pos tagger is NOT thread safe  :-/
     @Override
     public String[] getPosTags(String [] text) {
-        return posModel.tag(text);
-    //    String [] tags;
-    //    synchronized (posModel)	{
-    //        tags = posModel.tag(text);
-    //    }
-    //    return tags;
+        synchronized (posModel)	{
+            return posModel.tag(text);
+        }
     }
 
     public DOCTYPE getVerbType(String verbPhs) {
