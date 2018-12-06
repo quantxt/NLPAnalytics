@@ -5,8 +5,6 @@ import org.deeplearning4j.text.tokenization.tokenizer.DefaultTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.TokenPreProcess;
 import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 
@@ -15,7 +13,6 @@ import java.io.*;
  */
 public class LinePreProcess implements TokenizerFactory {
 
-    final private static Logger logger = LoggerFactory.getLogger(LinePreProcess.class);
     private TokenPreProcess tokenPreProcess;
 
     public LinePreProcess() {

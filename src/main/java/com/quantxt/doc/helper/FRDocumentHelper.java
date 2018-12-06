@@ -17,6 +17,9 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.quantxt.helper.types.ExtInterval.ExtType.NOUN;
+import static com.quantxt.helper.types.ExtInterval.ExtType.VERB;
+
 /**
  * Created by matin on 5/28/18.
  */
@@ -98,7 +101,7 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
                 if (!tagStr.contains("_P_")) continue;
             }
             ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
-            eit.setType("N");
+            eit.setType(NOUN);
             intervals.add(eit);
         }
 
@@ -107,7 +110,7 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end() - 1;
             ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
-            eit.setType("V");
+            eit.setType(VERB);
             intervals.add(eit);
         }
 

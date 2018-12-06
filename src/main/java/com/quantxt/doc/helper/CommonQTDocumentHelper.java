@@ -2,15 +2,13 @@ package com.quantxt.doc.helper;
 
 import java.io.*;
 import java.util.*;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.atilika.kuromoji.ipadic.Token;
 import com.atilika.kuromoji.ipadic.Tokenizer;
-import com.google.gson.*;
-import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.nlp.types.QTValueNumber;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
@@ -280,12 +278,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     public DOCTYPE getVerbType(String verbPhs) {
-
-  //      List<String> tokens = tokenize(verbPhs);
-  //      if (tokens.size() == 0) return null;
-
-  //      Collection<Emit> emits = getVerbTree().parseText(String.join(" ", tokens));
-
         Collection<Emit> emits = getVerbTree().parseText(verbPhs);
         for (Emit e : emits) {
             DOCTYPE vType = (DOCTYPE) e.getCustomeData();
@@ -306,7 +298,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     @Override
     public boolean isSentence(String str, List<String> tokens) {
         int numTokens = tokens.size();
-        if (numTokens < 6 || numTokens > 80) {
+        //TODO: this is too high.. pass a parameter
+        // this is equal to size of almost one page of content
+        if (numTokens < 6 || numTokens > 500) {
             return false;
         }
         return true;
@@ -336,10 +330,14 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return tokStrings;
     }
 
-    public static void main(String[] args) throws Exception {
-        File file = new File("/Users/matin/git/QTCurat/o.txt");
+    private static String getPad(final int s, final int e){
+        return String.join("", Collections.nCopies(e - s, " "));
+    }
 
-
+    @Override
+    public String getValues(String str, List<ExtInterval> valueInterval){
+        String str_copy = str;
+        return QTValueNumber.detect(str_copy, valueInterval);
     }
 
 }

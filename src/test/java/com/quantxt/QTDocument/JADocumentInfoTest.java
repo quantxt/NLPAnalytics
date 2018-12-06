@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import static com.quantxt.helper.types.ExtInterval.ExtType.NOUN;
+
 /**
  * Created by matin on 2/6/18.
  */
@@ -25,7 +27,7 @@ public class JADocumentInfoTest {
         String str = "朝日新聞デジタルに掲載の記事・写真の無断転載を禁じます。すべての内容は日本の著作権法並びに国際条約により保護";
         List<String> tokens = helper.tokenize(str);
         List<ExtInterval> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
-        Assert.assertEquals(intervals.get(2).getType(), "N");
+        Assert.assertEquals(intervals.get(2).getType(), NOUN);
         Assert.assertEquals(intervals.get(2).toString(), "12:14");
     }
 
@@ -44,7 +46,7 @@ public class JADocumentInfoTest {
 //            logger.info(e.getType() + " / " + str.substring(e.getStart(), e.getEnd()));
 //        }
 
-        Assert.assertEquals(intervals.get(0).getType(), "N");
+        Assert.assertEquals(intervals.get(0).getType(), NOUN);
         Assert.assertEquals(intervals.get(0).toString(), "0:9");
     }
 

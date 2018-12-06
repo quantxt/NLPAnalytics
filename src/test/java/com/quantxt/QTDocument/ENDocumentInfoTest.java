@@ -10,6 +10,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
+import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -23,12 +24,16 @@ import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.nlp.Speaker;
 import com.quantxt.types.Entity;
 import com.quantxt.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by matin on 10/10/17.
  */
 
 public class ENDocumentInfoTest {
+
+    private static Logger logger = LoggerFactory.getLogger(ENDocumentInfoTest.class);
 
     private static QTExtract enx;
     private static ENDocumentHelper helper;
@@ -46,9 +51,12 @@ public class ENDocumentInfoTest {
             ArrayList<Entity> entityArray2 = new ArrayList<>();
             entityArray2.add(new Entity("Director" , new String[]{"Director"} , true));
             entityArray2.add(new Entity("Senior Director" , new String[]{"Senior Director"} , true));
+            ArrayList<Entity> entityArray3 = new ArrayList<>();
+            entityArray3.add(new Entity("10 Year Exposure" , new String[]{"10 yr" , "10 yr", "ten year"} , true));
             Map<String, Entity[]> entMap = new HashMap<>();
             entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
             entMap.put("Title" , entityArray2.toArray(new Entity[entityArray2.size()]));
+            entMap.put("Exposure" , entityArray3.toArray(new Entity[entityArray3.size()]));
             helper = new ENDocumentHelper();
             enx = new Speaker(entMap, (String)null, null);
             setUpIsDone = true;
@@ -180,5 +188,88 @@ public class ENDocumentInfoTest {
         assertEquals(childs.get(0).getLink(), doc.getLink());
         assertEquals(childs.get(0).getLogo(), doc.getLogo());
         assertEquals(childs.get(0).getLanguage(), doc.getLanguage());
+    }
+
+    @Test
+    public void findExppsure1() {
+        // GIVEN
+        String str = "Bloomberg Barclays exposure to 10 yr : 5.6%";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(enx, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td></tr></table>");
+    }
+
+    @Test
+    public void findExppsureTable1() {
+        // GIVEN
+        String str = "Bloomberg Barclays exposure to 10 yr : 5.6% 6.4% 9.8%";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(enx, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
+
+    }
+
+    @Test
+    public void findExppsureTable2() {
+        // GIVEN
+        String str = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% 9.8%";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(enx, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
+
+    }
+
+    @Test
+    public void findExppsureTable3() {
+        // GIVEN
+        String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% 6.4% 9.8%";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(enx, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
+
+    }
+
+    @Test
+    public void findExppsureTable4() {
+        // GIVEN
+        String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(enx, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+
+    }
+
+    @Test
+    public void findExppsureTable5() {
+        // GIVEN
+        String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(enx, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+
+    }
+
+    @Test
+    public void findDate1() {
+        // GIVEN
+        String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(enx, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+
     }
 }

@@ -3,7 +3,6 @@ package com.quantxt.nlp;
 import com.google.gson.*;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
-import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
@@ -22,8 +21,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static com.quantxt.types.NamedEntity.PERSON;
 
 /**
  * Created by matin on 10/9/16.
@@ -100,7 +97,7 @@ public class Speaker implements QTExtract {
         if (entityMap == null){
             byte[] subjectArr = IOUtils.toByteArray(Speaker.class.getClassLoader().getResource("subject.json").openStream());
             entityMap = new HashMap<>();
-            entityMap.put(PERSON, gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class));
+            entityMap.put("Person", gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class));
         }
 
         for (Map.Entry<String, Entity[]> e : entityMap.entrySet()) {

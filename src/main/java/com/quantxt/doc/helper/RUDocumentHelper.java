@@ -18,6 +18,9 @@ import org.slf4j.LoggerFactory;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.util.StringUtil;
 
+import static com.quantxt.helper.types.ExtInterval.ExtType.NOUN;
+import static com.quantxt.helper.types.ExtInterval.ExtType.VERB;
+
 /**
  * Created by dejani on 1/24/18.
  */
@@ -91,7 +94,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end() - 1;
             ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
-            eit.setType("N");
+            eit.setType(NOUN);
             intervals.add(eit);
         }
 
@@ -100,7 +103,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end() - 1;
             ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
-            eit.setType("V");
+            eit.setType(VERB);
             intervals.add(eit);
         }
 

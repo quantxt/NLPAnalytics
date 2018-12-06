@@ -1,9 +1,16 @@
 package com.quantxt.nlp.types;
 
+import com.google.gson.Gson;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.helper.ENDocumentHelper;
+import com.quantxt.helper.ArticleBodyResolver;
 import com.quantxt.helper.DateResolver;
+import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.interval.Interval;
+import com.quantxt.trie.Emit;
+import com.quantxt.trie.Trie;
+import com.quantxt.types.NamedEntity;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
@@ -16,10 +23,15 @@ import org.apache.pdfbox.pdmodel.font.*;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.joda.time.DateTime;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -29,6 +41,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.quantxt.nlp.types.QTValue.getPad;
 
 /**
  * Created by matin on 6/28/16.
@@ -265,115 +279,99 @@ public class PDFManager {
     }
 
     public static void main(String[] args) throws Exception {
-        Path path = Paths.get("/Users/matin/Downloads/amg.pdf");
-        byte[] data = Files.readAllBytes(path);
-        QTDocument doc = pdf2QT(data);
+        //     Path path = Paths.get("/Users/matin/Downloads/mu-emd-i.pdf");
 
-        Pattern MONEY   = Pattern.compile("([\\s+|^]\\$\\s*((\\d[,\\.\\d]*)|(\\(\\d[,\\.\\d]*\\))))(?:\\s*(hundred|thousand|million|billion|M|B)[\\s,\\.;]+)?");
-        Pattern PERCENT = Pattern.compile("[\\.\\d]+\\%");
-        Pattern NUMBER  = Pattern.compile("([\\s+|^](\\d[,\\.\\d]*)|(\\(\\d[,\\d]*\\)))(?:\\s*(hundred|thousand|million|billion|M|B)[\\s,\\.;]+)?");
-        Pattern TAG = Pattern.compile("^[A-Z][a-z,\\.\\)\\(]+");
+        //     byte[] data = Files.readAllBytes(path);
+        //     QTDocument doc = pdf2QT(data);
+        InputStream is = new FileInputStream(new File("/Users/matin/Downloads/Document.htm"));
+        org.jsoup.nodes.Document jdoc = Jsoup.parse(is, "UTF-8", "Document.htm");
+        ENDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc = new ENDocumentInfo(jdoc.body().text(), "sec", helper);
 
-        Pattern MULT_SPACE = Pattern.compile("\\s{2,}");
+        String [] sentences = helper.getSentences(jdoc.body().text());
 
-        String [] lines = doc.getBody().split("\n");
+        Trie.TrieBuilder tries = Trie.builder().onlyWholeWords().ignoreOverlaps();
+        tries.addKeyword("News product subscription revenues");
+        tries.addKeyword("Other product subscription revenues");
+        tries.addKeyword("News product subscriptions");
+        tries.addKeyword("Other product subscriptions");
+        tries.addKeyword("Total digital-only subscription revenues");
 
-        int id = 0;
+     //   tries.addKeyword("revenues increased");
+     //   tries.addKeyword("year-over-year growth");
 
-        for (String l : lines){
-            String original = l ;
-            String l_copy = l;
-            Matcher m = TAG.matcher(l);
-            if (!m.find()) continue;
-            ArrayList<Interval> money = new ArrayList<>();
-            ArrayList<Interval> perc = new ArrayList<>();
-            ArrayList<Interval> numb = new ArrayList<>();
+        Gson gson = new Gson();
+    //    tries.addKeyword("liability");
+        Trie keywords = tries.build();
+        int dist = 9;
+        for (String rawSent_curr : sentences) {
 
-            m = MONEY.matcher(l_copy);
-            StringBuffer sb = new StringBuffer(l_copy.length());
-            String space =  " ";
-            while (m.find()){
-        //        String tagid = " __MON__"+id++ + " ";
-                String tagid = String.join("", Collections.nCopies(m.end() - m.start(), " "));
-                m.appendReplacement(sb, Matcher.quoteReplacement(tagid));
-                money.add(new Interval(m.start(), m.end()));
-            }
-            m.appendTail(sb);
+            rawSent_curr = rawSent_curr.replaceAll("(\\S+)\\:", "$1");
+            rawSent_curr = rawSent_curr.replaceAll("(\\S+)\\(\\d+\\)", "$1");
 
-            l_copy = sb.toString();
-            m = PERCENT.matcher(l_copy);
-            sb = new StringBuffer(l_copy.length());
 
-            while (m.find()){
-            //    String tagid = " __PERC__"+id++ + " ";
-                String tagid = String.join("", Collections.nCopies(m.end() - m.start(), " "));
-                m.appendReplacement(sb, Matcher.quoteReplacement(tagid));
-                perc.add(new Interval(m.start(), m.end()));
-            }
-            m.appendTail(sb);
+            Collection<Emit> emits = keywords.parseText(rawSent_curr);
+            if (emits.size() == 0) continue;
+    //        logger.info(rawSent_curr);
+            // get potential keys
 
-            l_copy = sb.toString();
-            m = NUMBER.matcher(l_copy);
-            sb = new StringBuffer(l_copy.length());
 
-            while (m.find()){
-            //    String tagid = " __NUM__"+id++ + " ";
-                String tagid = String.join("", Collections.nCopies(m.end() - m.start(), " "));
-                m.appendReplacement(sb, Matcher.quoteReplacement(tagid));
-                numb.add(new Interval(m.start(), m.end()));
-            }
+            ArrayList<ExtInterval> values = new ArrayList<>();
+            // get potential values
+            helper.getValues(rawSent_curr, values);
+            if (values.size() == 0) continue;
 
-            m.appendTail(sb);
-            if ((numb.size() + money.size() + perc.size()) == 0) continue;
-            int min_idx = 10000;
-            int max_idx = 0;
-            ArrayList<Interval> allIntervals = new ArrayList<>();
-            allIntervals.addAll(money);
-            allIntervals.addAll(numb);
-            allIntervals.addAll(perc);
-            for (Interval it : allIntervals){
-                if (it.getStart() < min_idx){
-                    min_idx = it.getStart();
+            // let's find all values that belong to this key
+
+            for (Emit emit : emits) {
+                String key = emit.getKeyword();
+                ArrayList<ExtInterval> vals2print = new ArrayList<>();
+                int keyEnd =  emit.getEnd();
+                Iterator<ExtInterval> iter = values.iterator();
+                while (iter.hasNext()) {
+                    ExtInterval extv = iter.next();
+                    int valStart = extv.getStart();
+                    int diff = (valStart - keyEnd);
+                    if (diff > 0 && diff < dist) {
+            //            extv.setKey(key);
+                        keyEnd = extv.getEnd();
+                        vals2print.add(extv);
+                        iter.remove();
+                    }
                 }
-                if (it.getEnd() > max_idx){
-                    max_idx = it.getEnd();
-                }
+//                if (vals2print.size() > 1){
+//                    logger.info(gson.toJson(vals2print));
+//                }
             }
-            String l_end = l_copy.substring(max_idx).trim();
-            if (l_end.length() != 0) continue;
-            l_copy = sb.toString().trim();
-            m = MULT_SPACE.matcher(l_copy);
-            if (m.find()) continue;
-            l_copy = l_copy.replaceAll("\\b-\\b" , "").trim();
 
+            StringBuilder sb = new StringBuilder();
             ArrayList<String> vals = new ArrayList<>();
-            vals.add(l_copy);
-            if (money.size() > 0) {
-                for (Interval it : money) {
-                    int s = it.getStart();
-                    int en = it.getEnd();
-                    vals.add(l.substring(s, en).replace(" ", "").trim());
+            for (ExtInterval extv : values) {
+                if (extv.getKey() != null) {
+                    // start new row and print he previous row
+                    if (vals.size() > 0) {
+                        sb.append("<tr>");
+                        for (String v : vals) {
+                            sb.append("<td>").append(v).append("</td>");
+                        }
+                        sb.append("</tr>");
+                    }
+                    vals.clear();
+   //                 vals.add(extv.getKey());
                 }
-                logger.info("Money: " + String.join("\t", vals));
-            } else if (perc.size() > 0){
-                for (Interval it : perc) {
-                    int s = it.getStart();
-                    int en = it.getEnd();
-                    vals.add(l.substring(s, en).replace(" ", "").trim());
+                vals.add(extv.getCustomData().toString());
+
+            }
+            if (vals.size() > 0) {
+                sb.append("<tr>");
+                for (String v : vals) {
+                    sb.append("<td>").append(v).append("</td>");
                 }
-                logger.info("Perc: " + String.join("\t", vals));
-            } else if (numb.size() > 0){
-                for (Interval it : numb) {
-                    int s = it.getStart();
-                    int en = it.getEnd();
-                    vals.add(l.substring(s, en).replace(" ", "").trim());
-                }
-                logger.info("Number: " + String.join("\t", vals));
+                sb.append("</tr>");
             }
 
-
+    //        logger.info(sb.toString());
         }
-
     }
 }
 

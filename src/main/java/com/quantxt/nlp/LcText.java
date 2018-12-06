@@ -125,11 +125,9 @@ public class LcText<T> {
         doc.add(new Field(English, body, QFieldType));
         doc.add(new Field(Standard, body, QFieldType));
 
-        //      doc.add(new TextField(English, body, Field.Store.NO));
-        //      doc.add(new TextField(Standard, body, Field.Store.NO));
+
         for (String s : content){
             doc.add(new Field(Keyword, s, QFieldType));
-            //          doc.add(new TextField(Keyword, s, Field.Store.NO));
         }
 
         return doc;
