@@ -15,6 +15,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
@@ -32,6 +33,7 @@ import java.util.StringTokenizer;
  * 
  * 3. everything else
  */
+
 public class MeteorConfiguration {
 
 	/* Configuration Instance */
@@ -49,6 +51,8 @@ public class MeteorConfiguration {
 	private URL synDirURL;
 	private URL paraDirURL;
 	private boolean charBased;
+	private HashMap<String, double[]> w2vMap;
+	private HashMap<String, Double> w2vCache;
 
 	/**
 	 * Create configuration with default parameters
@@ -62,10 +66,18 @@ public class MeteorConfiguration {
 		setTask("default");
 		setBeamSize(Constants.DEFAULT_BEAM_SIZE);
 		setWordFileURL(Constants.getDefaultWordFileURL(langID));
-		setSynDirURL(Constants.DEFAULT_SYN_DIR_URL);
+		setSynDirURL(Constants.getDefaultSynDIRURL(langID));
 		setParaFileURL(Constants.getDefaultParaFileURL(langID));
 		setNormalization(Constants.NO_NORMALIZE);
 		setCharBased(false);
+	}
+
+	public void setWord2vMap(final HashMap<String, double[]> w2v){
+		w2vMap = w2v;
+	}
+
+	public void setWord2vCache(final HashMap<String, Double> w2v){
+		w2vCache = w2v;
 	}
 
 	/**
@@ -92,13 +104,20 @@ public class MeteorConfiguration {
 		setParaFileURL(Constants.getDefaultParaFileURL(langID));
 		int defaultTask = Constants.getDefaultTask(langID);
 		setTask(defaultTask);
-
 	}
 
 	// No setter for langID since it must correspond to language
 
 	public int getLangID() {
 		return langID;
+	}
+
+	public HashMap<String, double[]> getW2v(){
+		return w2vMap;
+	}
+
+	public HashMap<String, Double> getW2vCache(){
+		return w2vCache;
 	}
 
 	public String getTask() {
@@ -170,7 +189,7 @@ public class MeteorConfiguration {
 	}
 
 	public ArrayList<Integer> getModules() {
-		return new ArrayList<Integer>(modules);
+		return new ArrayList<>(modules);
 	}
 
 	public String getModulesString() {
@@ -182,14 +201,14 @@ public class MeteorConfiguration {
 
 	public void setModules(ArrayList<Integer> modules) {
 		setTaskName("custom");
-		this.modules = new ArrayList<Integer>();
+		this.modules = new ArrayList<>();
 		for (Integer modID : modules)
 			this.modules.add(modID);
 	}
 
 	public void setModulesByName(ArrayList<String> modules) {
 		setTaskName("custom");
-		this.modules = new ArrayList<Integer>();
+		this.modules = new ArrayList<>();
 		for (String modName : modules)
 			this.modules.add(Constants.getModuleID(modName));
 	}

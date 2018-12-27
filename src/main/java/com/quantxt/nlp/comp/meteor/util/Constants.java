@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 
+import static com.quantxt.doc.helper.CommonQTDocumentHelper.getModelBaseDir;
+
 public class Constants {
 
 	/* Version */
@@ -61,6 +63,7 @@ public class Constants {
 
 	public static final int DEFAULT_BEAM_SIZE = 40;
 
+	/*
 	public static final URL DEFAULT_STEM_DIR_URL = ClassLoader
 			.getSystemResource("stem");
 
@@ -69,6 +72,7 @@ public class Constants {
 
 	public static final URL DEFAULT_WORD_DIR_URL = ClassLoader
 			.getSystemResource("function");
+	*/
 
 	/*
 	 * Scorer Constants
@@ -335,18 +339,30 @@ public class Constants {
 		return TASK_LI;
 	}
 
+	/*
 	public static String getLocation() {
 		File codeDir = new File(Constants.class.getProtectionDomain()
 				.getCodeSource().getLocation().getFile());
 		// Class is either in JAR file or build directory
 		return codeDir.getParent();
 	}
+	*/
 
 	public static URL getDefaultParaFileURL(int langID) throws RuntimeException {
 		String shortLang = getLanguageShortName(langID);
-		String fileName = "/data/paraphrase-" + shortLang + ".gz";
+		String fileName = getModelBaseDir() + shortLang + "/paraphrase-" + shortLang + ".gz";
 		try {
-			return new File(getLocation() + fileName).toURI().toURL();
+			return new URL("file://" + fileName);
+		} catch (MalformedURLException ex) {
+			throw new RuntimeException();
+		}
+	}
+
+	public static URL getDefaultSynDIRURL(int langID) throws RuntimeException {
+		String shortLang = getLanguageShortName(langID);
+		String fileName = getModelBaseDir() + shortLang + "/synonym/";
+		try {
+			return new URL("file://" + fileName);
 		} catch (MalformedURLException ex) {
 			throw new RuntimeException();
 		}
@@ -354,17 +370,16 @@ public class Constants {
 
 	public static URL getDefaultWordFileURL(int langID) throws RuntimeException {
 		String lang = getLanguageName(langID);
+		String fileName = getModelBaseDir() + "function/" + lang + ".words";
 		try {
-			return new URL(DEFAULT_WORD_DIR_URL.toString() + "/" + lang
-					+ ".words");
+			return new URL("file://" + fileName);
 		} catch (MalformedURLException ex) {
 			throw new RuntimeException();
 		}
 
 	}
 
-	public static String normLanguageName(String language)
-			throws RuntimeException {
+	public static String normLanguageName(String language) throws RuntimeException {
 		String lang = language.toLowerCase();
 		if (lang.equals("english") || lang.equals("en"))
 			return "english";
@@ -376,8 +391,7 @@ public class Constants {
 			return "german";
 		if (lang.equals("spanish") || lang.equals("es"))
 			return "spanish";
-		if (lang.equals("arabic-buckwalter-reduced")
-				|| lang.equals("ar-bw-red"))
+		if (lang.equals("arabic-buckwalter-reduced") || lang.equals("ar-bw-red"))
 			return "arabic-buckwalter-reduced";
 		if (lang.equals("portuguese") || lang.equals("pt"))
 			return "portuguese";
@@ -744,6 +758,7 @@ public class Constants {
 	public static Stemmer newStemmer(String language) throws RuntimeException {
 		return newStemmer(language, null);
 	}
+
 	public static Stemmer newStemmer(String language, URL stemFileURL) throws RuntimeException {
 		// Manually specified stem file
 		if (stemFileURL != null)
@@ -780,6 +795,7 @@ public class Constants {
 		if (language.equals("swedish"))
 			return new SnowballStemmerWrapper(new swedishStemmer());
 		// Legacy Arabic stemmer
+		/*
 		if (language.equals("arabic-buckwalter-reduced")) {
 			try {
 				return new LookupTableStemmer(new URL(
@@ -790,6 +806,7 @@ public class Constants {
 						"Error loading stemmer for language (" + language + ")");
 			}
 		}
+		*/
 		// Not found
 		throw new RuntimeException("No stemmer for language (" + language + ")");
 	}

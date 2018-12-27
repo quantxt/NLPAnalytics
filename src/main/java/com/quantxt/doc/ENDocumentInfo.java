@@ -3,6 +3,7 @@ package com.quantxt.doc;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.quantxt.util.StringUtil;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,19 +29,21 @@ public class ENDocumentInfo extends QTDocument {
 
     public ENDocumentInfo(Elements body, String title) {
         super(body.html(), title, new ENDocumentHelper());
-        rawText = body.text();
+        rawTitle = body.text();
     }
 
     @Override
     public List<QTDocument> getChilds() {
-        if (body == null || body.isEmpty())
-            return null;
-
-        String[] sentences = rawText == null ? helper.getSentences(body)
-                                             : helper.getSentences(rawText);
         List<QTDocument> childs = new ArrayList<>();
+        if (body == null || body.isEmpty())
+            return childs;
+
+        String[] sentences = rawTitle == null ? helper.getSentences(body)
+                                             : helper.getSentences(rawTitle);
+
         for (String s : sentences) {
-            ENDocumentInfo sDoc = new ENDocumentInfo("", s, helper);
+            ENDocumentInfo sDoc = new ENDocumentInfo("", s.trim(), helper);
+            sDoc.setRawTitle(s.trim());
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());

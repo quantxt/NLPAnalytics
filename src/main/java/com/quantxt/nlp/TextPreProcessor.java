@@ -10,8 +10,6 @@ import org.slf4j.LoggerFactory;
 
 public class TextPreProcessor implements TokenPreProcess {
 
-    final private static Logger logger = LoggerFactory.getLogger(TextPreProcessor.class);
-
     @Override
     public String preProcess(String token) {
         return token;

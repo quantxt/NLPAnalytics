@@ -1,20 +1,18 @@
 package com.quantxt.doc.helper;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.nlp.types.QTValueNumber;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.StopFilter;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +37,31 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private static Logger logger = LoggerFactory.getLogger(CommonQTDocumentHelper.class);
 
     protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
+    //Text normalization rules
+
+    private static String alnum = "0-9A-Za-zŠŽšžŸÀ-ÖØ-öø-ž" + "Ѐ-ӿԀ-ԧꙀ-ꙮ꙾-ꚗᴀ-ᵿ";
+
+    // Single quotes to normalize
+    protected static Pattern r_quote_norm = Pattern.compile("([`‘’])");
+    protected static String s_quote_norm = "'";
+    // Double quotes to normalize
+    protected static Pattern r_quote_norm2 = Pattern.compile("([“”]|'')");
+    protected static String s_quote_norm2 = " \" ";
+
+    protected static Pattern UTF8_TOKEN = Pattern.compile("^(?:[a-zA-Z]\\.){2,}|([\\p{L}\\p{N}]+[\\.\\&]{0,1}[\\p{L}\\p{N}])");
+
+
+    // Dashes to normalize
+    protected static String s_dash_norm = "–";
+    protected static String s_dash_norm2 = "-";
+    protected static String s_dash_norm3 = "--";
+
+    protected static Pattern r_punct_strip = Pattern.compile("([^" + alnum + "])|([" + alnum + "]+[\\&\\.]+[" + alnum+ "]*)");
+    protected static String s_punct_strip = " ";
+
+    //Unicode spaces
+    protected static Pattern r_white = Pattern.compile("[               　 ]+");
+    protected static String s_white = " ";
 
     private SentenceDetectorME sentenceDetector = null;
     private POSTaggerME posModel = null;
@@ -49,12 +72,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     protected Analyzer analyzer;
     protected Analyzer tokenizer;
 
-    public CommonQTDocumentHelper(InputStream contextFile, String sentencesFilePath,
+    public CommonQTDocumentHelper(InputStream verbFilePath, String sentencesFilePath,
                                   String posFilePath, String stoplistFilePath,
-                                  Set<String> pronouns) {
+                                  Set<String> pronouns, boolean isSimple) {
         try {
             init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
-            initVerbTree(contextFile);
+            initVerbTree(verbFilePath, isSimple);
         } catch (Exception e) {
             throw new RuntimeException("Unexpected error on init Document helper!", e);
         }
@@ -62,10 +85,10 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     public CommonQTDocumentHelper(String sentencesFilePath, String posFilePath,
                                   String stoplistFilePath, String verbFilePath,
-                                  Set<String> pronouns) {
+                                  Set<String> pronouns, boolean isSimple) {
         try {
             init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
-            initVerbTree(verbFilePath);
+            initVerbTree(verbFilePath, isSimple);
         } catch (Exception e) {
             throw new RuntimeException("Unexpected error on init Common Document helper!", e);
         }
@@ -122,23 +145,23 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         logger.info("Models initiliazed");
     }
 
-    private void initVerbTree(String verbFilePath) throws Exception {
+    private void initVerbTree(String verbFilePath, boolean isSimple) throws Exception {
         try (FileInputStream fis = new FileInputStream(getModelBaseDir() + verbFilePath)) {
             byte[] verbArr = IOUtils.toByteArray(fis);
-            initVerbTree(verbArr);
+            initVerbTree(verbArr, isSimple);
         } catch (Exception e) {
             logger.error("Error on initialize verbTree with for verbFilePath: {} with message: {}",
                     verbFilePath, e.getMessage());
         }
     }
 
-    private void initVerbTree(InputStream contextFile) throws Exception {
+    private void initVerbTree(InputStream contextFile, boolean isSimple) throws Exception {
         byte[] verbArr = IOUtils.toByteArray(contextFile);
-        initVerbTree(verbArr);
+        initVerbTree(verbArr, isSimple);
     }
 
-    private void initVerbTree(byte[] verbArr) throws IOException {
-        this.verbTree = TrieUtil.buildVerbTree(verbArr, (str) -> {
+    private void initVerbTree(byte[] verbArr, boolean isSimple) throws IOException {
+        this.verbTree = TrieUtil.buildVerbTree(verbArr, isSimple, (str) -> {
             return tokenize(str);
         });
     }
@@ -171,7 +194,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
         try {
             TokenStream stream  = analyzer.tokenStream(null, new StringReader(str));
-            stream = new StopFilter(stream, stopwords);
+        //    stream = new StopFilter(stream, stopwords);
             CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
             stream.reset();
             while (stream.incrementToken()) {
@@ -187,32 +210,73 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public String normalize(String string) {
-        ArrayList<String> postEdit = stemmer(string);
+    public String removeStopWords(String str) {
+        ArrayList<String> postEdit = new ArrayList<>();
+
+        Analyzer wspaceAnalyzer = new WhitespaceAnalyzer();  // this constructor do nothing
+        try {
+            TokenStream stream  = wspaceAnalyzer.tokenStream(null, new StringReader(str));
+            stream = new StopFilter(stream, stopwords);
+            CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
+            stream.reset();
+            while (stream.incrementToken()) {
+                String term = charTermAttribute.toString();
+                postEdit.add(term);
+            }
+            stream.close();
+        } catch (Exception e){
+            logger.error("Error Analyzer tokenStream for input String {}", str, e);
+        }
+
         return String.join(" ", postEdit);
+    }
+
+    protected static String normBasic(String workingLine){
+        // New: Normalize quotes
+        workingLine = r_quote_norm.matcher(workingLine).replaceAll(s_quote_norm);
+        workingLine = r_quote_norm2.matcher(workingLine).replaceAll(s_quote_norm2);
+
+        // New: Normalize dashes
+        workingLine = workingLine.replace(s_dash_norm, s_dash_norm2);
+        workingLine = workingLine.replace(s_dash_norm3, s_dash_norm2);
+
+        // Normalize whitespace
+        workingLine = r_white.matcher(workingLine).replaceAll(s_white).trim();
+
+        String [] parts = workingLine.split("\\s+");
+        ArrayList<String> normParts = new ArrayList<>();
+        for (String p : parts){
+            Matcher m = UTF8_TOKEN.matcher(p);
+            if (m.find()){
+                normParts.add(m.group());
+            }
+        }
+    //    workingLine = workingLine.replaceAll("^([{\\p{L}\\p{N}]+[\\.\\&]*[{\\p{L}\\p{N}]+[\\.]*)" , "");
+        return String.join(" ", normParts);
+    }
+
+    @Override
+    public String normalize(String workingLine) {
+        return normBasic(workingLine).toLowerCase();
     }
 
     //sentence detc is NOT thread safe  :-/
     public String[] getSentences(String text) {
-        return sentenceDetector.sentDetect(text);
+        synchronized (sentenceDetector) {
+            return sentenceDetector.sentDetect(text);
+        }
     }
 
     //pos tagger is NOT thread safe  :-/
     @Override
     public String[] getPosTags(String [] text) {
-        String [] tags;
         synchronized (posModel)	{
-            tags = posModel.tag(text);
+            return posModel.tag(text);
         }
-        return tags;
     }
 
     public DOCTYPE getVerbType(String verbPhs) {
-
-        List<String> tokens = tokenize(verbPhs);
-        if (tokens.size() == 0) return null;
-
-        Collection<Emit> emits = getVerbTree().parseText(String.join(" ", tokens));
+        Collection<Emit> emits = getVerbTree().parseText(verbPhs);
         for (Emit e : emits) {
             DOCTYPE vType = (DOCTYPE) e.getCustomeData();
             if (vType == DOCTYPE.Aux) {
@@ -230,12 +294,50 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public CharArraySet getStopwords() {
-        return stopwords;
+    public boolean isSentence(String str, List<String> tokens) {
+        int numTokens = tokens.size();
+        //TODO: this is too high.. pass a parameter
+        // this is equal to size of almost one page of content
+        if (numTokens < 6 || numTokens > 500) {
+            return false;
+        }
+        return true;
     }
 
-    public String getModelBaseDir() {
+    @Override
+    public Set<String> getStopwords() {
+        Iterator iter = stopwords.iterator();
+        HashSet<String> set = new HashSet<>();
+        while (iter.hasNext()){
+            Object obj = iter.next();
+            set.add(obj.toString());
+        }
+        return set;
+    }
+
+    public static String getModelBaseDir() {
         return System.getenv(DEFAULT_NLP_MODEL_DIR);
+    }
+
+    /*
+    public static List<String> tokenizeJA( Tokenizer tokenizer, String str) {
+        List<Token> tokens = tokenizer.tokenize(str);
+        List<String> tokStrings = new ArrayList<>();
+        for (Token e : tokens){
+            tokStrings.add(e.getSurface());
+        }
+        return tokStrings;
+    }
+    */
+
+    private static String getPad(final int s, final int e){
+        return String.join("", Collections.nCopies(e - s, " "));
+    }
+
+    @Override
+    public String getValues(String str, List<ExtInterval> valueInterval){
+        String str_copy = str;
+        return QTValueNumber.detect(str_copy, valueInterval);
     }
 
 }

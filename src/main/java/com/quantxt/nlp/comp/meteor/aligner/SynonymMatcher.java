@@ -15,17 +15,19 @@ import java.util.Iterator;
 
 public class SynonymMatcher {
 
-	public static void match(int stage, Alignment a, Stage s,
-			SynonymDictionary synonyms) {
+	public static void match(int stage,
+							 Alignment a,
+							 Stage s,
+							 final SynonymDictionary synonyms) {
 
 		// Map words to sets of synonym set numbers
 
-		Hashtable<Integer, HashSet<Integer>> string1Syn = new Hashtable<Integer, HashSet<Integer>>();
-		Hashtable<Integer, HashSet<Integer>> string2Syn = new Hashtable<Integer, HashSet<Integer>>();
+		Hashtable<Integer, HashSet<Integer>> string1Syn = new Hashtable<>();
+		Hashtable<Integer, HashSet<Integer>> string2Syn = new Hashtable<>();
 
 		// Line 1
 		for (int i = 0; i < a.words1.size(); i++) {
-			HashSet<Integer> set = new HashSet<Integer>(synonyms
+			HashSet<Integer> set = new HashSet<>(synonyms
 					.getSynSets(a.words1.get(i)));
 			set.addAll(synonyms.getStemSynSets(a.words1.get(i)));
 			string1Syn.put(i, set);
@@ -33,7 +35,7 @@ public class SynonymMatcher {
 
 		// Line 2
 		for (int i = 0; i < a.words2.size(); i++) {
-			HashSet<Integer> set = new HashSet<Integer>(synonyms
+			HashSet<Integer> set = new HashSet<>(synonyms
 					.getSynSets(a.words2.get(i)));
 			set.addAll(synonyms.getStemSynSets(a.words2.get(i)));
 			string2Syn.put(i, set);
@@ -66,7 +68,6 @@ public class SynonymMatcher {
 					m.length = 1;
 					m.matchStart = i;
 					m.matchLength = 1;
-
 					// Add this match to the list of matches and mark coverage
 					s.matches.get(j).add(m);
 					s.line1Coverage[i]++;

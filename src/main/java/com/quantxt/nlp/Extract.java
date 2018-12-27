@@ -25,8 +25,61 @@ public class Extract {
 
     private Trie lookupTrie  = null;
 
+    public Extract(String entType, Entity[] entities){
+        Trie.TrieBuilder names = Trie.builder().onlyWholeWords().ignoreOverlaps();
+        for (Entity entity : entities) {
+            // include entity as a speaker?
+
+            if (entity.isSpeaker()) {
+                String entity_name = entity.getName();
+                NamedEntity entityNamedEntity = new NamedEntity(entity_name, null);
+                entityNamedEntity.setEntity(entType, entity);
+                entityNamedEntity.setParent(true);
+
+                String[] alts = entity.getAlts();
+                if (alts != null) {
+                    for (String alt : alts) {
+                        names.addKeyword(alt, entityNamedEntity);
+                        names.addKeyword(alt.toUpperCase(), entityNamedEntity);
+
+                    }
+                } else {
+                    names.addKeyword(entity_name, entityNamedEntity);
+                    names.addKeyword(entity_name.toUpperCase(), entityNamedEntity);
+                }
+            }
+
+            List<NamedEntity> namedEntities = entity.getNamedEntities();
+            if (namedEntities == null) continue;
+            for (NamedEntity namedEntity : namedEntities) {
+                namedEntity.setEntity(entType, entity);
+                String p_name = namedEntity.getName();
+                names.addKeyword(p_name, namedEntity);
+                names.addKeyword(p_name.toUpperCase(), namedEntity);
+                Set<String> nameAlts = namedEntity.getAlts();
+                if (nameAlts != null) {
+                    for (String alt : namedEntity.getAlts()) {
+                        names.addKeyword(alt, namedEntity);
+                        names.addKeyword(alt.toUpperCase(), namedEntity);
+                    }
+                }
+            }
+        }
+        lookupTrie = names.build();
+    }
+
     public Extract(){
 
+    }
+
+    /*
+    public String getName(){
+        return name;
+    }
+    */
+
+    public Trie getLookupTrie(){
+        return lookupTrie;
     }
 
     public Extract(Trie.TrieBuilder trie){
@@ -34,7 +87,8 @@ public class Extract {
     }
 
     public void loadFlatTree(InputStream ins){
-        Trie.TrieBuilder trie = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
+        Trie.TrieBuilder trie = Trie.builder().onlyWholeWords()
+                .ignoreCase().ignoreOverlaps();
         String line;
         BufferedReader br = new BufferedReader(new InputStreamReader(ins));
         try {
@@ -84,7 +138,6 @@ public class Extract {
             e.printStackTrace();
         }
 
-  //      Type customeType = new TypeToken<BaseNameAlts<T>[]>() {}.getType();
         for (Map.Entry<String, List<BaseNameAlts<T>>> e : preTreeMap.entrySet()){
             trie.addKeyword(e.getKey(), e.getValue());
         }
@@ -108,7 +161,6 @@ public class Extract {
                 for (String alt : alts) {
                     trie.addKeyword(alt, bna);
                 }
-
             }
             lookupTrie = trie.build();
         } catch (IOException e) {
@@ -120,6 +172,13 @@ public class Extract {
     public void loadArrayTree(InputStream ins){
         Trie.TrieBuilder trie = Trie.builder().onlyWholeWords().ignoreCase().ignoreOverlaps();
         JsonParser parser = new JsonParser();
+        /*
+            {
+                "key1" : [val11, val12]
+                "key2" : [val21, val 22]
+            }
+
+         */
 
         try {
             byte[] contextArr = IOUtils.toByteArray(ins);
@@ -203,5 +262,4 @@ public class Extract {
         return (diff >= 0 && diff < 10);
 
     }
-
 }

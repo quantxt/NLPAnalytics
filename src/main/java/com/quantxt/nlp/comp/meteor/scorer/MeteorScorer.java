@@ -1,16 +1,8 @@
-/*
- * Carnegie Mellon University
- * Copyright (c) 2004, 2010
- * 
- * This software is distributed under the terms of the GNU Lesser General
- * Public License.  See the included COPYING and COPYING.LESSER files.
- * 
- */
-
 package com.quantxt.nlp.comp.meteor.scorer;
 
 
 import com.quantxt.nlp.comp.meteor.aligner.Aligner;
+
 import com.quantxt.nlp.comp.meteor.aligner.Alignment;
 import com.quantxt.nlp.comp.meteor.aligner.Match;
 import com.quantxt.nlp.comp.meteor.util.Constants;
@@ -25,6 +17,7 @@ import java.util.ArrayList;
  * field
  * 
  */
+
 public class MeteorScorer {
 
 	private Aligner aligner;
@@ -81,7 +74,7 @@ public class MeteorScorer {
 		beta = scorer.beta;
 		gamma = scorer.gamma;
 		delta = scorer.delta;
-		moduleWeights = new ArrayList<Double>(scorer.moduleWeights);
+		moduleWeights = new ArrayList<>(scorer.moduleWeights);
 		aligner = new Aligner(scorer.aligner);
 		charBased = scorer.charBased;
 	}
@@ -105,11 +98,13 @@ public class MeteorScorer {
 				config.getModuleWeights(), config.getBeamSize(),
 				config.getStemFileURL(), config.getWordFileURL(),
 				config.getSynDirURL(), config.getParaDirURL(),
+				config.getW2v(),
+				config.getW2vCache(),
 				// Best alignments for evaluation
 				Constants.PARTIAL_COMPARE_TOTAL);
 		// Best weights for evaluation
 		ArrayList<Integer> modules = config.getModules();
-		ArrayList<Double> setWeights = new ArrayList<Double>();
+		ArrayList<Double> setWeights = new ArrayList<>();
 		for (int module : modules) {
 			if (module == Constants.MODULE_EXACT)
 				setWeights.add(1.0);
@@ -350,7 +345,7 @@ public class MeteorScorer {
 		computeMetrics(stats);
 
 		// Keep underlying alignment
-		stats.alignment = alignment;
+	//	stats.alignment = alignment;
 
 		return stats;
 	}

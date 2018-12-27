@@ -2,6 +2,7 @@ package com.quantxt.doc;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
@@ -16,6 +17,7 @@ public class ESDocumentInfo extends QTDocument {
 
     private static final Logger logger = LoggerFactory.getLogger(ESDocumentInfo.class);
 
+
     public ESDocumentInfo(String body, String title, QTDocumentHelper helper) {
         super(body, title, helper);
         language = Language.SPANISH;
@@ -28,19 +30,19 @@ public class ESDocumentInfo extends QTDocument {
 
     public ESDocumentInfo(Elements body, String title) {
         super(body.html(), title, new ESDocumentHelper());
-        rawText = body.text();
+        rawTitle = body.text();
     }
 
     @Override
     List<QTDocument> getChilds() {
-        if (body == null || body.isEmpty())
-            return null;
-
-        String sentences[] = rawText == null ? helper.getSentences(body)
-                                             : helper.getSentences(rawText);
         List<QTDocument> childs = new ArrayList<>();
+        if (body == null || body.isEmpty())
+            return childs;
+
+        String sentences[] = rawTitle == null ? helper.getSentences(body)
+                                             : helper.getSentences(rawTitle);
         for (String s : sentences){
-            ESDocumentInfo sDoc = new ESDocumentInfo("", s, helper);
+            ESDocumentInfo sDoc = new ESDocumentInfo("", s.trim(), helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setLogo(getLogo());

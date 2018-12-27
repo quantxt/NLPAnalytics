@@ -211,10 +211,8 @@ public class Normalizer {
 		workingLine = r_comma3.matcher(workingLine).replaceAll(s_comma);
 
 		// New: Normalize quotes
-		workingLine = r_quote_norm.matcher(workingLine)
-				.replaceAll(s_quote_norm);
-		workingLine = r_quote_norm2.matcher(workingLine).replaceAll(
-				s_quote_norm2);
+		workingLine = r_quote_norm.matcher(workingLine).replaceAll(s_quote_norm);
+		workingLine = r_quote_norm2.matcher(workingLine).replaceAll(s_quote_norm2);
 
 		// New: Normalize dashes
 		workingLine = workingLine.replace(s_dash_norm, s_dash_norm2);

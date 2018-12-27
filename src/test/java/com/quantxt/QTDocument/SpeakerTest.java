@@ -52,6 +52,7 @@ public class SpeakerTest {
 
         // THEN
         assertNotNull(speaker.getNameTree());
+
         assertFalse(speaker.getNameTree().isEmpty());
     }
 
@@ -88,6 +89,7 @@ public class SpeakerTest {
             ArrayList<Entity> entityArray1 = new ArrayList<>();
             entityArray1.add(new Entity("Gilead Sciences, Inc.", null, true));
             entityArray1.add(new Entity("Amazon Inc.", new String[] { "Amazon" }, true));
+            entityArray1.add(new Entity("Amazon Inc.", null, true));
             ArrayList<Entity> entityArray2 = new ArrayList<>();
             entityArray2.add(new Entity("Director", new String[] { "Director" }, true));
             entityArray2.add(new Entity("Senior Director", new String[] { "Senior Director" }, true));

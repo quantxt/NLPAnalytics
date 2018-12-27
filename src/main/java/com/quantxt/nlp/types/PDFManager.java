@@ -1,7 +1,17 @@
 package com.quantxt.nlp.types;
 
+import com.google.gson.Gson;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.helper.ENDocumentHelper;
+import com.quantxt.helper.ArticleBodyResolver;
+import com.quantxt.helper.DateResolver;
+import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.interval.Interval;
+import com.quantxt.trie.Emit;
+import com.quantxt.trie.Trie;
+import com.quantxt.types.NamedEntity;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
@@ -13,19 +23,26 @@ import org.apache.pdfbox.pdmodel.font.*;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.joda.time.DateTime;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.List;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.quantxt.nlp.types.QTValue.getPad;
 
 /**
  * Created by matin on 6/28/16.
@@ -123,11 +140,13 @@ public class PDFManager {
             protected void processTextPosition(TextPosition text)
             {
                 String character = text.getUnicode();
-                if (character != null && character.trim().length() != 0)
+                if (character != null && character.trim().length() != 0) {
                     super.processTextPosition(text);
+                } else {
+        //            logger.info(" -----> '" + text.getUnicode()+ "'");
+                }
             }
         };
-        stripper.setSortByPosition(true);
         return stripper.getText(document);
     }
 
@@ -146,6 +165,7 @@ public class PDFManager {
             pdfStripper.setEndPage(pdDoc.getNumberOfPages());
 
             String body = extractNoSpaces(pdDoc);
+            logger.info(body);
             String title = pdDoc.getDocumentInformation().getTitle();
             doc = new ENDocumentInfo(body, title);
             String author = pdDoc.getDocumentInformation().getAuthor();
@@ -189,12 +209,7 @@ public class PDFManager {
 
             List<String> lines = new ArrayList<>();
             for (String text : strArr) {
-            //    text = text.replaceAll("[^\\x00-\\x7F]", "");
-            //    logger.info("Befre: " + text);
                 text = text.replaceAll("[^\\x00-\\x7F]", "");
-
-//                text = new String(text.getBytes(StandardCharsets.UTF_8) , "Windows-1252");
- //               logger.info("After: " + text);
                 text = text.replaceAll(" \\.$", ".").trim();
                 int lastSpace = -1;
                 while (text.length() > 0) {
@@ -264,13 +279,6 @@ public class PDFManager {
         }
 
         return document;
-    }
-
-    public static void main(String[] args) throws Exception {
-        Path path = Paths.get("Whitiff ACORD.pdf");
-        byte[] data = Files.readAllBytes(path);
-        QTDocument doc = pdf2QT(data);
-        logger.info(doc.getBody());
     }
 }
 
