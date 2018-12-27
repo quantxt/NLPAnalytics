@@ -1,6 +1,5 @@
 package com.quantxt.doc;
 
-import com.atilika.kuromoji.ipadic.Token;
 import com.google.gson.Gson;
 import com.quantxt.doc.helper.JADocumentHelper;
 import com.quantxt.helper.types.ExtInterval;
@@ -47,21 +46,24 @@ public class JADocumentInfo extends QTDocument {
             return childs;
 
         List<String> tokens = helper.tokenize(body);
-        List<Token> postags = ((JADocumentHelper)helper).getPosTagsJa(body);
+    //    List<Token> postags = ((JADocumentHelper)helper).getPosTagsJa(body);
+        List<String> postags = ((JADocumentHelper)helper).getPosTagsJa(body);
         ArrayList<String> sentTokens = new ArrayList();
         JADocumentInfo sDoc;
         int start = 0;
 
         for (int i=0; i< postags.size(); i++){
             String token = tokens.get(i);
-            Token PosTag = postags.get(i);
-            String tag = PosTag.getPartOfSpeechLevel1();
+    //        Token PosTag = postags.get(i);
+    //        String tag = PosTag.getPartOfSpeechLevel1();
+            String tag = postags.get(i);
             sentTokens.add(token);
             if (token.equals("。") || puntuations.contains(token)
                     || tag.equals("記号-句点") || tag.equals("記号-括弧閉") || tag.equals("記号-括弧開")
                     || tag.equals("記号-空白") || tag.equals("記号-読点") ) // japanese preiod.
             {
-                int end = PosTag.getPosition()+ token.length();
+    //            int end = PosTag.getPosition()+ token.length();
+                int end = body.indexOf(token, start) + token.length();
                 String raw = body.substring(start, end);
                 start = end;
                 sDoc = new JADocumentInfo("", raw, helper);

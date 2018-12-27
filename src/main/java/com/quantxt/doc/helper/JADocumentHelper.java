@@ -3,12 +3,18 @@ package com.quantxt.doc.helper;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.trie.Emit;
 import com.quantxt.util.StringUtil;
-import com.atilika.kuromoji.ipadic.Token;
-import com.atilika.kuromoji.ipadic.Tokenizer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
+import org.apache.lucene.analysis.ja.JapaneseTokenizer;
+import org.apache.lucene.analysis.ja.tokenattributes.PartOfSpeechAttribute;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,7 +42,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     private static Pattern VerbPhrase = Pattern.compile("動+");
 
     private Tokenizer tokenizer;
-    protected Tokenizer analyzer;
+//    protected Tokenizer analyzer;
 
     public JADocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH,
@@ -50,35 +56,89 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     }
 
     @Override
-    public List<String> tokenize(String str) {
+    public List<String> tokenize(String text) {
+        List<String> tokStrings = new ArrayList<>();
+        try {
+            Reader reader = new StringReader(text);
+            CharTermAttribute termAtt = tokenizer.addAttribute(CharTermAttribute.class);
+            tokenizer.setReader(reader);
+            tokenizer.reset();
+            while (tokenizer.incrementToken()) {
+                tokStrings.add(termAtt.toString());
+            }
+            tokenizer.end();
+            tokenizer.close();
+        } catch (Exception e){
+            logger.error(e.getMessage());
+        }
+
+        /*
         List<Token> tokens = tokenizer.tokenize(str);
         List<String> tokStrings = new ArrayList<>();
         for (Token e : tokens){
             tokStrings.add(e.getSurface());
         }
         return tokStrings;
+        */
+        return tokStrings;
     }
 
-    public List<Token> getPosTagsJa(String text) {
-        List<Token> tokens = tokenizer.tokenize(text);
-        return tokens;
+    public List<String> getPosTagsJa(String text) {
+        List<String> postags = new ArrayList<>();
+        try {
+            Reader reader = new StringReader(text);
+            PartOfSpeechAttribute pattr = tokenizer.addAttribute(PartOfSpeechAttribute.class);
+            tokenizer.setReader(reader);
+            tokenizer.reset();
+            while (tokenizer.incrementToken()) {
+                String pos[] = pattr.getPartOfSpeech().split("-");
+                postags.add(pos[0]);
+            }
+            tokenizer.end();
+            tokenizer.close();
+        } catch (Exception e){
+            logger.error(e.getMessage());
+        }
+
+        return postags;
     }
 
     @Override
     public void preInit() {
         //Analyzer
-        analyzer = new Tokenizer();
+        analyzer = new JapaneseAnalyzer();
+  //      analyzer = new Tokenizer();
         //Tokenizer
-        tokenizer = new Tokenizer();
+        tokenizer = new JapaneseTokenizer(null, false, JapaneseTokenizer.Mode.EXTENDED);
     }
 
     @Override
     public ArrayList<String> stemmer(String str) {
+        ArrayList<String> tokStrings = new ArrayList<>();
+        try {
+            TokenStream tokens = analyzer.tokenStream("field", str);
+            CharTermAttribute cattr = tokens.addAttribute(CharTermAttribute.class);
+            tokens.reset();
+
+            while (tokens.incrementToken()) {
+                String term = cattr.toString();
+                tokStrings.add(term);
+
+            }
+            if (tokStrings.size() == 0) return null;
+            tokens.end();
+            tokens.close();
+        } catch (Exception e){
+            return null;
+        }
+
+        /*
         List<Token> tokens = tokenizer.tokenize(str);
         ArrayList<String> tokStrings = new ArrayList<>();
         for (Token e : tokens){
             tokStrings.add(e.getBaseForm());
         }
+        */
         return tokStrings;
     }
 
@@ -132,13 +192,16 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     public List<ExtInterval> getNounAndVerbPhrases(final String orig_str,
                                                    String[] tokens) {
 
-        List<Token> taags = getPosTagsJa(orig_str);
+    //    List<Token> taags = getPosTagsJa(orig_str);
+        List<String> taags = getPosTagsJa(orig_str);
 
         StringBuilder allTags = new StringBuilder();
         ExtInterval [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
 
-        for (Token t : taags) {
-            allTags.append(t.getPartOfSpeechLevel1().substring(0, 1));
+      //  for (Token t : taags) {
+        for (String t : taags){
+            allTags.append(t.substring(0, 1));
+    //        allTags.append(t.getPartOfSpeechLevel1().substring(0, 1));
         }
 
         List<ExtInterval> intervals = new ArrayList<>();
@@ -146,7 +209,9 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         while (m.find()) {
             int s = m.start();
             int e = m.end() - 1;
-            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            int ss = tokenSpans[s].getStart();
+            int ee = tokenSpans[e].getEnd();
+            ExtInterval eit = new ExtInterval(ss, ee);
             eit.setType(NOUN);
             intervals.add(eit);
         }

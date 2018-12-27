@@ -5,8 +5,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.atilika.kuromoji.ipadic.Token;
-import com.atilika.kuromoji.ipadic.Tokenizer;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.nlp.types.QTValueNumber;
 import org.apache.commons.io.IOUtils;
@@ -321,6 +319,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return System.getenv(DEFAULT_NLP_MODEL_DIR);
     }
 
+    /*
     public static List<String> tokenizeJA( Tokenizer tokenizer, String str) {
         List<Token> tokens = tokenizer.tokenize(str);
         List<String> tokStrings = new ArrayList<>();
@@ -329,6 +328,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         }
         return tokStrings;
     }
+    */
 
     private static String getPad(final int s, final int e){
         return String.join("", Collections.nCopies(e - s, " "));

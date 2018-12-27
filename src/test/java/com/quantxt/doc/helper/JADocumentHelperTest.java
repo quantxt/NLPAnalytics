@@ -9,9 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 /**
  * Created by matin on 5/29/18.
  */
@@ -36,7 +33,7 @@ public class JADocumentHelperTest {
         Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
                 "北京");
         Assert.assertEquals(str.substring(tagged.get(10).getStart(), tagged.get(10).getEnd()),
-                "2000年以降");
+                "年以降");
     }
 
     @Test
@@ -106,7 +103,7 @@ public class JADocumentHelperTest {
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
                 "スマートスピーカー所有率");
         Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
-                "公式ブログ");
+                "今年");
 
     }
 
@@ -158,7 +155,7 @@ public class JADocumentHelperTest {
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
                 "児童");
         Assert.assertEquals(str.substring(tagged.get(12).getStart(), tagged.get(12).getEnd()),
-                "40代");
+                "代");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
                 "待機");
     }
@@ -196,7 +193,7 @@ public class JADocumentHelperTest {
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
                 "パートワーク");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
-                "さ2");
+                "さ");
     }
 
     @Test

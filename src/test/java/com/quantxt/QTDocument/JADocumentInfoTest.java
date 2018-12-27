@@ -1,6 +1,5 @@
 package com.quantxt.QTDocument;
 
-import com.atilika.kuromoji.ipadic.Token;
 import com.quantxt.doc.JADocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.JADocumentHelper;
@@ -47,7 +46,8 @@ public class JADocumentInfoTest {
 //        }
 
         Assert.assertEquals(intervals.get(0).getType(), NOUN);
-        Assert.assertEquals(intervals.get(0).toString(), "0:9");
+        Assert.assertEquals(intervals.get(0).toString(str), "マイクロソフト");
+        Assert.assertEquals(intervals.get(0).toString(), "25:32");
     }
 
     @Test

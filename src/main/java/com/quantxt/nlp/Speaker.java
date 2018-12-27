@@ -32,7 +32,9 @@ public class Speaker implements QTExtract {
 
     private Trie phraseTree = null;
     private Trie hidden_entities;
+
     private Map<String, Trie> nameTree = new HashMap<>();
+
     private List<String> search_terms = new ArrayList<>();
     private Tagger tagger = null;
     private ConcurrentHashMap<String, Double> tokenRank;

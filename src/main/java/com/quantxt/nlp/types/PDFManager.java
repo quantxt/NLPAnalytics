@@ -140,11 +140,13 @@ public class PDFManager {
             protected void processTextPosition(TextPosition text)
             {
                 String character = text.getUnicode();
-                if (character != null && character.trim().length() != 0)
+                if (character != null && character.trim().length() != 0) {
                     super.processTextPosition(text);
+                } else {
+        //            logger.info(" -----> '" + text.getUnicode()+ "'");
+                }
             }
         };
-        stripper.setSortByPosition(true);
         return stripper.getText(document);
     }
 
@@ -163,6 +165,7 @@ public class PDFManager {
             pdfStripper.setEndPage(pdDoc.getNumberOfPages());
 
             String body = extractNoSpaces(pdDoc);
+            logger.info(body);
             String title = pdDoc.getDocumentInformation().getTitle();
             doc = new ENDocumentInfo(body, title);
             String author = pdDoc.getDocumentInformation().getAuthor();
@@ -276,102 +279,6 @@ public class PDFManager {
         }
 
         return document;
-    }
-
-    public static void main(String[] args) throws Exception {
-        //     Path path = Paths.get("/Users/matin/Downloads/mu-emd-i.pdf");
-
-        //     byte[] data = Files.readAllBytes(path);
-        //     QTDocument doc = pdf2QT(data);
-        InputStream is = new FileInputStream(new File("/Users/matin/Downloads/Document.htm"));
-        org.jsoup.nodes.Document jdoc = Jsoup.parse(is, "UTF-8", "Document.htm");
-        ENDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc = new ENDocumentInfo(jdoc.body().text(), "sec", helper);
-
-        String [] sentences = helper.getSentences(jdoc.body().text());
-
-        Trie.TrieBuilder tries = Trie.builder().onlyWholeWords().ignoreOverlaps();
-        tries.addKeyword("News product subscription revenues");
-        tries.addKeyword("Other product subscription revenues");
-        tries.addKeyword("News product subscriptions");
-        tries.addKeyword("Other product subscriptions");
-        tries.addKeyword("Total digital-only subscription revenues");
-
-     //   tries.addKeyword("revenues increased");
-     //   tries.addKeyword("year-over-year growth");
-
-        Gson gson = new Gson();
-    //    tries.addKeyword("liability");
-        Trie keywords = tries.build();
-        int dist = 9;
-        for (String rawSent_curr : sentences) {
-
-            rawSent_curr = rawSent_curr.replaceAll("(\\S+)\\:", "$1");
-            rawSent_curr = rawSent_curr.replaceAll("(\\S+)\\(\\d+\\)", "$1");
-
-
-            Collection<Emit> emits = keywords.parseText(rawSent_curr);
-            if (emits.size() == 0) continue;
-    //        logger.info(rawSent_curr);
-            // get potential keys
-
-
-            ArrayList<ExtInterval> values = new ArrayList<>();
-            // get potential values
-            helper.getValues(rawSent_curr, values);
-            if (values.size() == 0) continue;
-
-            // let's find all values that belong to this key
-
-            for (Emit emit : emits) {
-                String key = emit.getKeyword();
-                ArrayList<ExtInterval> vals2print = new ArrayList<>();
-                int keyEnd =  emit.getEnd();
-                Iterator<ExtInterval> iter = values.iterator();
-                while (iter.hasNext()) {
-                    ExtInterval extv = iter.next();
-                    int valStart = extv.getStart();
-                    int diff = (valStart - keyEnd);
-                    if (diff > 0 && diff < dist) {
-            //            extv.setKey(key);
-                        keyEnd = extv.getEnd();
-                        vals2print.add(extv);
-                        iter.remove();
-                    }
-                }
-//                if (vals2print.size() > 1){
-//                    logger.info(gson.toJson(vals2print));
-//                }
-            }
-
-            StringBuilder sb = new StringBuilder();
-            ArrayList<String> vals = new ArrayList<>();
-            for (ExtInterval extv : values) {
-                if (extv.getKey() != null) {
-                    // start new row and print he previous row
-                    if (vals.size() > 0) {
-                        sb.append("<tr>");
-                        for (String v : vals) {
-                            sb.append("<td>").append(v).append("</td>");
-                        }
-                        sb.append("</tr>");
-                    }
-                    vals.clear();
-   //                 vals.add(extv.getKey());
-                }
-                vals.add(extv.getCustomData().toString());
-
-            }
-            if (vals.size() > 0) {
-                sb.append("<tr>");
-                for (String v : vals) {
-                    sb.append("<td>").append(v).append("</td>");
-                }
-                sb.append("</tr>");
-            }
-
-    //        logger.info(sb.toString());
-        }
     }
 }
 

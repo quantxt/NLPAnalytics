@@ -36,4 +36,23 @@ public class QTValueNumberTest {
         assertTrue(list.get(2).getNumbervalue() == -6.09);
         assertTrue(list.get(3).getNumbervalue() == 1.764);
     }
+
+    @Test
+    public void multiplepointTest1() {
+        String str = "Standardized Total Returns (I-shares) for Yield to Worst (%) 7.84 17.84 (6.09) 1.764.";
+        List<ExtInterval> list = new ArrayList<>();
+        QTValueNumber.detect(str, list);
+        assertTrue(list.size() == 4);
+        assertTrue(list.get(2).getNumbervalue() == -6.09);
+        assertTrue(list.get(3).getNumbervalue() == 1.764);
+    }
+
+    @Test
+    public void commaNumberTest1() {
+        String str = "Standardized Total Returns (I-shares) for Yield to Worst (%) 70,000,840 17.84 (6.09) 1.764.";
+        List<ExtInterval> list = new ArrayList<>();
+        QTValueNumber.detect(str, list);
+        assertTrue(list.size() == 4);
+        assertTrue(list.get(0).getNumbervalue() == 70000840);
+    }
 }
