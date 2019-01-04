@@ -54,5 +54,35 @@ public class QTValueNumberTest {
         QTValueNumber.detect(str, list);
         assertTrue(list.size() == 4);
         assertTrue(list.get(0).getNumbervalue() == 70000840);
+        assertTrue(list.get(2).getNumbervalue() == -6.09);
+    }
+
+    @Test
+    public void negativeNumberCommaTest1() {
+        String str = "Standardized Total Returns (I-shares) for Yield to Worst (%) (70,000,840) 17.84 (6.09) 1.764.";
+        List<ExtInterval> list = new ArrayList<>();
+        QTValueNumber.detect(str, list);
+        assertTrue(list.size() == 4);
+        assertTrue(list.get(0).getNumbervalue() == -70000840);
+    }
+
+    @Test
+    public void moneyTest1() {
+        String str = "Standardized Total Returns (I-shares) for Yield to Worst (%) $70,000,840 17.84 (6.09) 1.764.";
+        List<ExtInterval> list = new ArrayList<>();
+        QTValueNumber.detect(str, list);
+        assertTrue(list.size() == 4);
+        assertTrue(list.get(0).getNumbervalue() == 70000840);
+        assertTrue(list.get(0).getType() == ExtInterval.ExtType.MONEY);
+    }
+    @Test
+    public void moneyTest2() {
+        String str = "Standardized Total Returns (I-shares) for Yield to Worst (%) $" + "\n\n\n" +
+                "          70,000,840 17.84 (6.09) 1.764.";
+        List<ExtInterval> list = new ArrayList<>();
+        QTValueNumber.detect(str, list);
+        assertTrue(list.size() == 4);
+        assertTrue(list.get(0).getNumbervalue() == 70000840);
+        assertTrue(list.get(0).getType() == ExtInterval.ExtType.MONEY);
     }
 }

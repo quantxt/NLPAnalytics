@@ -233,7 +233,7 @@ public class ENDocumentInfoTest {
         doc.extractKeyValues(enx, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
 
     }
 
@@ -245,7 +245,7 @@ public class ENDocumentInfoTest {
         doc.extractKeyValues(enx, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
 
     }
 
@@ -257,7 +257,7 @@ public class ENDocumentInfoTest {
         doc.extractKeyValues(enx, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
 
     }
 
@@ -269,7 +269,7 @@ public class ENDocumentInfoTest {
         doc.extractKeyValues(enx, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
 
     }
 

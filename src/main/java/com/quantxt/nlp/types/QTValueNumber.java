@@ -29,8 +29,9 @@ public class QTValueNumber {
 
     final private static Logger logger = LoggerFactory.getLogger(QTValueNumber.class);
 
-    final private static String simple_number = "(^|\\s+)(\\p{Sc}\\s*)?(([\\+\\-]?\\d+\\.\\d+|\\d[,\\d]+\\d|\\d+)|\\((\\d+\\.\\d+|\\d[,\\d]\\d|\\d+)\\))";
+    final private static String simple_number = "(([\\+\\-]?\\d+\\.\\d+|\\d[,\\d]+\\d|\\d+)|\\(\\s*(\\d+\\.\\d+|\\d[,\\d]+\\d|\\d+)\\s*\\))";
 
+    final private static Pattern currencies = Pattern.compile("(\\p{Sc})\\s*$");
     final private static Pattern units = Pattern.compile("hundred|thousand|million|billion|M|B");
 
     final private static Pattern PATTERN  = Pattern.compile(simple_number);
@@ -51,7 +52,7 @@ public class QTValueNumber {
         }
 
         Matcher m = PATTERN.matcher(str);
-        int numberGroups = 3;
+        int numberGroups = 1;
         while (m.find()){
             int start = m.start(numberGroups);
             int end = m.end(numberGroups);
@@ -60,7 +61,8 @@ public class QTValueNumber {
             extractionStr = extractionStr.replace(",", "").trim();
             if (extractionStr.contains("(") && extractionStr.contains(")")){
                 mult = -1;
-                extractionStr = extractionStr.replaceAll("[\\(\\)]", "");
+                extractionStr = m.group(3).replace(",", "").trim();
+            //    extractionStr = extractionStr.replaceAll("\\(\\s*|\\s*\\)]", "");
             }
 
             try {
@@ -69,8 +71,13 @@ public class QTValueNumber {
                 if (str.length() > end && str.charAt(end) == '%'){
                     end +=1;
                     t = PERCENT;
-                } else if (m.group(2) != null){
-                    t = MONEY;
+                } else {
+                    // search for currency
+                    String string_to_look_for_currencieis = str.substring(Math.max(0, start - 50), start);
+                    Matcher currency_matcher = currencies.matcher(string_to_look_for_currencieis);
+                    if (currency_matcher.find()){
+                        t = MONEY;
+                    }
                 }
                 ExtInterval ext = new ExtInterval(start, end);
                 ext.setType(t);

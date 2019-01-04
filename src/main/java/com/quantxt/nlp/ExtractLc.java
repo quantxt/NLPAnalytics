@@ -29,6 +29,9 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
+import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
+import org.apache.lucene.search.highlight.QueryScorer;
 import org.apache.lucene.search.spans.SpanNearQuery;
 import org.apache.lucene.search.spans.SpanTermQuery;
 import org.apache.lucene.search.uhighlight.UnifiedHighlighter;
@@ -70,7 +73,7 @@ public class ExtractLc implements QTExtract {
     final private static String entNameField = "entnamefield";
     final private static String searchField  = "searchfield";
 
-    final private static int topN = 100;
+    private int topN = 100;
 
     final private static FieldType PositionField;
     final private static FieldType SearchField;
@@ -113,6 +116,10 @@ public class ExtractLc implements QTExtract {
 
     private Analyzer search_analyzer;
     private Analyzer index_analyzer;
+
+    public void setTopN(int i){
+        topN = i;
+    }
 
     private Analyzer getCustomAnalyzer() {
         return new EnglishAnalyzer(EMPTY_SET);
@@ -359,22 +366,25 @@ public class ExtractLc implements QTExtract {
     private String mergeCloseFragment(String f){
         // if </b> and <b> are nearby
         int start = 0;
-        while (start >= 0 && start < f.length()){
-            int endPhraseInFragment = f.indexOf(CLOSEH, start);
+        int utteranceLength = f.length();
+        while (start >= 0 && start < utteranceLength){
+            int endPhraseInFragment = f.indexOf(CLOSEH, start);   // find </b>
             if (endPhraseInFragment < 0) return f;
-            int startPhraseInFragment = f.indexOf(OPENH, endPhraseInFragment);
+            int startPhraseInFragment = f.indexOf(OPENH, endPhraseInFragment);   // find <b>
             if (startPhraseInFragment < 0) return f;
-            start = endPhraseInFragment;
+            // </b  '>'  vmdn  '<' b>
+            start = endPhraseInFragment; //it is at </b '>'
             if (startPhraseInFragment - endPhraseInFragment < (CLOSEHLENGTH + 4)) {// DO NOT HARDCODE THIS NUMBER!! 4 for length of /b>
                 //TODO: do some analysis on between to make sure it can be merged
-                //TODO: for example is between is a number don't merge it
+                //TODO: for example if between is a number don't merge it
                 String between = f.substring(endPhraseInFragment + CLOSEHLENGTH, startPhraseInFragment);
-                if (between.length() < 1) continue;
-                Matcher m = DIGITS.matcher(between);
-                if (m.find()) continue;
+        //        if (between.length() < 1) continue;
+        //        Matcher m = DIGITS.matcher(between);
+        //        if (m.find()) continue;
                 String f1 = f.substring(0, endPhraseInFragment);
                 String f2 = f.substring(startPhraseInFragment+OPENHLENGTH);
                 f = f1 + between + f2;
+                utteranceLength -= (CLOSEHLENGTH + OPENHLENGTH);
             } else {
                 start++;
 
@@ -390,7 +400,7 @@ public class ExtractLc implements QTExtract {
                                                final IndexSearcher searcher,
                                                final Analyzer analyzer,
                                                final Document matchedDoc,
-                                               final Query query) throws IOException {
+                                               final Query query) throws IOException, InvalidTokenOffsetsException {
         ArrayList<Emit> emits = new ArrayList<>();
 
         TopDocs res = searcher.search(query, 1);
@@ -402,10 +412,9 @@ public class ExtractLc implements QTExtract {
         UnifiedHighlighter uhighlighter = new UnifiedHighlighter(searcher, analyzer);
         String[] fragments = uhighlighter.highlight(searchField, query, res);
 
-
         for (String rawFragment : fragments) {
-
             String f = mergeCloseFragment(rawFragment);
+      //      String f = rawFragment;
             String freduced = f.replace(OPENH, "").replace(CLOSEH, "");
             //now start and end on fragment need to be shifted to match str
             int offset = str.indexOf(freduced, fragmentstart);
@@ -443,7 +452,6 @@ public class ExtractLc implements QTExtract {
                 start = endPhraseInFragment + OPENHLENGTH;
             }
         }
-
         return emits;
     }
 
@@ -462,7 +470,7 @@ public class ExtractLc implements QTExtract {
 
     private Collection<Emit> getFragments(final String entType,
                                           final HashSet<Document> matchedDocs,
-                                          final String str) throws IOException
+                                          final String str) throws Exception
     {
 
         HashSet<Emit> emits = new HashSet<>();
@@ -472,7 +480,8 @@ public class ExtractLc implements QTExtract {
         //TODO: this is messy; re-factor it with proper multi-field index
         for (Document matchedDoc : matchedDocs) {
             Query query = null;
-            String query_string = matchedDoc.getField(searchField).stringValue();
+            String query_string_raw = matchedDoc.getField(searchField).stringValue();
+            String query_string = QueryParser.escape(query_string_raw);
             switch (mode) {
                 case EXACT_PHRASE : query = getPhraseQuery(search_analyzer , query_string, 0); break;
                 case PHRASE : query = getPhraseQuery(search_analyzer , query_string, 1); break;
@@ -480,7 +489,6 @@ public class ExtractLc implements QTExtract {
                 case SPAN : query = getSpanQuery(search_analyzer , query_string, 1, true); break;
                 case PARTIAL_SPAN : query = getSpanQuery(search_analyzer , query_string, 1, false); break;
             }
-            //     emits.addAll(getFragmentsHelper(entType, str, searcher1, search_analyzer, matchedDoc, query1));
             emits.addAll(getFragmentsHelper(entType, str, searcher, search_analyzer, matchedDoc, query));
         }
 
@@ -684,7 +692,7 @@ public class ExtractLc implements QTExtract {
         String q = "so I will be the only fox in the america for you.";
 
         Query query = lnindex.getMultimatcheQuery(lnindex.search_analyzer, q);
-        TopDocs res = lnindex.phraseTree.search(query, topN);
+        TopDocs res = lnindex.phraseTree.search(query, lnindex.topN);
 
         HashSet<Document> phrases = new HashSet<>();
         for (ScoreDoc hit : res.scoreDocs) {
@@ -728,13 +736,15 @@ public class ExtractLc implements QTExtract {
     }
 
     @Override
-    public Map<String, Collection<Emit>> parseNames(String s) {
+    public Map<String, Collection<Emit>> parseNames(final String query_string) {
+
+        String escaped_query = QueryParser.escape(query_string);
 
         HashMap<String, Collection<Emit>> res = new HashMap<>();
 
         try {
             if (hidden_entities != null){
-                Query query = getMultimatcheQuery(search_analyzer, s);
+                Query query = getMultimatcheQuery(search_analyzer, escaped_query);
                 TopDocs topdocs = hidden_entities.search(query, topN);
                 HashSet<Document> matchedDocs = new HashSet<>();
                 for (ScoreDoc hit : topdocs.scoreDocs) {
@@ -743,15 +753,17 @@ public class ExtractLc implements QTExtract {
                     matchedDocs.add(doclookedup);
                 }
                 if (matchedDocs.size() > 0 ) {
-                    res.put(HIDDEH_ENTITY, getFragments(HIDDEH_ENTITY, matchedDocs, s));
+                    res.put(HIDDEH_ENTITY, getFragments(HIDDEH_ENTITY, matchedDocs, query_string));
                 }
             }
+
 
             for (Map.Entry<String, IndexSearcher> e : nameTree.entrySet()) {
                 IndexSearcher trie = e.getValue();
                 String entType = e.getKey();
-                Query query = getMultimatcheQuery(search_analyzer, s);
+                Query query = getMultimatcheQuery(search_analyzer, escaped_query);
                 TopDocs topdocs = trie.search(query, topN);
+
 
                 HashSet<Document> matchedDocs = new HashSet<>();
                 for (ScoreDoc hit : topdocs.scoreDocs) {
@@ -760,8 +772,9 @@ public class ExtractLc implements QTExtract {
                     matchedDocs.add(doclookedup);
                 }
                 if (matchedDocs.size() == 0 ) continue;
-                res.put(entType, getFragments(entType, matchedDocs, s));
+                res.put(entType, getFragments(entType, matchedDocs, query_string));
             }
+
 
 
         } catch (Exception e ){
