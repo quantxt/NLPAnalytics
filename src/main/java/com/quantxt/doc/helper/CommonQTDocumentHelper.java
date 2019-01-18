@@ -335,9 +335,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public String getValues(String str, List<ExtInterval> valueInterval){
+    public String getValues(String str, String context, List<ExtInterval> valueInterval){
         String str_copy = str;
-        return QTValueNumber.detect(str_copy, valueInterval);
+        return QTValueNumber.detect(str_copy, context, valueInterval);
     }
 
 }

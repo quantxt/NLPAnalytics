@@ -195,7 +195,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, 5, true);
+        doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td></tr></table>");
@@ -206,7 +206,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6% 6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, 5, true);
+        doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
@@ -218,7 +218,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, 5, true);
+        doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
@@ -230,7 +230,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% 6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, 5, true);
+        doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
@@ -242,7 +242,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, 5, true);
+        doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
@@ -254,7 +254,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, 5, true);
+        doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
@@ -266,7 +266,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, 5, true);
+        doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
@@ -285,7 +285,7 @@ public class ENDocumentInfoTest {
         QTExtract lext = new ExtractLc(entMap, null, null);
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(lext, 5, true);
+        doc.extractKeyValues(lext, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
@@ -307,11 +307,11 @@ public class ENDocumentInfoTest {
         QTExtract lext = new ExtractLc(entMap, null, null);
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(lext, 5, true);
+        doc.extractKeyValues(lext, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>774000.0</td></tr></table>");
+                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>7.74E8</td></tr></table>");
 
     }
 
@@ -320,7 +320,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6 million";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, 5, true);
+        doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5600000.0</td></tr></table>");
@@ -332,9 +332,83 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : $ 5.6 million";
         List<ExtInterval> intervals= new ArrayList<>();
-        QTValueNumber.detect(str, intervals);
+        QTValueNumber.detect(str, str, intervals);
         // THEN
         assertTrue(intervals.size() == 2);
         assertTrue(intervals.get(1).getType() == ExtInterval.ExtType.MONEY);
+    }
+
+    @Test
+    public void thousandsInTableHeader() throws IOException {
+        // GIVEN
+        String str = "Condensed Consolidated Balance Sheets \n" +
+                "(In thousands) \n" +
+                "March 31,2009 \n" +
+                "December 31,2008 \n" +
+                "(Unaudited) \n" +
+                "(Note) \n" +
+                "Assets \n" +
+                "Current assets: \n" +
+                "Cash and cash equivalents \n" +
+                "$ \n" +
+                "62,458 \n" +
+                "$ \n" +
+                "73,329 \n";
+
+
+        ArrayList<Entity> entityArray1 = new ArrayList<>();
+
+        entityArray1.add(new Entity("Cash and cash equivalents" , new String[]{"Cash and cash equivalents"} , true));
+        entityArray1.add(new Entity("Prepaid expenses and other current assets" ,new String [] {"Prepaid expenses and other current assets"}, true));
+        entityArray1.add(new Entity("Warrant liability" , new String[]{"Warrant liability"} , true));
+
+        Map<String, Entity[]> entMap = new HashMap<>();
+        entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        QTExtract qtExtract = new ExtractLc(entMap, null, null);
+
+
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(qtExtract, str, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(),
+                "<table width=\"100%\"><tr><td>Cash and cash equivalents</td><td>6.2458E7</td><td>7.3329E7</td></tr></table>");
+
+    }
+
+    @Test
+    public void percentInNumber() throws IOException {
+        // GIVEN
+        String str = "Share-based compensation (benefit) expense (in thousands)\n" +
+                "(54.6 \n" +
+                ") \n" +
+                "102.7 \n" +
+                "(153.2 \n" +
+                ")% \n" +
+                "Total selling, general and administrative expense \n" +
+                "$ \n" +
+                "177.3 \n" +
+                "$ \n" +
+                "304.0 \n" +
+                "(41.7 \n" +
+                ")% ";
+
+
+        ArrayList<Entity> entityArray1 = new ArrayList<>();
+
+        entityArray1.add(new Entity("Total selling, general and administrative expense" , new String[]{"Total selling, general and administrative expense"} , true));
+
+        Map<String, Entity[]> entMap = new HashMap<>();
+        entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        QTExtract qtExtract = new ExtractLc(entMap, null, null);
+
+
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(qtExtract, str, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(),
+                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177300.0</td><td>304000.0</td><td>41.7</td></tr></table>")
+        ;
     }
 }

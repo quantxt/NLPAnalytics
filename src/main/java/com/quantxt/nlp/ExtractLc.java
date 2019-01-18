@@ -93,7 +93,7 @@ public class ExtractLc implements QTExtract {
 
     static {
 
-        BooleanQuery.setMaxClauseCount(5000);
+        BooleanQuery.setMaxClauseCount(15000);
 
         DataField = new FieldType();
         DataField.setStored(true);
