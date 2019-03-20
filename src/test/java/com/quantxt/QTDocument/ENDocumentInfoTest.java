@@ -69,7 +69,7 @@ public class ENDocumentInfoTest {
     public void testNounVerbPh1() {
         String str = "Gilead Sciences , Inc. told to reuters reporters.";
         QTDocument doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx, true, false, false);
         Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").iterator().next(), "Gilead Sciences, Inc.");
     }
@@ -78,7 +78,7 @@ public class ENDocumentInfoTest {
     public void testNounVerbPh2() {
         String str = "Amazon Inc. reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx, true, false, false);
         Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
     }
@@ -87,7 +87,7 @@ public class ENDocumentInfoTest {
     public void testNounVerbPh3() {
         String str = "Amazon reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx, true, false, false);
         Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
     }
@@ -96,7 +96,7 @@ public class ENDocumentInfoTest {
     public void testNounVerbPh4() {
         String str = "Amazon Corp reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx, true, false, false);
         Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
     }
@@ -105,7 +105,7 @@ public class ENDocumentInfoTest {
     public void testNounVerbPh5() {
         String str = "Amazon LLC announced a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx, true, false, false);
         Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
     }
@@ -114,7 +114,7 @@ public class ENDocumentInfoTest {
     public void testNounVerbPh6() {
         String str = "He works as a high rank Senior Director in Amazon";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx);
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(enx, true, false, false);
         Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
         Assert.assertTrue(entityMap.get("Title").contains("Senior Director"));
     }
@@ -178,7 +178,7 @@ public class ENDocumentInfoTest {
         doc.setLogo("logo");
 
         // WHEN
-        List<QTDocument> childs = doc.getChilds();
+        List<QTDocument> childs = doc.getChilds(false);
 
         // THEN
         assertNotNull(childs);
@@ -200,6 +200,7 @@ public class ENDocumentInfoTest {
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td></tr></table>");
     }
+
 
     @Test
     public void findExppsureTable1() {
@@ -233,7 +234,7 @@ public class ENDocumentInfoTest {
         doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
 
     }
 
@@ -245,7 +246,7 @@ public class ENDocumentInfoTest {
         doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
 
     }
 
@@ -257,7 +258,7 @@ public class ENDocumentInfoTest {
         doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
 
     }
 
@@ -269,7 +270,7 @@ public class ENDocumentInfoTest {
         doc.extractKeyValues(enx, str, 5, true);
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>-2.0</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
 
     }
 
@@ -296,7 +297,10 @@ public class ENDocumentInfoTest {
     @Test
     public void findSpane2() throws IOException {
         String str =
-                "The effects of this change are applied retrospectively and are provided in the Reconciliation of Non-GAAP Financial Measures to GAAP Financial Measures tables. 2 CUSTOMER METRICS Total Branded Postpaid Net Additions Branded Postpaid Customers (in thousands) Branded postpaid phone net customer additions were 774,000 in Q3 2018, compared to 686,000 in Q2 2018 and 595,000 in Q3 2017.";
+                "The effects of this change are applied retrospectively and are provided in the Reconciliation of Non-GAAP Financial Measures to " +
+                        "GAAP Financial Measures tables. 2 CUSTOMER METRICS Total Branded Postpaid Net Additions " +
+                        "Branded Postpaid Customers (in thousands) Branded postpaid phone net customer additions " +
+                        "were 774,000 in Q3 2018, compared to 686,000 in Q2 2018 and 595,000 in Q3 2017.";
         ArrayList<Entity> entityArray1 = new ArrayList<>();
 
         entityArray1.add(new Entity("Branded postpaid net customer additions" , new String[]{"Branded postpaid net customer additions were"} , true));
@@ -386,6 +390,41 @@ public class ENDocumentInfoTest {
                 "(153.2 \n" +
                 ")% \n" +
                 "Total selling, general and administrative expense \n" +
+                "$ \n" +
+                "177.3 \n" +
+                "$ \n" +
+                "304.0 \n" +
+                "(41.7 \n" +
+                ")% ";
+
+
+        ArrayList<Entity> entityArray1 = new ArrayList<>();
+
+        entityArray1.add(new Entity("Total selling, general and administrative expense" , new String[]{"Total selling, general and administrative expense"} , true));
+
+        Map<String, Entity[]> entMap = new HashMap<>();
+        entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        QTExtract qtExtract = new ExtractLc(entMap, null, null);
+
+
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        doc.extractKeyValues(qtExtract, str, 5, true);
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(),
+                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177300.0</td><td>304000.0</td><td>41.7</td></tr></table>")
+        ;
+    }
+
+    public void numberParantesis() throws IOException {
+        // GIVEN
+        String str = "Share-based compensation (benefit) expense (in thousands)\n" +
+                "(54.6 \n" +
+                ") \n" +
+                "102.7 \n" +
+                "(153.2 \n" +
+                ")% \n" +
+                "Total selling, general and administrative expense(1) \n" +
                 "$ \n" +
                 "177.3 \n" +
                 "$ \n" +

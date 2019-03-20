@@ -40,32 +40,55 @@ public class JADocumentInfo extends QTDocument {
     }
 
     @Override
-    public List<QTDocument> getChilds() {
+    public List<QTDocument> getChilds(boolean splitOnNewLine) {
         List<QTDocument> childs = new ArrayList<>();
         if (body == null || body.isEmpty())
             return childs;
 
-        List<String> tokens = helper.tokenize(body);
-    //    List<Token> postags = ((JADocumentHelper)helper).getPosTagsJa(body);
-        List<String> postags = ((JADocumentHelper)helper).getPosTagsJa(body);
-        ArrayList<String> sentTokens = new ArrayList();
-        JADocumentInfo sDoc;
-        int start = 0;
+        if (splitOnNewLine) {
+            String[] sentences = body.split("\\n");
+            for (String s : sentences) {
+                ENDocumentInfo sDoc = new ENDocumentInfo("", s.trim(), helper);
+                sDoc.setRawTitle(s.trim());
+                sDoc.setDate(getDate());
+                sDoc.setLink(getLink());
+                sDoc.setLogo(getLogo());
+                sDoc.setSource(getSource());
+                sDoc.setLanguage(getLanguage());
+                childs.add(sDoc);
+            }
+        } else {
+            List<String> tokens = helper.tokenize(body);
+            List<String> postags = ((JADocumentHelper) helper).getPosTagsJa(body);
+            ArrayList<String> sentTokens = new ArrayList();
+            JADocumentInfo sDoc;
+            int start = 0;
 
-        for (int i=0; i< postags.size(); i++){
-            String token = tokens.get(i);
-    //        Token PosTag = postags.get(i);
-    //        String tag = PosTag.getPartOfSpeechLevel1();
-            String tag = postags.get(i);
-            sentTokens.add(token);
-            if (token.equals("。") || puntuations.contains(token)
-                    || tag.equals("記号-句点") || tag.equals("記号-括弧閉") || tag.equals("記号-括弧開")
-                    || tag.equals("記号-空白") || tag.equals("記号-読点") ) // japanese preiod.
-            {
-    //            int end = PosTag.getPosition()+ token.length();
-                int end = body.indexOf(token, start) + token.length();
-                String raw = body.substring(start, end);
-                start = end;
+            for (int i = 0; i < postags.size(); i++) {
+                String token = tokens.get(i);
+
+                String tag = postags.get(i);
+                sentTokens.add(token);
+                if (token.equals("。") || puntuations.contains(token)
+                        || tag.equals("記号-句点") || tag.equals("記号-括弧閉") || tag.equals("記号-括弧開")
+                        || tag.equals("記号-空白") || tag.equals("記号-読点")) // japanese preiod.
+                {
+                    int end = body.indexOf(token, start) + token.length();
+                    String raw = body.substring(start, end);
+                    start = end;
+                    sDoc = new JADocumentInfo("", raw, helper);
+                    sDoc.setDate(getDate());
+                    sDoc.setLink(getLink());
+                    sDoc.setLogo(getLogo());
+                    sDoc.setSource(getSource());
+                    sDoc.setLanguage(getLanguage());
+                    childs.add(sDoc);
+                    sentTokens = new ArrayList();
+                }
+            }
+
+            if (sentTokens.size() > 0) {
+                String raw = body.substring(start);
                 sDoc = new JADocumentInfo("", raw, helper);
                 sDoc.setDate(getDate());
                 sDoc.setLink(getLink());
@@ -73,19 +96,7 @@ public class JADocumentInfo extends QTDocument {
                 sDoc.setSource(getSource());
                 sDoc.setLanguage(getLanguage());
                 childs.add(sDoc);
-                sentTokens = new ArrayList();
             }
-        }
-
-        if (sentTokens.size() > 0){
-            String raw = body.substring(start);
-            sDoc = new JADocumentInfo("", raw, helper);
-            sDoc.setDate(getDate());
-            sDoc.setLink(getLink());
-            sDoc.setLogo(getLogo());
-            sDoc.setSource(getSource());
-            sDoc.setLanguage(getLanguage());
-            childs.add(sDoc);
         }
 
         return childs;
@@ -119,7 +130,7 @@ public class JADocumentInfo extends QTDocument {
             try {
                 JADocumentInfo doc = gson.fromJson(st, JADocumentInfo.class);
                 doc.setHelper(helper);
-                List<QTDocument> childs = doc.getChilds();
+                List<QTDocument> childs = doc.getChilds(false);
                 logger.info(doc.getTitle());
                 for (QTDocument d : childs) {
                     String str = d.getTitle();

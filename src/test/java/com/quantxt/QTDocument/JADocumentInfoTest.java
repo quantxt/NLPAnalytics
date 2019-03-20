@@ -75,7 +75,7 @@ public class JADocumentInfoTest {
                 "優良だと錯覚する「キラキラ系ブラック企業」 Copyright (c) 2018 SANKEI DIGITAL INC. All rights reserved. ";
 
         JADocumentInfo doc = new JADocumentInfo(str, "");
-        List<QTDocument> sents = doc.getChilds();
+        List<QTDocument> sents = doc.getChilds(true);
 
         logger.info("num " + sents.size());
     }

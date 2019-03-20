@@ -1,16 +1,13 @@
 package com.quantxt.nlp.types;
 
 import com.quantxt.doc.ENDocumentInfo;
-import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.helper.DateResolver;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.nlp.ExtractLc;
-import com.quantxt.trie.Emit;
 import com.quantxt.types.Entity;
-import com.quantxt.types.NamedEntity;
 import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -172,7 +169,7 @@ public class QTValueNumber {
     public static void main(String[] args) throws Exception {
     // bug:    String url = "https://www.sec.gov/Archives/edgar/data/1178670/000095012310045489/b80508e10vq.htm";
 
-        String url = "https://www.sec.gov/Archives/edgar/data/1048477/000119312508040467/d10k.htm";
+        String url = "https://www.sec.gov/Archives/edgar/data/859737/000119312506253369/d10k.htm";
         QTDocumentHelper helper = new ENDocumentHelper();
 
         Pattern key_value  = Pattern.compile("[\n\r]+ *([A-Z][A-Za-z\\-\\(\\),\\. ]+[a-z])[\n\r ]*");
@@ -202,9 +199,9 @@ public class QTValueNumber {
 
         ArrayList<Entity> entityArray1 = new ArrayList<>();
 
-  //      entityArray1.add(new Entity("Research and development" , new String[]{"Research and development"} , true));
+        entityArray1.add(new Entity("Research and development" , new String[]{"Research and development" , "Total Research and development expense"} , true));
   //      entityArray1.add(new Entity("Total Research and development expense" , new String[]{"Total research and development expense"} , true));
-        entityArray1.add(new Entity("Research and development expenses increased by" ,new String [] {"Research and development expenses increased by"}, true));
+  //      entityArray1.add(new Entity("Research and development expenses increased by" ,new String [] {"Research and development expenses increased by"}, true));
 
         Map<String, Entity[]> entMap = new HashMap<>();
         entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
@@ -234,7 +231,7 @@ public class QTValueNumber {
      //       extractKeyValues(qtExtract, str, helper, 5, true);
 
             endoc.extractKeyValues(qtExtract, context, 5, true);
-            logger.info("++++ " + str);
+       //     logger.info("++++ " + str);
        //     d.extractKeyValues(qtExtract, 9, true);
             if (endoc.getValues() != null && !(endoc.getTitle() == null || endoc.getTitle().isEmpty())) {
      //           logger.info(str);

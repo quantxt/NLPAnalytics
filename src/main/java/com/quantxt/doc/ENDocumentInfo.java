@@ -33,13 +33,18 @@ public class ENDocumentInfo extends QTDocument {
     }
 
     @Override
-    public List<QTDocument> getChilds() {
+    public List<QTDocument> getChilds(boolean splitOnNewLine) {
         List<QTDocument> childs = new ArrayList<>();
         if (body == null || body.isEmpty())
             return childs;
 
-        String[] sentences = rawTitle == null ? helper.getSentences(body)
-                                             : helper.getSentences(rawTitle);
+        String[] sentences = null;
+        if (splitOnNewLine){
+            sentences = body.split("[\\n\\r]+");
+        } else {
+            sentences = rawTitle == null ? helper.getSentences(body)
+                    : helper.getSentences(rawTitle);
+        }
 
         for (String s : sentences) {
             ENDocumentInfo sDoc = new ENDocumentInfo("", s.trim(), helper);
@@ -51,6 +56,7 @@ public class ENDocumentInfo extends QTDocument {
             sDoc.setLanguage(getLanguage());
             childs.add(sDoc);
         }
+
         return childs;
     }
 

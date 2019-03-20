@@ -34,13 +34,18 @@ public class ESDocumentInfo extends QTDocument {
     }
 
     @Override
-    List<QTDocument> getChilds() {
+    List<QTDocument> getChilds(boolean splitOnNewLine) {
         List<QTDocument> childs = new ArrayList<>();
         if (body == null || body.isEmpty())
             return childs;
 
-        String sentences[] = rawTitle == null ? helper.getSentences(body)
-                                             : helper.getSentences(rawTitle);
+        String[] sentences = null;
+        if (splitOnNewLine){
+            sentences = body.split("[\\n\\r]+");
+        } else {
+            sentences = rawTitle == null ? helper.getSentences(body)
+                    : helper.getSentences(rawTitle);
+        }
         for (String s : sentences){
             ESDocumentInfo sDoc = new ESDocumentInfo("", s.trim(), helper);
             sDoc.setDate(getDate());

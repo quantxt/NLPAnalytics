@@ -187,6 +187,21 @@ public class ENDocumentHelperTest {
     }
 
     @Test
+    public void testBulletPointSplit_1() {
+        // GIVEN
+        String str = "damage to physician and patient confidence in any of our MS products. •\n" +
+                "difficulty in penetrating this market if our therapies are not regarded as offering significant benefits over current treatments;";
+        ENDocumentHelper helper = new ENDocumentHelper();
+
+        // WHEN
+        String [] sentences = helper.getSentences(str);
+        assertNotNull(sentences);
+        assertFalse(sentences.length == 3);
+        assertFalse(sentences[1].startsWith("\ndifficulty"));
+    }
+
+
+    @Test
     public void testNormalize1() {
         // GIVEN
         String str = "Some light sources, such as neon lights, "
