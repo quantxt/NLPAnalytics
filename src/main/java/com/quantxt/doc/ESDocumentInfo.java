@@ -2,7 +2,6 @@ package com.quantxt.doc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
@@ -30,7 +29,6 @@ public class ESDocumentInfo extends QTDocument {
 
     public ESDocumentInfo(Elements body, String title) {
         super(body.html(), title, new ESDocumentHelper());
-        rawTitle = body.text();
     }
 
     @Override
@@ -43,14 +41,12 @@ public class ESDocumentInfo extends QTDocument {
         if (splitOnNewLine){
             sentences = body.split("[\\n\\r]+");
         } else {
-            sentences = rawTitle == null ? helper.getSentences(body)
-                    : helper.getSentences(rawTitle);
+            sentences = helper.getSentences(body);
         }
         for (String s : sentences){
             ESDocumentInfo sDoc = new ESDocumentInfo("", s.trim(), helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
-            sDoc.setLogo(getLogo());
             sDoc.setSource(getSource());
             sDoc.setLanguage(getLanguage());
             childs.add(sDoc);

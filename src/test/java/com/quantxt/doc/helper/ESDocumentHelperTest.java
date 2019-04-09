@@ -2,6 +2,7 @@ package com.quantxt.doc.helper;
 
 import com.quantxt.doc.helper.ESDocumentHelper;
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -28,7 +29,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -51,7 +52,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -70,7 +71,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -90,7 +91,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -109,7 +110,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -129,7 +130,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
@@ -151,7 +152,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
@@ -171,7 +172,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -191,7 +192,7 @@ public class ESDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),

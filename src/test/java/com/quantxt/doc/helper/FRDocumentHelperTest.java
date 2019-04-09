@@ -1,6 +1,7 @@
 package com.quantxt.doc.helper;
 
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -21,7 +22,7 @@ public class FRDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -45,7 +46,7 @@ public class FRDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -72,7 +73,7 @@ public class FRDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -98,7 +99,7 @@ public class FRDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -115,7 +116,7 @@ public class FRDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -139,7 +140,7 @@ public class FRDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),

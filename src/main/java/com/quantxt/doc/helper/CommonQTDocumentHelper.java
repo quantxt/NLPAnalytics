@@ -6,6 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.types.QTValueNumber;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
@@ -347,9 +348,21 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public String getValues(String str, String context, List<ExtInterval> valueInterval){
+    public String getValues(String str, String context, List<ExtIntervalSimple> valueInterval){
         String str_copy = str;
         return QTValueNumber.detect(str_copy, context, valueInterval);
+    }
+
+    @Override
+    public String getDatetimeValues(String str, String context, List<ExtIntervalSimple> valueInterval){
+        String str_copy = str;
+        return QTValueNumber.detectDates(str_copy, context, valueInterval);
+    }
+
+    @Override
+    public String getPatternValues(String str, String context, Pattern regex, int [] groups, List<ExtIntervalSimple> valueInterval){
+        String str_copy = str;
+        return QTValueNumber.detectPattern(str_copy, context, regex, groups,valueInterval);
     }
 
 }

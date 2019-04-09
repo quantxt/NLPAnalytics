@@ -3,6 +3,7 @@ package com.quantxt.nlp;
 import com.google.gson.Gson;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
+import com.quantxt.helper.types.QTField;
 import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
@@ -29,9 +30,7 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.highlight.Highlighter;
 import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
-import org.apache.lucene.search.highlight.QueryScorer;
 import org.apache.lucene.search.spans.SpanNearQuery;
 import org.apache.lucene.search.spans.SpanTermQuery;
 import org.apache.lucene.search.uhighlight.UnifiedHighlighter;
@@ -45,7 +44,6 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.quantxt.nlp.ExtractLc.Mode.*;
@@ -55,6 +53,7 @@ import static org.apache.lucene.analysis.CharArraySet.EMPTY_SET;
 /**
  * Created by matin on 12/2/18.
  */
+
 public class ExtractLc implements QTExtract {
 
     final private static Logger logger = LoggerFactory.getLogger(ExtractLc.class);
@@ -73,18 +72,23 @@ public class ExtractLc implements QTExtract {
     final private static String entNameField = "entnamefield";
     final private static String searchField  = "searchfield";
 
-    private int topN = 100;
-
     final private static FieldType PositionField;
     final private static FieldType SearchField;
     final private static FieldType DataField;
 
+
+    private QTField.QTFieldType qtFieldType = QTField.QTFieldType.DOUBLE;
+    private Pattern pattern;
+    private int [] groups;
+
+    private int topN = 100;
     private IndexSearcher phraseTree = null;
     private IndexSearcher hidden_entities;
 
     private Trie synonyms_phrases;
 
     private Map<String, IndexSearcher> nameTree = new HashMap<>();
+
     private List<String> search_terms = new ArrayList<>();
 
     private Tagger tagger = null;
@@ -784,7 +788,7 @@ public class ExtractLc implements QTExtract {
             printWriter.flush();
 
             String stackTrace = writer.toString();
-            logger.error("Error in name search {} {}", e.getMessage() , stackTrace);
+            logger.error("Error in name search {}: query_string '{}' {}", e.getMessage() , query_string, stackTrace);
         }
         return res;
     }
@@ -807,5 +811,35 @@ public class ExtractLc implements QTExtract {
     @Override
     public boolean hasEntities() {
         return nameTree.size() > 0;
+    }
+
+    @Override
+    public QTField.QTFieldType getType() {
+        return qtFieldType;
+    }
+
+    @Override
+    public void setType(QTField.QTFieldType type) {
+        this.qtFieldType = type;
+    }
+
+    @Override
+    public Pattern getPattern() {
+        return pattern;
+    }
+
+    @Override
+    public void setPattern(Pattern ptr) {
+        this.pattern = ptr;
+    }
+
+    @Override
+    public int[] getGroups() {
+        return groups;
+    }
+
+    @Override
+    public void setGroups(int[] groups) {
+        this.groups = groups;
     }
 }

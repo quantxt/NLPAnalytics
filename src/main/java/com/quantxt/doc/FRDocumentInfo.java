@@ -28,7 +28,6 @@ public class FRDocumentInfo extends QTDocument {
 
     public FRDocumentInfo(Elements body, String title) {
         super(body.html(), title, new FRDocumentHelper());
-        rawTitle = body.text();
     }
 
     @Override
@@ -41,15 +40,13 @@ public class FRDocumentInfo extends QTDocument {
         if (splitOnNewLine){
             sentences = body.split("[\\n\\r]+");
         } else {
-            sentences = rawTitle == null ? helper.getSentences(body)
-                    : helper.getSentences(rawTitle);
+            sentences = helper.getSentences(body);
         }
 
         for (String s : sentences){
             FRDocumentInfo sDoc = new FRDocumentInfo("", s.trim(), helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
-            sDoc.setLogo(getLogo());
             sDoc.setSource(getSource());
             sDoc.setLanguage(getLanguage());
             childs.add(sDoc);

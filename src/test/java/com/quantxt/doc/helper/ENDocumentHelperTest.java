@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.quantxt.helper.types.ExtIntervalSimple;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -91,7 +92,7 @@ public class ENDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
@@ -112,7 +113,7 @@ public class ENDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -132,7 +133,7 @@ public class ENDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
         // THEN
         Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
                 "Director");
@@ -152,7 +153,7 @@ public class ENDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
@@ -175,7 +176,7 @@ public class ENDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -307,7 +308,7 @@ public class ENDocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         assertNotNull(tagged);

@@ -36,7 +36,6 @@ public class JADocumentInfo extends QTDocument {
 
     public JADocumentInfo (Elements body, String title) {
         super(body.html(), title, new JADocumentHelper());
-        rawTitle = body.text();
     }
 
     @Override
@@ -49,10 +48,8 @@ public class JADocumentInfo extends QTDocument {
             String[] sentences = body.split("\\n");
             for (String s : sentences) {
                 ENDocumentInfo sDoc = new ENDocumentInfo("", s.trim(), helper);
-                sDoc.setRawTitle(s.trim());
                 sDoc.setDate(getDate());
                 sDoc.setLink(getLink());
-                sDoc.setLogo(getLogo());
                 sDoc.setSource(getSource());
                 sDoc.setLanguage(getLanguage());
                 childs.add(sDoc);
@@ -79,7 +76,6 @@ public class JADocumentInfo extends QTDocument {
                     sDoc = new JADocumentInfo("", raw, helper);
                     sDoc.setDate(getDate());
                     sDoc.setLink(getLink());
-                    sDoc.setLogo(getLogo());
                     sDoc.setSource(getSource());
                     sDoc.setLanguage(getLanguage());
                     childs.add(sDoc);
@@ -92,7 +88,6 @@ public class JADocumentInfo extends QTDocument {
                 sDoc = new JADocumentInfo("", raw, helper);
                 sDoc.setDate(getDate());
                 sDoc.setLink(getLink());
-                sDoc.setLogo(getLogo());
                 sDoc.setSource(getSource());
                 sDoc.setLanguage(getLanguage());
                 childs.add(sDoc);
@@ -116,35 +111,5 @@ public class JADocumentInfo extends QTDocument {
     @Override
     public boolean isStatement(String s) {
         return false;
-    }
-
-    public static void main(String[] args) throws Exception {
-        JADocumentHelper helper = new JADocumentHelper();
-        File file = new File("/Users/matin/git/QTCurat/o.txt");
-
-        BufferedReader br = new BufferedReader(new FileReader(file));
-        Gson gson = new Gson();
-
-        String st;
-        while ((st = br.readLine()) != null){
-            try {
-                JADocumentInfo doc = gson.fromJson(st, JADocumentInfo.class);
-                doc.setHelper(helper);
-                List<QTDocument> childs = doc.getChilds(false);
-                logger.info(doc.getTitle());
-                for (QTDocument d : childs) {
-                    String str = d.getTitle();
-                    List<String> p = helper.tokenize(d.getTitle());
-                    String[] parts = p.toArray(new String[p.size()]);
-                    List<ExtInterval> nvs = helper.getNounAndVerbPhrases(str, parts);
-                    for (ExtInterval ext : nvs){
-                        logger.info("\t\t" + ext.getType() + " | " + str.substring(ext.getStart(), ext.getEnd()));
-                    }
-                }
-            } catch (Exception e){
-                logger.error(st);
-            }
-        }
-
     }
 }

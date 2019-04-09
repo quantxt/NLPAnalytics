@@ -1,6 +1,7 @@
 package com.quantxt.doc.helper;
 
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.trie.Emit;
 import com.quantxt.util.StringUtil;
 import org.apache.lucene.analysis.TokenStream;
@@ -19,8 +20,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.quantxt.helper.types.ExtInterval.ExtType.NOUN;
-import static com.quantxt.helper.types.ExtInterval.ExtType.VERB;
+import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
+import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
 
 
 /**
@@ -189,14 +190,14 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     }
 
     //http://universaldependencies.org/tagset-conversion/ja-ipadic-uposf.html
-    public List<ExtInterval> getNounAndVerbPhrases(final String orig_str,
-                                                   String[] tokens) {
+    public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
+                                                         String[] tokens) {
 
     //    List<Token> taags = getPosTagsJa(orig_str);
         List<String> taags = getPosTagsJa(orig_str);
 
         StringBuilder allTags = new StringBuilder();
-        ExtInterval [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
+        ExtIntervalSimple [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
 
       //  for (Token t : taags) {
         for (String t : taags){
@@ -204,14 +205,14 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     //        allTags.append(t.getPartOfSpeechLevel1().substring(0, 1));
         }
 
-        List<ExtInterval> intervals = new ArrayList<>();
+        List<ExtIntervalSimple> intervals = new ArrayList<>();
         Matcher m = NounPhrase.matcher(allTags.toString());
         while (m.find()) {
             int s = m.start();
             int e = m.end() - 1;
             int ss = tokenSpans[s].getStart();
             int ee = tokenSpans[e].getEnd();
-            ExtInterval eit = new ExtInterval(ss, ee);
+            ExtIntervalSimple eit = new ExtIntervalSimple(ss, ee);
             eit.setType(NOUN);
             intervals.add(eit);
         }
@@ -222,7 +223,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         if (detectedVerbs != null && detectedVerbs.size() > 0){
             for (Emit dv : detectedVerbs){
                 // special case
-                ExtInterval eit = new ExtInterval(dv.getStart(), dv.getEnd()+1);
+                ExtIntervalSimple eit = new ExtIntervalSimple(dv.getStart(), dv.getEnd()+1);
                 eit.setType(VERB);
                 intervals.add(eit);
             }

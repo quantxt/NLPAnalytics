@@ -4,6 +4,7 @@ import com.google.gson.*;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
+import com.quantxt.helper.types.QTField;
 import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
@@ -21,6 +22,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Created by matin on 10/9/16.
@@ -34,6 +36,10 @@ public class Speaker implements QTExtract {
     private Trie hidden_entities;
 
     private Map<String, Trie> nameTree = new HashMap<>();
+
+    private QTField.QTFieldType qtFieldType = QTField.QTFieldType.DOUBLE;
+    private Pattern pattern;
+    private int [] groups;
 
     private List<String> search_terms = new ArrayList<>();
     private Tagger tagger = null;
@@ -325,6 +331,36 @@ public class Speaker implements QTExtract {
     @Override
     public boolean hasEntities() {
         return nameTree.size() > 0;
+    }
+
+    @Override
+    public QTField.QTFieldType getType() {
+        return qtFieldType;
+    }
+
+    @Override
+    public void setType(QTField.QTFieldType type) {
+        this.qtFieldType = type;
+    }
+
+    @Override
+    public Pattern getPattern() {
+        return pattern;
+    }
+
+    @Override
+    public void setPattern(Pattern ptr) {
+        this.pattern = ptr;
+    }
+
+    @Override
+    public int[] getGroups() {
+        return groups;
+    }
+
+    @Override
+    public void setGroups(int[] groups) {
+        this.groups = groups;
     }
 
     public Tagger getTagger() {

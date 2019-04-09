@@ -4,6 +4,7 @@ import com.quantxt.doc.JADocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.JADocumentHelper;
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -11,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static com.quantxt.helper.types.ExtInterval.ExtType.NOUN;
+import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
 
 /**
  * Created by matin on 2/6/18.
@@ -25,7 +26,7 @@ public class JADocumentInfoTest {
     public void tag1() {
         String str = "朝日新聞デジタルに掲載の記事・写真の無断転載を禁じます。すべての内容は日本の著作権法並びに国際条約により保護";
         List<String> tokens = helper.tokenize(str);
-        List<ExtInterval> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
+        List<ExtIntervalSimple> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
         Assert.assertEquals(intervals.get(2).getType(), NOUN);
         Assert.assertEquals(intervals.get(2).toString(), "12:14");
     }
@@ -34,7 +35,7 @@ public class JADocumentInfoTest {
     public void tag2() {
         String str = "Cognitive Toolkit（CNTK）は、マイクロソフトが主導して開発しているオープンソースのディープラーニングライブラリです。Speech認識で世界記録を達成したMS Researchの研究チームが開発し、MITやStanfordなどの様々な研究者と共同で改定しています。";
         List<String> tokens = helper.tokenize(str);
-        List<ExtInterval> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
+        List<ExtIntervalSimple> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
 
    //     List<Token> tagss = helper.getPosTagsJa(str);
 

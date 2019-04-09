@@ -5,6 +5,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.quantxt.helper.types.ExtIntervalSimple;
 import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
@@ -15,8 +16,8 @@ import org.slf4j.LoggerFactory;
 import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.util.StringUtil;
 
-import static com.quantxt.helper.types.ExtInterval.ExtType.NOUN;
-import static com.quantxt.helper.types.ExtInterval.ExtType.VERB;
+import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
+import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
 
 /**
  * Created by dejani on 1/24/18.
@@ -89,22 +90,22 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
 
     //https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(final String orig_str,
+    public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
                                                    String[] tokens) {
         String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
-        ExtInterval[] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
+        ExtIntervalSimple[] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
 
         for (String t : taags) {
             allTags.append(t.substring(0, 1));
         }
 
-        List<ExtInterval> intervals = new ArrayList<>();
+        List<ExtIntervalSimple> intervals = new ArrayList<>();
         Matcher m = NounPhrase.matcher(allTags.toString());
         while (m.find()) {
             int s = m.start();
             int e = m.end() - 1;
-            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
             //        List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
             //        ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
             //        if (eit == null) {
@@ -119,13 +120,13 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
         while (m.find()) {
             int s = m.start();
             int e = m.end() - 1;
-            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
             eit.setType(VERB);
             intervals.add(eit);
         }
 
-        Collections.sort(intervals, new Comparator<ExtInterval>() {
-            public int compare(ExtInterval p1, ExtInterval p2) {
+        Collections.sort(intervals, new Comparator<ExtIntervalSimple>() {
+            public int compare(ExtIntervalSimple p1, ExtIntervalSimple p2) {
                 Integer s1 = p1.getStart();
                 Integer s2 = p2.getStart();
                 return s1.compareTo(s2);

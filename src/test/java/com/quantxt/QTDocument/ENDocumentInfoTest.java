@@ -2,12 +2,11 @@ package com.quantxt.QTDocument;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
-import com.quantxt.doc.helper.CommonQTDocumentHelper;
-import com.quantxt.nlp.Extract;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.ExtractLc;
 import com.quantxt.nlp.types.QTValueNumber;
-import com.quantxt.trie.Emit;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -17,13 +16,12 @@ import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.helper.types.ExtInterval;
-import com.quantxt.nlp.Speaker;
 import com.quantxt.types.Entity;
 import com.quantxt.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.quantxt.helper.types.QTField.QTFieldType.*;
 import static org.junit.Assert.*;
 
 /**
@@ -125,7 +123,7 @@ public class ENDocumentInfoTest {
         List<String> tokens = new ArrayList<>();
         tokens.add("a");
         tokens.add("research");
-        ExtInterval spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "a research");
     }
 
@@ -135,7 +133,7 @@ public class ENDocumentInfoTest {
         List<String> tokens = new ArrayList<>();
         tokens.add("Gilead");
         tokens.add("Sciences");
-        ExtInterval spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Gilead Sciences");
     }
 
@@ -147,7 +145,7 @@ public class ENDocumentInfoTest {
         tokens.add("Бывший");
         tokens.add("мэр");
         tokens.add("Даугавпилса");
-        ExtInterval spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Бывший мэр Даугавпилса");
     }
 
@@ -175,7 +173,6 @@ public class ENDocumentInfoTest {
                 + "lights, give off only certain frequencies of light.";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         doc.setLink("link");
-        doc.setLogo("logo");
 
         // WHEN
         List<QTDocument> childs = doc.getChilds(false);
@@ -186,7 +183,6 @@ public class ENDocumentInfoTest {
         assertEquals(childs.size(), 3);
         assertEquals(childs.get(0).getTitle(), "Light behaves in some respects like particles and in other respects like waves.");
         assertEquals(childs.get(0).getLink(), doc.getLink());
-        assertEquals(childs.get(0).getLogo(), doc.getLogo());
         assertEquals(childs.get(0).getLanguage(), doc.getLanguage());
     }
 
@@ -195,7 +191,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5, true);
+        doc.extractKeyValues(enx, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td></tr></table>");
@@ -207,7 +204,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6% 6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5, true);
+        doc.extractKeyValues(enx, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
@@ -219,7 +217,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5, true);
+        doc.extractKeyValues(enx, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
@@ -231,7 +230,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% 6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5, true);
+        doc.extractKeyValues(enx, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
@@ -243,7 +243,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5, true);
+        doc.extractKeyValues(enx, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
@@ -255,7 +256,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5, true);
+        doc.extractKeyValues(enx, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
@@ -267,7 +269,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5, true);
+        doc.extractKeyValues(enx, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>-6.4</td><td>9.8</td></tr></table>");
@@ -286,7 +289,8 @@ public class ENDocumentInfoTest {
         QTExtract lext = new ExtractLc(entMap, null, null);
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(lext, str, 5, true);
+        doc.extractKeyValues(lext, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
@@ -311,7 +315,8 @@ public class ENDocumentInfoTest {
         QTExtract lext = new ExtractLc(entMap, null, null);
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(lext, str, 5, true);
+        doc.extractKeyValues(lext, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
@@ -320,11 +325,89 @@ public class ENDocumentInfoTest {
     }
 
     @Test
+    public void findSpane3() throws IOException {
+        String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
+        ArrayList<Entity> entityArray1 = new ArrayList<>();
+        entityArray1.add(new Entity("Net market value" , new String[]{"Net market value, as of"} , true));
+        Map<String, Entity[]> entMap = new HashMap<>();
+        entMap.put("Net value" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        QTExtract lext = new ExtractLc(entMap, null, null);
+
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        lext.setType(DATETIME);
+        doc.extractKeyValues(lext, str, 15);
+        doc.convertValues2titleTable();
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(),
+                "<table width=\"100%\"><tr><td>Net market value</td><td>10/31/18</td></tr></table>");
+
+    }
+
+    @Test
+    public void findSpane4() throws IOException {
+        String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
+        ArrayList<Entity> entityArray1 = new ArrayList<>();
+        entityArray1.add(new Entity("Returns" , new String[]{"returned"} , true));
+        Map<String, Entity[]> entMap1 = new HashMap<>();
+        entMap1.put("Fund Performance" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        QTExtract regexQtExtract = new ExtractLc(entMap1, null, null);
+
+        ArrayList<Entity> entityArray2 = new ArrayList<>();
+        entityArray2.add(new Entity("Net market value" , new String[]{"Net market value, as of"} , true));
+        Map<String, Entity[]> entMap2 = new HashMap<>();
+        entMap2.put("Net value" , entityArray2.toArray(new Entity[entityArray2.size()]));
+        QTExtract dateQtExtract = new ExtractLc(entMap2, null, null);
+
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        Pattern regex = Pattern.compile("returned ([\\-+]?[\\d\\.]+)%");
+        int [] groups = new int[] {1};
+        regexQtExtract.setPattern(regex);
+        regexQtExtract.setGroups(groups);
+        regexQtExtract.setType(STRING);
+        doc.extractKeyValues(regexQtExtract, str, 25);
+        dateQtExtract.setType(DATETIME);
+        doc.extractKeyValues(dateQtExtract, str, 15);
+        doc.convertValues2titleTable();
+
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(),
+                "<table width=\"100%\"><tr><td>Net market value</td><td>10/31/18</td></tr><tr><td>Returns</td><td>-2.67</td></tr></table>");
+
+    }
+
+    @Test
+    public void findSpane5() throws IOException {
+        String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
+        ArrayList<Entity> entityArray1 = new ArrayList<>();
+        entityArray1.add(new Entity("Returns" , new String[]{"returned"} , true));
+        Map<String, Entity[]> entMap = new HashMap<>();
+        entMap.put("Fund Performance" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        QTExtract lext = new ExtractLc(entMap, null, null);
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+
+        Pattern regex = Pattern.compile("returned ([\\-+]?[\\d\\.]+)%");
+        int [] groups = new int[] {1};
+        lext.setPattern(regex);
+        lext.setType(STRING);
+        lext.setGroups(groups);
+        doc.extractKeyValues(lext, str, 25);
+        doc.convertValues2titleTable();
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(),
+                "<table width=\"100%\"><tr><td>Returns</td><td>-2.67</td></tr></table>");
+
+    }
+
+    @Test
     public void stringUnitTest1() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6 million";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5, true);
+        doc.extractKeyValues(enx, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5600000.0</td></tr></table>");
@@ -335,11 +418,11 @@ public class ENDocumentInfoTest {
     public void currencyTest1() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : $ 5.6 million";
-        List<ExtInterval> intervals= new ArrayList<>();
+        List<ExtIntervalSimple> intervals= new ArrayList<>();
         QTValueNumber.detect(str, str, intervals);
         // THEN
         assertTrue(intervals.size() == 2);
-        assertTrue(intervals.get(1).getType() == ExtInterval.ExtType.MONEY);
+        assertTrue(intervals.get(1).getType() == MONEY);
     }
 
     @Test
@@ -372,7 +455,8 @@ public class ENDocumentInfoTest {
 
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtExtract, str, 5, true);
+        doc.extractKeyValues(qtExtract, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
@@ -408,7 +492,9 @@ public class ENDocumentInfoTest {
 
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtExtract, str, 5, true);
+        doc.extractKeyValues(qtExtract, str, 5);
+        doc.convertValues2titleTable();
+
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
@@ -443,7 +529,8 @@ public class ENDocumentInfoTest {
 
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtExtract, str, 5, true);
+        doc.extractKeyValues(qtExtract, str, 5);
+        doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),

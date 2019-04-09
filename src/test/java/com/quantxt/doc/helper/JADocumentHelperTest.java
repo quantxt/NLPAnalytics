@@ -1,6 +1,7 @@
 package com.quantxt.doc.helper;
 
 import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -25,7 +26,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -44,7 +45,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
@@ -60,7 +61,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -80,7 +81,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -97,7 +98,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
@@ -114,7 +115,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
@@ -130,7 +131,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -149,7 +150,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
@@ -167,7 +168,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -185,7 +186,7 @@ public class JADocumentHelperTest {
         List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -203,9 +204,9 @@ public class JADocumentHelperTest {
         String str = "トランプ氏は大統領令を活用する考えを示した。どのような行動を取るかは不明で、詳細を示さなかった。";
         List<String> parts = helper.tokenize(str);
 
-        List<ExtInterval> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
 
-        for (ExtInterval ei : tagged){
+        for (ExtIntervalSimple ei : tagged){
             logger.info(ei.getType() + " | " + str.substring(ei.getStart(), ei.getEnd()));
         }
         /*
