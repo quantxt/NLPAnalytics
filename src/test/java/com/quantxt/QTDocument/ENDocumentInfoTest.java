@@ -1,6 +1,6 @@
 package com.quantxt.QTDocument;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -62,6 +62,45 @@ public class ENDocumentInfoTest {
             e.printStackTrace();
         }
     }
+
+    @Test
+    public void largeFilePatternDetection() {
+        try {
+            InputStream inputStream = getClass().getResourceAsStream("/long_text.txt");
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) != -1) {
+                result.write(buffer, 0, length);
+            }
+
+
+            ArrayList<Entity> entityArray1 = new ArrayList<>();
+            entityArray1.add(new Entity("FEIN OR SOC SEC" , new String[]{"FEIN OR SOC SEC"} , true));
+            Map<String, Entity[]> entMap = new HashMap<>();
+            entMap.put("FEIN" , entityArray1.toArray(new Entity[entityArray1.size()]));
+            QTExtract enx = new ExtractLc(entMap, null, null);
+
+            enx.setGroups(new int []{1});
+            Pattern match = Pattern.compile("(\\d+\\-\\d+)");
+            enx.setPattern(match);
+            enx.setType(STRING);
+            QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
+            Pattern skipPattern = Pattern.compile("[\\s\\#]+");
+            doc.extractKeyValues(enx, "", skipPattern, 130);
+
+            doc.convertValues2titleTable();
+            // THEN
+            assertFalse(doc.getValues() == null);
+            assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>FEIN OR SOC SEC</td><td>59-2051726</td></tr></table>");
+
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
+
 
     @Test
     public void testNounVerbPh1() {
@@ -191,7 +230,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
+        doc.extractKeyValues(enx, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -203,8 +243,10 @@ public class ENDocumentInfoTest {
     public void findExppsureTable1() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6% 6.4% 9.8%";
+    //    helper = new ENDocumentHelper();
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
+        doc.extractKeyValues(enx, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -217,7 +259,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
+        doc.extractKeyValues(enx, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -230,7 +273,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% 6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)");
+        doc.extractKeyValues(enx, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -243,7 +287,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)");
+        doc.extractKeyValues(enx, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -256,7 +301,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)");
+        doc.extractKeyValues(enx, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -269,7 +315,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)");
+        doc.extractKeyValues(enx, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -288,8 +335,10 @@ public class ENDocumentInfoTest {
         //      enx = new Speaker(entMap, (String)null, null);
         QTExtract lext = new ExtractLc(entMap, null, null);
 
+        helper = new ENDocumentHelper();
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(lext, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)");
+        doc.extractKeyValues(lext, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -315,7 +364,8 @@ public class ENDocumentInfoTest {
         QTExtract lext = new ExtractLc(entMap, null, null);
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(lext, str, 5);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)");
+        doc.extractKeyValues(lext, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -335,7 +385,8 @@ public class ENDocumentInfoTest {
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         lext.setType(DATETIME);
-        doc.extractKeyValues(lext, str, 15);
+        Pattern regexPad = Pattern.compile("\\s{0,3}\\(\\d+\\)");
+        doc.extractKeyValues(lext, str, regexPad,15);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -361,13 +412,16 @@ public class ENDocumentInfoTest {
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         Pattern regex = Pattern.compile("returned ([\\-+]?[\\d\\.]+)%");
+
         int [] groups = new int[] {1};
         regexQtExtract.setPattern(regex);
         regexQtExtract.setGroups(groups);
         regexQtExtract.setType(STRING);
-        doc.extractKeyValues(regexQtExtract, str, 25);
+        Pattern regexPad = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
+
+        doc.extractKeyValues(regexQtExtract, str, regexPad,25);
         dateQtExtract.setType(DATETIME);
-        doc.extractKeyValues(dateQtExtract, str, 15);
+        doc.extractKeyValues(dateQtExtract, str, regexPad,15);
         doc.convertValues2titleTable();
 
         // THEN
@@ -392,7 +446,9 @@ public class ENDocumentInfoTest {
         lext.setPattern(regex);
         lext.setType(STRING);
         lext.setGroups(groups);
-        doc.extractKeyValues(lext, str, 25);
+        Pattern regexPad = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
+
+        doc.extractKeyValues(lext, str, regexPad,25);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -406,7 +462,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6 million";
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(enx, str, 5);
+        Pattern regexPad = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
+        doc.extractKeyValues(enx, str, regexPad, 5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -452,10 +509,10 @@ public class ENDocumentInfoTest {
         Map<String, Entity[]> entMap = new HashMap<>();
         entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
         QTExtract qtExtract = new ExtractLc(entMap, null, null);
-
+        Pattern regexPad = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;\\$]+)");
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtExtract, str, 5);
+        doc.extractKeyValues(qtExtract, str, regexPad,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -492,7 +549,9 @@ public class ENDocumentInfoTest {
 
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtExtract, str, 5);
+        Pattern regexPad = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
+
+        doc.extractKeyValues(qtExtract, str, regexPad,5);
         doc.convertValues2titleTable();
 
         // THEN
@@ -529,7 +588,7 @@ public class ENDocumentInfoTest {
 
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtExtract, str, 5);
+        doc.extractKeyValues(qtExtract, str, null,5);
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);

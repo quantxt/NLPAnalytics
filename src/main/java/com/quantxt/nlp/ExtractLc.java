@@ -404,7 +404,7 @@ public class ExtractLc implements QTExtract {
                                                final IndexSearcher searcher,
                                                final Analyzer analyzer,
                                                final Document matchedDoc,
-                                               final Query query) throws IOException, InvalidTokenOffsetsException {
+                                               final Query query) throws IOException {
         ArrayList<Emit> emits = new ArrayList<>();
 
         TopDocs res = searcher.search(query, 1);
@@ -414,6 +414,7 @@ public class ExtractLc implements QTExtract {
         String foundValue = matchedDoc.getField(entNameField).stringValue();
 
         UnifiedHighlighter uhighlighter = new UnifiedHighlighter(searcher, analyzer);
+    //    uhighlighter.setMaxLength(50000);
         String[] fragments = uhighlighter.highlight(searchField, query, res);
 
         for (String rawFragment : fragments) {

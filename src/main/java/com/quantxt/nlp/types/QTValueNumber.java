@@ -188,4 +188,25 @@ public class QTValueNumber {
 
         return str;
     }
+
+    public static void main(String[] args) throws Exception {
+
+        String body = "06/12/2019 06/12/2020 $ $ $\n" +
+                "DIRECT AGENCY\n" +
+                "APPLICANT INFORMATION\n" +
+                "NAME (First Named Insured) AND MAILING ADDRESS (including ZIP+4) GL CODE SIC NAICS FEIN OR SOC SEC #\n" +
+                "Seasons Condo Assoc of Ft Lauderdale, Inc The\n" +
+                "c/o Castle Management, LLc 62003 8641 59-2051726\n" +
+                "12270 SW 3rd Street BUSINESS PHONE #: (954) 462-8902\n" +
+                "Suite 200\n" +
+                "Plantation, FL 33325 WEBSITE ADDRESS\n" +
+                "http://www.floridaseasons.com/index.html\n" +
+                "CORPORATION JOINT VENTURE NOT FOR PROFIT ORG SUBCHAPTER \"S\" CORPORATION X Condo Association\n" +
+                "INDIVIDUAL LLC NO. OF MEMBERSAND MANAGERS: PARTNERSHIP TRUST";
+        String p = "(\\d{2}\\-\\d{7})";
+        int[] g = new int[]{1};
+        List<ExtIntervalSimple> valIntervals = new ArrayList<>();
+        detectPattern(body, null, Pattern.compile(p), g, valIntervals);
+        logger.info("Done");
+    }
 }
