@@ -18,7 +18,6 @@ import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
-import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.synonym.SynonymGraphFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
@@ -30,7 +29,6 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
 import org.apache.lucene.search.spans.SpanNearQuery;
 import org.apache.lucene.search.spans.SpanTermQuery;
 import org.apache.lucene.search.uhighlight.UnifiedHighlighter;
@@ -213,8 +211,8 @@ public class ExtractLc implements QTExtract {
             @Override
             protected TokenStreamComponents createComponents(String fieldName) {
                 StandardTokenizer source = new StandardTokenizer();
-                StandardFilter result = new StandardFilter(source);
-                EnglishPossessiveFilter result2 = new EnglishPossessiveFilter(result);
+            //    StandardFilter result = new StandardFilter(source);
+                EnglishPossessiveFilter result2 = new EnglishPossessiveFilter(source);
                 LowerCaseFilter result3 = new LowerCaseFilter(result2);
                 Object result4 = new StopFilter(result3, EMPTY_SET);
                 PorterStemFilter result1 = new PorterStemFilter((TokenStream)result4);
@@ -408,7 +406,7 @@ public class ExtractLc implements QTExtract {
         ArrayList<Emit> emits = new ArrayList<>();
 
         TopDocs res = searcher.search(query, 1);
-        if (res.totalHits == 0) return emits;
+        if (res.totalHits.value == 0) return emits;
 
         int fragmentstart = 0;
         String foundValue = matchedDoc.getField(entNameField).stringValue();

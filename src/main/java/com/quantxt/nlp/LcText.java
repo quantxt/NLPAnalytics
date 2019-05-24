@@ -188,14 +188,14 @@ public class LcText<T> {
 
             Query query = getPhraseQuery(analyzer, str, 0);
             TopDocs topcdocs = indexSearcher.search(query, topN);
-            if (topcdocs.totalHits == 0){
+            if (topcdocs.totalHits.value == 0){
                 //try phrase but with slope 1
                 query = getPhraseQuery(analyzer, str, 1);
                 topcdocs = indexSearcher.search(query, topN);
-                if (topcdocs.totalHits == 0){
+                if (topcdocs.totalHits.value == 0){
                     query = getMultimatcheQuery(analyzer, str, thresh);
                     topcdocs = indexSearcher.search(query, topN);
-                    if (topcdocs.totalHits == 0){
+                    if (topcdocs.totalHits.value == 0){
                         return res;
                     }
                 }

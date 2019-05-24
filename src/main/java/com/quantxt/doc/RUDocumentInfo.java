@@ -33,7 +33,7 @@ public class RUDocumentInfo extends QTDocument {
     }
 
     @Override
-    List<QTDocument> getChilds(boolean splitOnNewLine) {
+    public List<QTDocument> getChilds(boolean splitOnNewLine) {
         List<QTDocument> childs = new ArrayList<>();
         if (body == null || body.isEmpty())
             return childs;

@@ -24,13 +24,15 @@ public class QTValueNumber {
 
     final private static String simple_number = "(([\\+\\-]?\\d[,\\.\\d]+\\d|\\d+)|\\(\\s*(\\d[,\\.\\d]+\\d|\\d+)\\s*\\))(\\s*%)?";
     final private static Pattern currencies = Pattern.compile("(\\p{Sc})\\s*$");
-    final private static Pattern units = Pattern.compile("hundred|thousand|million|billion|M|B");
+    final private static Pattern units = Pattern.compile("hundred|thousand|million|billion|M|B|百万円|億");
     final private static Pattern PATTERN  = Pattern.compile(simple_number);
     final private static Pattern units_prefix_thousands  = Pattern.compile("in thousands|in 000s|in \\$000\\'s", Pattern.CASE_INSENSITIVE);
-    final private static Pattern units_prefix_million  = Pattern.compile("in millions", Pattern.CASE_INSENSITIVE);
+    final private static Pattern units_prefix_million  = Pattern.compile("in millions|百万円", Pattern.CASE_INSENSITIVE);
+    final private static Pattern units_prefix_billion  = Pattern.compile("in billions|億", Pattern.CASE_INSENSITIVE);
 
 
-    private static double getMult(int start, int t_lastseen, int m_lastseen, ArrayList<Integer> thousands, ArrayList<Integer> millions){
+    private static double getMult(int start, int t_lastseen, int m_lastseen, int b_lastseen,
+                                  ArrayList<Integer> thousands, ArrayList<Integer> millions, ArrayList<Integer> billions){
         if (thousands.size() == 0 && millions.size() == 0) return 1;
         int dist = 200;
         if (t_lastseen > 0 && (start - t_lastseen) < dist && (start - t_lastseen) >0) {
@@ -39,6 +41,10 @@ public class QTValueNumber {
         if (m_lastseen > 0 && (start - m_lastseen) < dist && (start - m_lastseen) > 0) {
             return 1000000;
         }
+        if (b_lastseen > 0 && (start - b_lastseen) < dist && (start - b_lastseen) > 0) {
+            return 1000000000;
+        }
+
         for (int t : thousands){
             if ((start - t) < dist && (start - t) > 0){
                 return 1000;
@@ -47,6 +53,11 @@ public class QTValueNumber {
         for (int m : millions){
             if ((start - m) < dist && (start - m) > 0){
                 return 1000000;
+            }
+        }
+        for (int m : billions){
+            if ((start - m) < dist && (start - m) > 0){
+                return 1000000000;
             }
         }
         return 1;
@@ -90,21 +101,9 @@ public class QTValueNumber {
                                 String context_orig,
                                 List<ExtIntervalSimple> valIntervals)
     {
-
-  /*      ArrayList<ExtInterval> dates = DateResolver.resolveDate(str);
-        if (dates.size() > 0){
-            for (ExtInterval e : dates){
-                int st = e.getStart();
-                int ed = e.getEnd();
-                String pad = getPad(st, ed);
-                str = StringUtils.overlay(str, pad, st, ed);
-            }
-            valIntervals.addAll(dates);
-        }
-*/
         ArrayList<Integer> thousands = new ArrayList<>();
         ArrayList<Integer> millions = new ArrayList<>();
-
+        ArrayList<Integer> billions = new ArrayList<>();
 
         // context --> str
         String context = (context_orig == null || context_orig.isEmpty()) ? str : context_orig + " " + str;
@@ -117,21 +116,31 @@ public class QTValueNumber {
         while (m.find()){
             millions.add(m.start() -  context.length() + str.length() + 1);
         }
+        m = units_prefix_billion.matcher(context);
+        while (m.find()){
+            billions.add(m.start() -  context.length() + str.length() + 1);
+        }
 
         m = PATTERN.matcher(str);
 
         int numberGroups = 1;
         int thousands_offset = -1;
         int millions_offset = -1;
+        int billions_offset = -1;
         while (m.find()){
             int start = m.start(numberGroups);
             int end   = m.end(numberGroups);
-            double mult = getMult(start, thousands_offset, millions_offset, thousands, millions);
+            double mult = getMult(start, thousands_offset, millions_offset, billions_offset, thousands,
+                    millions, billions);
+
             if (mult == 1000){
                 thousands_offset = start;
             } else  if (mult == 1000000){
                 millions_offset = start;
+            } else  if (mult == 1000000000){
+                billions_offset = start;
             }
+
             String extractionStr = str.substring(start, end);
 
             extractionStr = extractionStr.replace(",", "").trim();
