@@ -90,6 +90,9 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end() - 1;
             ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             eit.setType(NOUN);
             intervals.add(eit);
         }
@@ -99,6 +102,9 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end() - 1;
             ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             eit.setType(VERB);
             intervals.add(eit);
         }

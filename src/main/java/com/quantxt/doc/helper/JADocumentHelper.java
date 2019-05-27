@@ -213,6 +213,9 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
             int ss = tokenSpans[s].getStart();
             int ee = tokenSpans[e].getEnd();
             ExtIntervalSimple eit = new ExtIntervalSimple(ss, ee);
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             eit.setType(NOUN);
             intervals.add(eit);
         }
@@ -224,6 +227,9 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
             for (Emit dv : detectedVerbs){
                 // special case
                 ExtIntervalSimple eit = new ExtIntervalSimple(dv.getStart(), dv.getEnd()+1);
+                String str = orig_str.substring(eit.getStart(), eit.getEnd());
+                eit.setCustomData(str);
+                eit.setStringValue(str);
                 eit.setType(VERB);
                 intervals.add(eit);
             }

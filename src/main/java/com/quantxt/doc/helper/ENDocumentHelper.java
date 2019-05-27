@@ -90,7 +90,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     //https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
     @Override
     public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
-                                                   String[] tokens) {
+                                                         String[] tokens) {
         String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
         ExtIntervalSimple[] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
@@ -105,14 +105,11 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end() - 1;
             ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
-            //        List<String> tokenList = Arrays.asList(Arrays.copyOfRange(parts, s, e));
-            //        ExtInterval eit = StringUtil.findSpan(tokenized_title, tokenList);
-            //        if (eit == null) {
-            //            logger.error("NOT FOUND: '" + String.join(" ", tokenList) + "' in: " + orig_str);
-            //        } else {
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             eit.setType(NOUN);
             intervals.add(eit);
-            //        }
         }
 
         m = VerbPhrase.matcher(allTags.toString());
@@ -120,6 +117,9 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
             int s = m.start();
             int e = m.end() - 1;
             ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             eit.setType(VERB);
             intervals.add(eit);
         }

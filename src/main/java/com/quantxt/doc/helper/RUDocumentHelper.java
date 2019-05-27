@@ -92,6 +92,9 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             int e = m.end() - 1;
             ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
             eit.setType(NOUN);
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             intervals.add(eit);
         }
 
@@ -101,6 +104,9 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
             int e = m.end() - 1;
             ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
             eit.setType(VERB);
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             intervals.add(eit);
         }
 
