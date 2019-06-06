@@ -1,6 +1,5 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.trie.Emit;
 import com.quantxt.util.StringUtil;
@@ -20,6 +19,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.quantxt.doc.helper.CommonQTDocumentHelper.QTPosTags.*;
 import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
 import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
 
@@ -31,19 +31,108 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
     private static Logger logger = LoggerFactory.getLogger(JADocumentHelper.class);
 
-    private static final String SENTENCES_FILE_PATH = "/en/en-sent.bin";
-    //TODO Check with Matin why RUDocumentInfo was initialized with EN sentences
+    private static final String SENTENCES_FILE_PATH = "";
 
     private static final String POS_FILE_PATH = "";
     private static final String STOPLIST_FILE_PATH = "/ja/stoplist.txt";
     private static final String VERB_FILE_PATH = "/ja/context.json";
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("此奴", "其奴", "彼", "彼女"));
+    private static Map<String, QTPosTags> TAGS = new HashMap<>();
 
-    private static Pattern NounPhrase = Pattern.compile("名+");
-    private static Pattern VerbPhrase = Pattern.compile("動+");
+    static {
+        TAGS.put("その他", X);
+        TAGS.put("その他-間投", INTJ);
+        TAGS.put("フィラー", X);
+        TAGS.put("副詞", ADV);
+        TAGS.put("副詞-一般", ADV);
+        TAGS.put("副詞-助詞類接続", ADV);
+        TAGS.put("助動詞", AUX);
+        TAGS.put("助詞", ADP);
+        TAGS.put("助詞-並立助詞", CCONJ);
+        TAGS.put("助詞-係助詞", ADP);
+        TAGS.put("助詞-副助詞", ADP);
+        TAGS.put("助詞-副助詞／並立助詞／終助詞", ADP);
+        TAGS.put("助詞-副詞化", ADP);
+        TAGS.put("助詞-接続助詞", ADP);
+        TAGS.put("助詞-格助詞", ADP);
+        TAGS.put("助詞-格助詞-一般", ADP);
+        TAGS.put("助詞-格助詞-引用", ADP);
+        TAGS.put("助詞-格助詞-連語", ADP);
+        TAGS.put("助詞-特殊", ADP);
+        TAGS.put("助詞-終助詞", ADP);
+        TAGS.put("助詞-連体化", ADP);
+        TAGS.put("助詞-間投助詞", ADP);
+        TAGS.put("動詞", VERBB);
+        TAGS.put("動詞-接尾", VERBB);
+        TAGS.put("動詞-自立", VERBB);
+        TAGS.put("動詞-非自立", AUX);
+        TAGS.put("名詞", NOUNN);
+        TAGS.put("名詞-サ変接続", NOUNN);
+        TAGS.put("名詞-ナイ形容詞語幹", NOUNN);
+        TAGS.put("名詞-一般", NOUNN);
+        TAGS.put("名詞-代名詞", PRON);
+        TAGS.put("名詞-代名詞-一般", PRON);
+        TAGS.put("名詞-代名詞-縮約", PRON);
+        TAGS.put("名詞-副詞可能", NOUNN);
+        TAGS.put("名詞-動詞非自立的", NOUNN);
+        TAGS.put("名詞-固有名詞", PROPN);
+        TAGS.put("名詞-固有名詞-一般", PROPN);
+        TAGS.put("名詞-固有名詞-人名", PROPN);
+        TAGS.put("名詞-固有名詞-人名-一般", PROPN);
+        TAGS.put("名詞-固有名詞-人名-名", PROPN);
+        TAGS.put("名詞-固有名詞-人名-姓", PROPN);
+        TAGS.put("名詞-固有名詞-地域", PROPN);
+        TAGS.put("名詞-固有名詞-地域-一般", PROPN);
+        TAGS.put("名詞-固有名詞-地域-国", PROPN);
+        TAGS.put("名詞-固有名詞-組織", PROPN);
+        TAGS.put("名詞-引用文字列", NOUNN);
+        TAGS.put("名詞-形容動詞語幹", NOUNN);
+        TAGS.put("名詞-接尾", NOUNN);
+        TAGS.put("名詞-接尾-サ変接続", NOUNN);
+        TAGS.put("名詞-接尾-一般", NOUNN);
+        TAGS.put("名詞-接尾-人名", NOUNN);
+        TAGS.put("名詞-接尾-副詞可能", NOUNN);
+        TAGS.put("名詞-接尾-助動詞語幹", NOUNN);
+        TAGS.put("名詞-接尾-助数詞", NOUNN);
+        TAGS.put("名詞-接尾-地域", NOUNN);
+        TAGS.put("名詞-接尾-形容動詞語幹", NOUNN);
+        TAGS.put("名詞-接尾-特殊", NOUNN);
+        TAGS.put("名詞-接続詞的", NOUNN);
+        TAGS.put("名詞-数", NUM);
+        TAGS.put("名詞-特殊", NOUNN);
+        TAGS.put("名詞-特殊-助動詞語幹", NOUNN);
+        TAGS.put("名詞-非自立", NOUNN);
+        TAGS.put("名詞-非自立-一般", NOUNN);
+        TAGS.put("名詞-非自立-副詞可能", NOUNN);
+        TAGS.put("名詞-非自立-助動詞語幹", NOUNN);
+        TAGS.put("名詞-非自立-形容動詞語幹", NOUNN);
+        TAGS.put("形容詞", ADJ);
+        TAGS.put("形容詞-接尾", ADJ);
+        TAGS.put("形容詞-自立", ADJ);
+        TAGS.put("形容詞-非自立", ADJ);
+        TAGS.put("感動詞", INTJ);
+        TAGS.put("接続詞", CCONJ);
+        TAGS.put("接頭詞", X);
+        TAGS.put("接頭詞-動詞接続", VERBB);
+        TAGS.put("接頭詞-名詞接続", NOUNN);
+        TAGS.put("接頭詞-形容詞接続", ADJ);
+        TAGS.put("接頭詞-数接続", NUM);
+        TAGS.put("記号", SYM);
+        TAGS.put("記号-アルファベット", SYM);
+        TAGS.put("記号-一般", SYM);
+        TAGS.put("記号-句点", PUNCT);
+        TAGS.put("記号-括弧閉", PUNCT);
+        TAGS.put("記号-括弧開", PUNCT);
+        TAGS.put("記号-空白", PUNCT);
+        TAGS.put("記号-読点", PUNCT);
+        TAGS.put("語断片", X);
+        TAGS.put("連体詞", ADJ);
+        TAGS.put("非言語音", X);
+    }
+
+    private static Pattern NounPhrase = Pattern.compile("N+");
 
     private Tokenizer tokenizer;
-//    protected Tokenizer analyzer;
 
     public JADocumentHelper() {
         super(SENTENCES_FILE_PATH, POS_FILE_PATH,
@@ -73,14 +162,6 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
             logger.error(e.getMessage());
         }
 
-        /*
-        List<Token> tokens = tokenizer.tokenize(str);
-        List<String> tokStrings = new ArrayList<>();
-        for (Token e : tokens){
-            tokStrings.add(e.getSurface());
-        }
-        return tokStrings;
-        */
         return tokStrings;
     }
 
@@ -108,9 +189,10 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     public void preInit() {
         //Analyzer
         analyzer = new JapaneseAnalyzer();
-  //      analyzer = new Tokenizer();
+
         //Tokenizer
         tokenizer = new JapaneseTokenizer(null, false, JapaneseTokenizer.Mode.EXTENDED);
+
     }
 
     @Override
@@ -133,13 +215,6 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
             return null;
         }
 
-        /*
-        List<Token> tokens = tokenizer.tokenize(str);
-        ArrayList<String> tokStrings = new ArrayList<>();
-        for (Token e : tokens){
-            tokStrings.add(e.getBaseForm());
-        }
-        */
         return tokStrings;
     }
 
@@ -150,7 +225,8 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     @Override
     public boolean isSentence(String str, List<String> tokens) {
         int numTokens = tokens.size();
-        if (numTokens < 15 || numTokens > 400) {
+        //TODO: This is bad logic
+        if (numTokens < 5 || numTokens > 400) {
             return false;
         }
         return true;
@@ -193,19 +269,27 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
                                                          String[] tokens) {
 
-    //    List<Token> taags = getPosTagsJa(orig_str);
-        List<String> taags = getPosTagsJa(orig_str);
+        List<String> jaPosTags = getPosTagsJa(orig_str);
 
         StringBuilder allTags = new StringBuilder();
         ExtIntervalSimple [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
 
-      //  for (Token t : taags) {
-        for (String t : taags){
-            allTags.append(t.substring(0, 1));
-    //        allTags.append(t.getPartOfSpeechLevel1().substring(0, 1));
+
+        for (int i=0; i<jaPosTags.size(); i++){
+            QTPosTags posTagCurrent = TAGS.get(jaPosTags.get(i));
+            QTPosTags posTagBefore = i==0 ? X : TAGS.get(jaPosTags.get(i-1));
+            if (posTagCurrent == NOUNN) {
+                allTags.append("N");
+            } else if (posTagCurrent == ADP && posTagBefore == NOUNN){
+                allTags.append("N");
+            } else {
+                allTags.append("X");
+            }
         }
 
         List<ExtIntervalSimple> intervals = new ArrayList<>();
+        if (jaPosTags.size() != tokens.length) return intervals;
+
         Matcher m = NounPhrase.matcher(allTags.toString());
         while (m.find()) {
             int s = m.start();
@@ -213,7 +297,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
             int ss = tokenSpans[s].getStart();
             int ee = tokenSpans[e].getEnd();
             ExtIntervalSimple eit = new ExtIntervalSimple(ss, ee);
-            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            String str = orig_str.substring(ss, ee);
             eit.setCustomData(str);
             eit.setStringValue(str);
             eit.setType(NOUN);
@@ -239,8 +323,18 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     }
 
     public static void main(String[] args) throws Exception {
-        String str = "コーディング・フリスCEOは「消費者はシンプルなデザインを好むようになっており、われわれの予測よりも需要が低かった」と語った。";
-        String substr = str.substring(59, 61+1);
-        logger.info("'" + substr + "'");
+        JADocumentHelper jHelper = new JADocumentHelper();
+
+        String str1 = "コーディング・フリスCEOは「消費者はシンプルなデザインを好むようになっており、われわれの予測よりも需要が低かった」と語った。";
+        String str2 = "室内に設置されたセントラルコントローラーは、各種IoT機器の操作だけでなく、コンシェルジュによる、水漏れなどのトラブルや退居時の連絡など、入居者の毎日の生活をサポートいたします。";
+        String str3 = "現在、日本のスマートスピーカー所有率は5%程度(*4)に過ぎませんが、米国で昨年よりAmazonが実施しており、公式ブログでは今年から日本でも実施していく予定とされる報酬プログラム(*5)の開始などにより、参入企業も増加していくと見込まれます。";
+
+
+        List<String> tokens = jHelper.tokenize(str3);
+        List<String> qtTags = jHelper.getPosTagsJa(str3);
+
+        for (int i =0; i<tokens.size(); i++){
+            System.out.println(tokens.get(i) + "  |  " + TAGS.get(qtTags.get(i)));
+        }
     }
 }

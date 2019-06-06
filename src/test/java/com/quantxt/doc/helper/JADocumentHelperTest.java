@@ -30,11 +30,11 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
-                "韓国");
+                "韓国の聯合ニュースに");
         Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
-                "北京");
-        Assert.assertEquals(str.substring(tagged.get(10).getStart(), tagged.get(10).getEnd()),
-                "年以降");
+                "見通し");
+        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
+                "北朝鮮高官の中で");
     }
 
     @Test
@@ -49,9 +49,9 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
-                "守備選手");
+                "反則問題で");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
-                "臨時理事会");
+                "問題を調査");
     }
 
     @Test
@@ -65,11 +65,11 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
-                "米朝首脳会談");
+                "米朝首脳会談の開催に");
         Assert.assertEquals(str.substring(tagged.get(1).getStart(), tagged.get(1).getEnd()),
-                "開催");
+                "米政府は北朝鮮に");
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "北朝鮮");
+                "規模");
     }
 
     @Test
@@ -85,9 +85,9 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
-                "外務省");
-        Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
-                "公海上");
+                "外務省に");
+        Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
+                "東シナ海の公海上で２隻を確認");
     }
 
     @Test
@@ -102,9 +102,9 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
-                "スマートスピーカー所有率");
+                "程度");
         Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
-                "今年");
+                "予定と");
 
     }
 
@@ -119,9 +119,9 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
-                "自動車修理店");
-        Assert.assertEquals(str.substring(tagged.get(9).getStart(), tagged.get(9).getEnd()),
-                "返納");
+                "ことが");
+        Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
+                "斉藤容疑者はその後");
     }
 
     @Test
@@ -135,11 +135,11 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
-                "同署");
+                "同署など");
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "６階建て");
-        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
-                "死亡");
+                "場で死亡が確認");
+        Assert.assertEquals(str.substring(tagged.get(4).getStart(), tagged.get(4).getEnd()),
+                "１人は病院へ搬送後に");
     }
 
     @Test
@@ -154,11 +154,11 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
-                "児童");
-        Assert.assertEquals(str.substring(tagged.get(12).getStart(), tagged.get(12).getEnd()),
-                "代");
+                "下校を");
+        Assert.assertEquals(str.substring(tagged.get(8).getStart(), tagged.get(8).getEnd()),
+                "代と");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
-                "待機");
+                "眼鏡を");
     }
 
     @Test
@@ -172,11 +172,11 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
-                "夕刊フジ");
+                "夕刊フジでコラム");
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
-                "警戒");
+                "毎週木曜に連載");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
-                "島村英紀教授");
+                "静岡線");
     }
 
     @Test
@@ -190,11 +190,11 @@ public class JADocumentHelperTest {
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
-                "同社");
+                "同社は");
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
-                "パートワーク");
+                "商品として");
         Assert.assertEquals(str.substring(tagged.get(6).getStart(), tagged.get(6).getEnd()),
-                "さ");
+                "現在開発中");
     }
 
     @Test
