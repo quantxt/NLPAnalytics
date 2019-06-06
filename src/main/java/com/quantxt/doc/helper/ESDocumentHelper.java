@@ -1,30 +1,21 @@
 package com.quantxt.doc.helper;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.InputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.quantxt.doc.ENDocumentInfo;
-import com.quantxt.doc.ESDocumentInfo;
-import com.quantxt.doc.JADocumentInfo;
-import com.quantxt.doc.QTDocument;
-import com.quantxt.types.MapSort;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.util.StringUtil;
 
-import static com.quantxt.helper.types.ExtInterval.ExtType.NOUN;
-import static com.quantxt.helper.types.ExtInterval.ExtType.VERB;
+import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
+import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
 
 /**
  * Created by dejani on 1/24/18.
@@ -82,23 +73,26 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
 
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
     @Override
-    public List<ExtInterval> getNounAndVerbPhrases(final String orig_str,
+    public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
                                                    String[] tokens) {
 
         String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
-        ExtInterval [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
+        ExtIntervalSimple [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
 
         for (String t : taags) {
             allTags.append(t.substring(0, 1));
         }
 
-        List<ExtInterval> intervals = new ArrayList<>();
+        List<ExtIntervalSimple> intervals = new ArrayList<>();
         Matcher m = NounPhrase.matcher(allTags.toString());
         while (m.find()) {
             int s = m.start();
             int e = m.end() - 1;
-            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             eit.setType(NOUN);
             intervals.add(eit);
         }
@@ -107,13 +101,16 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
         while (m.find()) {
             int s = m.start();
             int e = m.end() - 1;
-            ExtInterval eit = new ExtInterval(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
+            String str = orig_str.substring(eit.getStart(), eit.getEnd());
+            eit.setCustomData(str);
+            eit.setStringValue(str);
             eit.setType(VERB);
             intervals.add(eit);
         }
 
-        Collections.sort(intervals, new Comparator<ExtInterval>(){
-            public int compare(ExtInterval p1, ExtInterval p2){
+        Collections.sort(intervals, new Comparator<ExtIntervalSimple>(){
+            public int compare(ExtIntervalSimple p1, ExtIntervalSimple p2){
                 Integer s1 = p1.getStart();
                 Integer s2 = p2.getStart();
                 return s1.compareTo(s2);

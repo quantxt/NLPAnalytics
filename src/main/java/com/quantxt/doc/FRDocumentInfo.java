@@ -28,22 +28,25 @@ public class FRDocumentInfo extends QTDocument {
 
     public FRDocumentInfo(Elements body, String title) {
         super(body.html(), title, new FRDocumentHelper());
-        rawTitle = body.text();
     }
 
     @Override
-    List<QTDocument> getChilds() {
+    public List<QTDocument> getChilds(boolean splitOnNewLine) {
         List<QTDocument> childs = new ArrayList<>();
         if (body == null || body.isEmpty())
             return childs;
 
-        String sentences[] = rawTitle == null ? helper.getSentences(body)
-                : helper.getSentences(rawTitle);
+        String[] sentences = null;
+        if (splitOnNewLine){
+            sentences = body.split("[\\n\\r]+");
+        } else {
+            sentences = helper.getSentences(body);
+        }
+
         for (String s : sentences){
             FRDocumentInfo sDoc = new FRDocumentInfo("", s.trim(), helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
-            sDoc.setLogo(getLogo());
             sDoc.setSource(getSource());
             sDoc.setLanguage(getLanguage());
             childs.add(sDoc);

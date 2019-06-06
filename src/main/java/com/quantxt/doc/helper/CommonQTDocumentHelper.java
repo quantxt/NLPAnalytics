@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.quantxt.helper.types.ExtInterval;
+import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.types.QTValueNumber;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
@@ -48,7 +48,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static Pattern r_quote_norm2 = Pattern.compile("([“”]|'')");
     protected static String s_quote_norm2 = " \" ";
 
-    protected static Pattern UTF8_TOKEN = Pattern.compile("^(?:[a-zA-Z]\\.){2,}|([\\p{L}\\p{N}]+[\\.\\&]{0,1}[\\p{L}\\p{N}])");
+    // bullets
+    protected static String UTF8_BULLETS = "\\u2022|\\u2023|\\u25E6|\\u2043|\\u2219";
+    protected static Pattern UTF8_TOKEN   = Pattern.compile("^(?:[a-zA-Z]\\.){2,}|([\\p{L}\\p{N}]+[\\.\\&]{0,1}[\\p{L}\\p{N}])");
 
 
     // Dashes to normalize
@@ -263,7 +265,17 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     //sentence detc is NOT thread safe  :-/
     public String[] getSentences(String text) {
         synchronized (sentenceDetector) {
-            return sentenceDetector.sentDetect(text);
+            String [] sentences = sentenceDetector.sentDetect(text);
+            ArrayList<String> sentence_arr = new ArrayList<>();
+            for (String str : sentences) {
+                String[] bullet_points = str.split(UTF8_BULLETS);
+                for (String b : bullet_points) {
+                    b = b.trim();
+                    if (b.isEmpty() ) continue;
+                    sentence_arr.add(b);
+                }
+            }
+            return sentence_arr.toArray(new String [sentence_arr.size()]);
         }
     }
 
@@ -335,9 +347,21 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public String getValues(String str, List<ExtInterval> valueInterval){
+    public String getValues(String str, String context, List<ExtIntervalSimple> valueInterval){
         String str_copy = str;
-        return QTValueNumber.detect(str_copy, valueInterval);
+        return QTValueNumber.detect(str_copy, context, valueInterval);
+    }
+
+    @Override
+    public String getDatetimeValues(String str, String context, List<ExtIntervalSimple> valueInterval){
+        String str_copy = str;
+        return QTValueNumber.detectDates(str_copy, context, valueInterval);
+    }
+
+    @Override
+    public String getPatternValues(String str, String context, Pattern regex, int [] groups, List<ExtIntervalSimple> valueInterval){
+        String str_copy = str;
+        return QTValueNumber.detectPattern(str_copy, context, regex, groups,valueInterval);
     }
 
 }

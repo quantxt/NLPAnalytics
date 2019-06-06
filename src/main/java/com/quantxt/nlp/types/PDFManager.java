@@ -168,8 +168,6 @@ public class PDFManager {
             logger.info(body);
             String title = pdDoc.getDocumentInformation().getTitle();
             doc = new ENDocumentInfo(body, title);
-            String author = pdDoc.getDocumentInformation().getAuthor();
-            doc.setAuthor(author);
             Calendar d = pdDoc.getDocumentInformation().getCreationDate();
             if (d != null) {
                 doc.setDate(new DateTime(d.getTime()));
