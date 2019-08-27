@@ -1,17 +1,7 @@
 package com.quantxt.nlp.types;
 
-import com.google.gson.Gson;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
-import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.helper.ArticleBodyResolver;
-import com.quantxt.helper.DateResolver;
-import com.quantxt.helper.types.ExtInterval;
-import com.quantxt.interval.Interval;
-import com.quantxt.trie.Emit;
-import com.quantxt.trie.Trie;
-import com.quantxt.types.NamedEntity;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
@@ -19,30 +9,19 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.*;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.joda.time.DateTime;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static com.quantxt.nlp.types.QTValue.getPad;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Created by matin on 6/28/16.
@@ -132,7 +111,8 @@ public class PDFManager {
         return document;
     }
 
-    private static String extractNoSpaces(PDDocument document) throws IOException
+    private static String extractNoSpaces(PDDocument document,
+                                   StringBuilder sb) throws IOException
     {
         PDFTextStripper stripper = new PDFTextStripper()
         {
@@ -140,14 +120,32 @@ public class PDFManager {
             protected void processTextPosition(TextPosition text)
             {
                 String character = text.getUnicode();
-                if (character != null && character.trim().length() != 0) {
+                if (character == null) return;
+                if (character.trim().length() != 0) {
+                    sb.append(character);
                     super.processTextPosition(text);
-                } else {
-        //            logger.info(" -----> '" + text.getUnicode()+ "'");
                 }
             }
         };
-        return stripper.getText(document);
+
+        StringBuilder allPagesContent = new StringBuilder();
+        int numPage = document.getNumberOfPages();
+        for (int i=1; i<=numPage; i++) {
+            stripper.setStartPage(i);
+            stripper.setEndPage(i);
+
+            try {
+                String t = stripper.getText(document);
+                if (t != null){
+                    allPagesContent.append(t);
+                }
+            } catch (Exception e) {
+           //     e.printStackTrace();
+                logger.error(e.getMessage());
+            }
+            sb.append("\n");
+        }
+        return allPagesContent.toString();
     }
 
     public static QTDocument pdf2QT(byte [] input)
@@ -164,7 +162,8 @@ public class PDFManager {
             //    pdfStripper.setEndPage(10);
             pdfStripper.setEndPage(pdDoc.getNumberOfPages());
 
-            String body = extractNoSpaces(pdDoc);
+            StringBuilder sb = new StringBuilder();
+            String body = extractNoSpaces(pdDoc, sb);
             logger.info(body);
             String title = pdDoc.getDocumentInformation().getTitle();
             doc = new ENDocumentInfo(body, title);
@@ -277,6 +276,23 @@ public class PDFManager {
         }
 
         return document;
+    }
+
+    public static void main(String[] args) throws Exception {
+        String file = "/Users/matin/Downloads/S100E4RL (1).pdf";
+        InputStream is = new FileInputStream(new File(file));
+
+        PDFParser parser = new PDFParser(new RandomAccessBuffer(new BufferedInputStream(is)));
+        parser.parse();
+
+        COSDocument cosDoc = parser.getDocument();
+        PDDocument pdDoc = new PDDocument(cosDoc);
+
+        StringBuilder sb = new StringBuilder();
+        String body = extractNoSpaces(pdDoc, sb);
+
+        logger.info(sb.toString());
+
     }
 }
 

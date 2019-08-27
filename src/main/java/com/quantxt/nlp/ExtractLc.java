@@ -6,11 +6,12 @@ import com.quantxt.doc.QTExtract;
 import com.quantxt.helper.types.QTField;
 import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
-import com.quantxt.trie.Trie;
 import com.quantxt.types.Entity;
 import com.quantxt.types.NamedEntity;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.*;
+import org.apache.lucene.analysis.core.SimpleAnalyzer;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
@@ -18,6 +19,7 @@ import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.synonym.SynonymGraphFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
@@ -32,10 +34,9 @@ import org.apache.lucene.search.*;
 import org.apache.lucene.search.spans.SpanNearQuery;
 import org.apache.lucene.search.spans.SpanTermQuery;
 import org.apache.lucene.search.uhighlight.UnifiedHighlighter;
+import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.RAMDirectory;
-import org.apache.lucene.util.CharsRef;
-import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
+import org.apache.lucene.util.CharsRefBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +62,10 @@ public class ExtractLc implements QTExtract {
         EXACT_PHRASE, PHRASE, EXACT_SPAN, SPAN, PARTIAL_SPAN
     }
 
+    enum AnalyzerType {
+        WHITESPACE, SIMPLE, STANDARD
+    }
+
     final private static String OPENH  = "<b>";
     final private static String CLOSEH = "</b>";
     final private static int OPENHLENGTH  = OPENH.length();
@@ -82,8 +87,6 @@ public class ExtractLc implements QTExtract {
     private int topN = 100;
     private IndexSearcher phraseTree = null;
     private IndexSearcher hidden_entities;
-
-    private Trie synonyms_phrases;
 
     private Map<String, IndexSearcher> nameTree = new HashMap<>();
 
@@ -123,10 +126,6 @@ public class ExtractLc implements QTExtract {
         topN = i;
     }
 
-    private Analyzer getCustomAnalyzer() {
-        return new EnglishAnalyzer(EMPTY_SET);
-    }
-
     public void setMode(int i){
         switch (i) {
             case 0 : mode = EXACT_PHRASE; break;
@@ -138,11 +137,8 @@ public class ExtractLc implements QTExtract {
     }
 
     public ExtractLc(QTDocument.Language lang){
-        if (lang == null) {
-            this.index_analyzer = new EnglishAnalyzer();
-            this.search_analyzer = this.index_analyzer;
-            return;
-        }
+        this(AnalyzerType.WHITESPACE);
+        if (lang == null) return;
         switch (lang) {
             case ENGLISH:
                 this.index_analyzer = new EnglishAnalyzer();
@@ -162,11 +158,14 @@ public class ExtractLc implements QTExtract {
             default:
                 this.index_analyzer = new EnglishAnalyzer();
         }
-        this.search_analyzer = this.index_analyzer;
     }
 
-    public ExtractLc(){
-        this.index_analyzer = getCustomAnalyzer();
+    public ExtractLc(AnalyzerType analyzerType){
+        switch (analyzerType) {
+            case SIMPLE: this.index_analyzer = new SimpleAnalyzer(); break;
+            case STANDARD: this.index_analyzer = new StandardAnalyzer(); break;
+            case WHITESPACE: this.index_analyzer = new WhitespaceAnalyzer(); break;
+        }
         this.search_analyzer = this.index_analyzer;
     }
 
@@ -190,45 +189,45 @@ public class ExtractLc implements QTExtract {
     }
 
     public void setSynonyms(ArrayList<String> synonymPairs){
-        SynonymMap.Builder builder = new SynonymMap.Builder(true);
-        Trie.TrieBuilder triephraseBuilder = Trie.builder().onlyWholeWords().ignoreCase();
-        for (String s : synonymPairs){
-            String [] parts = s.split("\\t");
-            if (parts.length != 2) continue;
-            String keyphraseorword = tokenize(index_analyzer, parts[0]);
-            if (keyphraseorword.length() == 0) continue;
-            //the rest are synonyms
-            String root = tokenize(index_analyzer, parts[1]);
-            if (root.length() == 0) continue;
-            //they should go through index_analyzer
-            String root_phrases = root.replace(" " ,"_");
-            triephraseBuilder.addKeyword(root, root_phrases);
-            builder.add(new CharsRef(keyphraseorword), new CharsRef(root_phrases), true);
-        }
+        try {
+            SynonymMap.Builder builder = new SynonymMap.Builder(true);
+            // first argument is mapped to second
+            for (String s : synonymPairs) {
+                String[] parts = s.split("\\t");
+                if (parts.length != 2) continue;
 
-        synonyms_phrases = triephraseBuilder.build();
-        this.search_analyzer = new Analyzer() {
-            @Override
-            protected TokenStreamComponents createComponents(String fieldName) {
-                StandardTokenizer source = new StandardTokenizer();
-            //    StandardFilter result = new StandardFilter(source);
-                EnglishPossessiveFilter result2 = new EnglishPossessiveFilter(source);
-                LowerCaseFilter result3 = new LowerCaseFilter(result2);
-                Object result4 = new StopFilter(result3, EMPTY_SET);
-                PorterStemFilter result1 = new PorterStemFilter((TokenStream)result4);
-                TokenStream filter = null;
-                try {
-                    filter = new SynonymGraphFilter(result1, builder.build(), true);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                return new TokenStreamComponents(source, filter);
+                CharsRefBuilder inputCharsRef = new CharsRefBuilder();
+                SynonymMap.Builder.join(tokenize(index_analyzer, parts[0]).split(" +"), inputCharsRef);
+
+                CharsRefBuilder outputCharsRef = new CharsRefBuilder();
+                SynonymMap.Builder.join(tokenize(index_analyzer, parts[1]).split(" +"), outputCharsRef);
+                builder.add(inputCharsRef.get(), outputCharsRef.get(), true);
+
             }
-        };
+
+            final SynonymMap map = builder.build();
+
+            this.search_analyzer = new Analyzer() {
+                @Override
+                protected TokenStreamComponents createComponents(String fieldName) {
+                    StandardTokenizer tokenizer = new StandardTokenizer();
+
+                    TokenStream tokenStream = new EnglishPossessiveFilter(tokenizer);
+                    tokenStream = new LowerCaseFilter(tokenStream);
+                    tokenStream = new StopFilter(tokenStream, new CharArraySet(EMPTY_SET, true));
+                    tokenStream = new PorterStemFilter(tokenStream);
+                    TokenStream sysfilter = new SynonymGraphFilter(tokenStream, map, true);
+                    return new TokenStreamComponents(tokenizer, sysfilter);
+                }
+            };
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
+
     public ExtractLc(ArrayList<String> synonymPairs){
-        this.index_analyzer = getCustomAnalyzer();
+        this(AnalyzerType.WHITESPACE);
         setSynonyms(synonymPairs);
     }
 
@@ -236,8 +235,7 @@ public class ExtractLc implements QTExtract {
                      String taggerDir,
                      InputStream phraseFile) throws IOException
     {
-        this.index_analyzer = getCustomAnalyzer();
-        this.search_analyzer = this.index_analyzer;
+        this(AnalyzerType.WHITESPACE);
         loadEntsAndPhs(entities, phraseFile);
         if (taggerDir != null) {
             tagger = Tagger.load(taggerDir);
@@ -245,16 +243,16 @@ public class ExtractLc implements QTExtract {
         }
     }
 
-    public Query getPhraseQuery(Analyzer analyzer, String query, int slop) throws IOException {
+    public Query getPhraseQuery(Analyzer analyzer, String query, int slop) {
         QueryParser qp = new QueryParser(searchField, analyzer);
         Query q = qp.createPhraseQuery(searchField, query, slop);
         return q;
     }
 
-    public Query getMultimatcheQuery(Analyzer analyzer, String query) throws IOException {
+    public Query getMultimatcheQuery(Analyzer analyzer, String query)  {
         QueryParser qp = new QueryParser(searchField, analyzer);
         BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
-        Query q = qp. createBooleanQuery(searchField, query, matching_mode);
+        Query q = qp.createBooleanQuery(searchField, query, matching_mode);
     //    logger.info(" ++ " + q.toString());
         return q;
     }
@@ -412,7 +410,6 @@ public class ExtractLc implements QTExtract {
         String foundValue = matchedDoc.getField(entNameField).stringValue();
 
         UnifiedHighlighter uhighlighter = new UnifiedHighlighter(searcher, analyzer);
-    //    uhighlighter.setMaxLength(50000);
         String[] fragments = uhighlighter.highlight(searchField, query, res);
 
         for (String rawFragment : fragments) {
@@ -458,32 +455,34 @@ public class ExtractLc implements QTExtract {
         return emits;
     }
 
-    private IndexSearcher getIndexSearcher(Analyzer analyzer, String str) throws IOException {
+    private IndexSearcher getIndexSearcher(Analyzer analyzer,
+                                           String str) throws IOException {
 
-        Directory ramDirectory = new RAMDirectory();
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
-        IndexWriter writer = new IndexWriter(ramDirectory, config);
+        Directory mMapDirectory = new ByteBuffersDirectory();
+        IndexWriter writer = new IndexWriter(mMapDirectory, config);
+
         Document doc = new Document();
         doc.add(new Field(searchField, str, PositionField));
         writer.addDocument(doc);
         writer.close();
-        DirectoryReader dreader = DirectoryReader.open(ramDirectory);
+        DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
         return new IndexSearcher(dreader);
     }
 
     private Collection<Emit> getFragments(final String entType,
-                                          final HashSet<Document> matchedDocs,
+                                          final Collection<Document> matchedDocs,
                                           final String str) throws Exception
     {
 
         HashSet<Emit> emits = new HashSet<>();
-        String phrased = getPhrased(str);
-        IndexSearcher searcher = getIndexSearcher(search_analyzer, phrased);
+        IndexSearcher searcher = getIndexSearcher(search_analyzer, str);
 
         //TODO: this is messy; re-factor it with proper multi-field index
         for (Document matchedDoc : matchedDocs) {
             Query query = null;
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
+        //    logger.info("quuu " + query_string_raw);
             String query_string = QueryParser.escape(query_string_raw);
             switch (mode) {
                 case EXACT_PHRASE : query = getPhraseQuery(search_analyzer , query_string, 0); break;
@@ -497,7 +496,6 @@ public class ExtractLc implements QTExtract {
 
         ArrayList<Emit> output = new ArrayList<>(emits);
         output.sort((Emit s1, Emit s2)-> s1.getEnd()- (s2.getEnd()));
-
 
         //remove overlaps?
         boolean removeOverlaps = true; //TODO: make this a switch
@@ -532,10 +530,11 @@ public class ExtractLc implements QTExtract {
     }
 
     private IndexSearcher getSearcherFromEntities(String entType,
-                                                  Entity[] entities) throws IOException {
-        Directory ramDirectory = new RAMDirectory();
+                                                  Entity[] entities) throws IOException
+    {
         IndexWriterConfig config = new IndexWriterConfig(index_analyzer);
-        IndexWriter writer = new IndexWriter(ramDirectory, config);
+        Directory mMapDirectory = new ByteBuffersDirectory();
+        IndexWriter writer = new IndexWriter(mMapDirectory, config);
 
         for (Entity entity : entities) {
             // include entity as a speaker?
@@ -583,18 +582,18 @@ public class ExtractLc implements QTExtract {
             }
         }
         writer.close();
-        DirectoryReader dreader = DirectoryReader.open(ramDirectory);
+        DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
         return new IndexSearcher(dreader);
     }
 
     private void loadEntsAndPhs(Map<String, Entity[]> entityMap,
                                 InputStream phraseFile) throws IOException
     {
-        if (phraseFile != null) {
-
-            Directory ramDirectory = new RAMDirectory();
+        if (phraseFile != null)
+        {
             IndexWriterConfig config = new IndexWriterConfig(index_analyzer);
-            IndexWriter writer = new IndexWriter(ramDirectory, config);
+            Directory mMapDirectory = new ByteBuffersDirectory();
+            IndexWriter writer = new IndexWriter(mMapDirectory, config);
 
             String line;
             int num = 0;
@@ -606,7 +605,7 @@ public class ExtractLc implements QTExtract {
                 num++;
             }
             logger.info(num + " phrases loaded for tagging");
-            DirectoryReader dreader = DirectoryReader.open(ramDirectory);
+            DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
             phraseTree = new IndexSearcher(dreader);
             writer.close();
         }
@@ -637,16 +636,6 @@ public class ExtractLc implements QTExtract {
         }
     }
 
-    public String getPhrased(String str){
-        if (synonyms_phrases == null) return str;
-        Collection<Emit> emits = synonyms_phrases.parseText(str);
-        for (Emit e : emits) {
-            String keyword = e.getKeyword();
-            str = str.replace(keyword, e.getCustomeData().toString());
-        }
-        return str;
-    }
-
     public static void main(String[] args) throws Exception {
         ArrayList<String> uts = new ArrayList<>();
         uts.add("the cat");
@@ -663,48 +652,39 @@ public class ExtractLc implements QTExtract {
 
         ExtractLc lnindex = new ExtractLc(synonymMap);
 
-        /*
-        Map<String, Analyzer> analyzerMap = new HashMap<>();
-        analyzerMap.put(lnindex.field, lnindex.analyzer);
-        PerFieldAnalyzerWrapper pfaw = new PerFieldAnalyzerWrapper(new KeywordAnalyzer(), analyzerMap);
-
-        IndexWriterConfig iwc = new IndexWriterConfig(pfaw);
-        Directory ramDirectory = new RAMDirectory();
-        iwc.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
-        IndexWriter writer = new IndexWriter(ramDirectory, iwc);
-        */
-
-        Directory ramDirectory = new RAMDirectory();
+        Directory mMapDirectory = new ByteBuffersDirectory();
         IndexWriterConfig config = new IndexWriterConfig(lnindex.index_analyzer);
-        IndexWriter writer = new IndexWriter(ramDirectory, config);
+        IndexWriter writer = new IndexWriter(mMapDirectory, config);
+
 
         for (String str : uts) {
             Document doc = new Document();
-            String search_str = lnindex.getPhrased(str);
-
-            doc.add(new Field(searchField, search_str, SearchField));
+            doc.add(new Field(searchField, str, SearchField));
             doc.add(new Field(entNameField, str, DataField));
             writer.addDocument(doc);
         }
         writer.close();
 
-        DirectoryReader dreader = DirectoryReader.open(ramDirectory);
+        DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
         lnindex.phraseTree = new IndexSearcher(dreader);
 
-
         String q = "so I will be the only fox in the america for you.";
-
+     //   String q = "******";
         Query query = lnindex.getMultimatcheQuery(lnindex.search_analyzer, q);
-        TopDocs res = lnindex.phraseTree.search(query, lnindex.topN);
+        logger.info(query.toString());
+        TopDocs res = lnindex.phraseTree.search(query, 40);
 
-        HashSet<Document> phrases = new HashSet<>();
+        List<Document> matchedDocs = new ArrayList<>();
+        HashSet<Integer> uniqIds = new HashSet<>();
         for (ScoreDoc hit : res.scoreDocs) {
             int id = hit.doc;
+            if (uniqIds.contains(id)) continue;
+            uniqIds.add(id);
             Document doclookedup = lnindex.phraseTree.doc(id);
-            phrases.add(doclookedup);
+            matchedDocs.add(doclookedup);
         }
 
-        lnindex.getFragments("NEW", phrases, q);
+        lnindex.getFragments("NEW", matchedDocs, q);
 
     }
 
@@ -742,16 +722,18 @@ public class ExtractLc implements QTExtract {
     public Map<String, Collection<Emit>> parseNames(final String query_string) {
 
         String escaped_query = QueryParser.escape(query_string);
-
         HashMap<String, Collection<Emit>> res = new HashMap<>();
+    //    HashSet<Integer> uniqDocs = new HashSet<>();
 
         try {
             if (hidden_entities != null){
                 Query query = getMultimatcheQuery(search_analyzer, escaped_query);
                 TopDocs topdocs = hidden_entities.search(query, topN);
-                HashSet<Document> matchedDocs = new HashSet<>();
+                List<Document> matchedDocs = new ArrayList<>();
                 for (ScoreDoc hit : topdocs.scoreDocs) {
                     int id = hit.doc;
+        //            if (uniqDocs.contains(id)) continue;
+        //            uniqDocs.add(id);
                     Document doclookedup = hidden_entities.doc(id);
                     matchedDocs.add(doclookedup);
                 }
@@ -760,40 +742,29 @@ public class ExtractLc implements QTExtract {
                 }
             }
 
-
             for (Map.Entry<String, IndexSearcher> e : nameTree.entrySet()) {
-                IndexSearcher trie = e.getValue();
+                IndexSearcher indexSearcher = e.getValue();
                 String entType = e.getKey();
                 Query query = getMultimatcheQuery(search_analyzer, escaped_query);
-                TopDocs topdocs = trie.search(query, topN);
+                TopDocs topdocs = indexSearcher.search(query, topN);
 
-
-                HashSet<Document> matchedDocs = new HashSet<>();
+                List<Document> matchedDocs = new ArrayList<>();
                 for (ScoreDoc hit : topdocs.scoreDocs) {
                     int id = hit.doc;
-                    Document doclookedup = trie.doc(id);
+            //        if (uniqDocs.contains(id)) continue;
+            //        uniqDocs.add(id);
+                    Document doclookedup = indexSearcher.doc(id);
                     matchedDocs.add(doclookedup);
                 }
+
                 if (matchedDocs.size() == 0 ) continue;
                 res.put(entType, getFragments(entType, matchedDocs, query_string));
             }
 
-
-
         } catch (Exception e ){
-            StringWriter writer = new StringWriter();
-            PrintWriter printWriter = new PrintWriter( writer );
-            e.printStackTrace( printWriter );
-            printWriter.flush();
-
-            String stackTrace = writer.toString();
-            logger.error("Error in name search {}: query_string '{}' {}", e.getMessage() , query_string, stackTrace);
+            logger.error("Error in name search {}: query_string '{}'", e.getMessage() , query_string);
         }
         return res;
-    }
-
-    public WordVectors getw2v(){
-        return tagger.getW2v().getW2v();
     }
 
     public double getSentenceRank(List<String> parts){

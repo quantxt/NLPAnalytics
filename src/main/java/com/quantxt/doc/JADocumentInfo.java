@@ -1,6 +1,7 @@
 package com.quantxt.doc;
 
 import com.google.gson.Gson;
+import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.JADocumentHelper;
 import com.quantxt.helper.types.ExtInterval;
 import org.jsoup.select.Elements;
@@ -66,9 +67,8 @@ public class JADocumentInfo extends QTDocument {
 
                 String tag = postags.get(i);
                 sentTokens.add(token);
-                if (token.equals("。") || puntuations.contains(token)
-                        || tag.equals("記号-句点") || tag.equals("記号-括弧閉") || tag.equals("記号-括弧開")
-                        || tag.equals("記号-空白") || tag.equals("記号-読点")) // japanese preiod.
+                CommonQTDocumentHelper.QTPosTags qtPosTag = ((JADocumentHelper) helper).getQtPosTag(tag);
+                if (token.equals("。") || puntuations.contains(token) || qtPosTag == CommonQTDocumentHelper.QTPosTags.PUNCT)
                 {
                     int end = body.indexOf(token, start) + token.length();
                     String raw = body.substring(start, end);

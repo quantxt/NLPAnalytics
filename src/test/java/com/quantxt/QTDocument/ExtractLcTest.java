@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 public class ExtractLcTest {
 
     @Test
-    public void testParseNames() throws IOException {
+    public void testParseNames() {
         // GIVEN
         String str = "Amazon Inc. reported a gain on his earnings.";
         ExtractLc speaker = getSpeaker();
@@ -37,7 +37,7 @@ public class ExtractLcTest {
     }
 
     @Test
-    public void testSynonymNotStemable() throws IOException {
+    public void testSynonymNotStemable()  {
         // GIVEN
         String str = "Amazon inciobi reported a gain on his earnings.";
         ExtractLc speaker = getSpeaker();
@@ -55,7 +55,7 @@ public class ExtractLcTest {
     }
 
     @Test
-    public void testSynonymStemable() throws IOException {
+    public void testSynonymStemable() {
         // GIVEN
         // corporate will become corpor
         String str = "Amazon corporate reported a gain on his earnings.";

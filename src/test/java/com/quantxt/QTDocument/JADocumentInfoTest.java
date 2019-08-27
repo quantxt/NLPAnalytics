@@ -27,8 +27,9 @@ public class JADocumentInfoTest {
         String str = "朝日新聞デジタルに掲載の記事・写真の無断転載を禁じます。すべての内容は日本の著作権法並びに国際条約により保護";
         List<String> tokens = helper.tokenize(str);
         List<ExtIntervalSimple> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
+
         Assert.assertEquals(intervals.get(2).getType(), NOUN);
-        Assert.assertEquals(intervals.get(2).toString(), "12:14");
+        Assert.assertEquals(intervals.get(2).toString(), "28:42");
     }
 
     @Test
@@ -37,18 +38,9 @@ public class JADocumentInfoTest {
         List<String> tokens = helper.tokenize(str);
         List<ExtIntervalSimple> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
 
-   //     List<Token> tagss = helper.getPosTagsJa(str);
-
-//        for (int i =0; i<tagss.length; i++){
-//            logger.info(tokens.get(i) + " | " + tagss[i]);
-//        }
-//        for (ExtInterval e : intervals){
-//            logger.info(e.getType() + " / " + str.substring(e.getStart(), e.getEnd()));
-//        }
-
         Assert.assertEquals(intervals.get(0).getType(), NOUN);
-        Assert.assertEquals(intervals.get(0).toString(str), "マイクロソフト");
-        Assert.assertEquals(intervals.get(0).toString(), "25:32");
+        Assert.assertEquals(intervals.get(0).toString(str), "マイクロソフトが主導");
+        Assert.assertEquals(intervals.get(0).toString(), "25:35");
     }
 
     @Test

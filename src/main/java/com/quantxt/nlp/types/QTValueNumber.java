@@ -24,7 +24,7 @@ public class QTValueNumber {
 
     final private static String simple_number = "(([\\+\\-]?\\d[,\\.\\d]+\\d|\\d+)|\\(\\s*(\\d[,\\.\\d]+\\d|\\d+)\\s*\\))(\\s*%)?";
     final private static Pattern currencies = Pattern.compile("(\\p{Sc})\\s*$");
-    final private static Pattern units = Pattern.compile("hundred|thousand|million|billion|M|B|百万円|億");
+    final private static Pattern units = Pattern.compile("(hundred|thousand|million|billion|M|B|百万円|億)($|[\b\\s\\.,])");
     final private static Pattern PATTERN  = Pattern.compile(simple_number);
     final private static Pattern units_prefix_thousands  = Pattern.compile("in thousands|in 000s|in \\$000\\'s", Pattern.CASE_INSENSITIVE);
     final private static Pattern units_prefix_million  = Pattern.compile("in millions|百万円", Pattern.CASE_INSENSITIVE);

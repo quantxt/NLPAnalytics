@@ -33,6 +33,7 @@ import opennlp.tools.sentdetect.SentenceModel;
 /**
  * Created by dejani on 1/24/18.
  */
+
 public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private static Logger logger = LoggerFactory.getLogger(CommonQTDocumentHelper.class);
@@ -74,7 +75,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private Set<String> pronouns;
     private Trie verbTree;
 
-    protected Analyzer analyzer;
+         Analyzer analyzer;
     protected Analyzer tokenizer;
 
     public CommonQTDocumentHelper(InputStream verbFilePath, String sentencesFilePath,

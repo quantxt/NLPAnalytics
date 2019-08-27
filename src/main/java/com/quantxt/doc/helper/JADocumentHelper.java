@@ -38,6 +38,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     private static final String VERB_FILE_PATH = "/ja/context.json";
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("此奴", "其奴", "彼", "彼女"));
     private static Map<String, QTPosTags> TAGS = new HashMap<>();
+    private static final String SENTENCE_DELIMITER = "(?<=[。！])";
 
     static {
         TAGS.put("その他", X);
@@ -145,6 +146,10 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
     }
 
+    public QTPosTags getQtPosTag(String t){
+        return TAGS.get(t);
+    }
+
     @Override
     public List<String> tokenize(String text) {
         List<String> tokStrings = new ArrayList<>();
@@ -190,7 +195,8 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         //Analyzer
         analyzer = new JapaneseAnalyzer();
 
-        //Tokenizer
+        //Tokenizer : Mode is SERACH to be consistent with Lucene
+        //https://lucene.apache.org/core/7_0_0/analyzers-kuromoji/org/apache/lucene/analysis/ja/JapaneseTokenizer.html#DEFAULT_MODE
         tokenizer = new JapaneseTokenizer(null, false, JapaneseTokenizer.Mode.EXTENDED);
 
     }
@@ -226,7 +232,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     public boolean isSentence(String str, List<String> tokens) {
         int numTokens = tokens.size();
         //TODO: This is bad logic
-        if (numTokens < 5 || numTokens > 400) {
+        if (numTokens < 5 || numTokens > 750) {
             return false;
         }
         return true;
@@ -236,12 +242,14 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     public String[] getSentences(String text) {
 
         ArrayList<String> allSents = new ArrayList<>();
-        String[] sentStage1 = super.getSentences(text);
-        for (String s : sentStage1) {
-            String[] parts = s.split("。");
-            for (String p : parts) {
-                allSents.add(p + "。");
-            }
+
+        String[] parts = text.split(SENTENCE_DELIMITER);
+        for (String p : parts) {
+            String trimmed = p
+                    .replaceAll("^[ \\t\\u00A0\\u1680\\u180e\\u2000\\u200a\\u202f\\u205f\\u3000]+", "")
+                    .replaceAll("[ \\t\\u00A0\\u1680\\u180e\\u2000\\u200a\\u202f\\u205f\\u3000]+$","");
+            if (trimmed.isEmpty()) continue;
+            allSents.add(trimmed);
         }
         return allSents.toArray(new String[allSents.size()]);
     }
@@ -325,13 +333,15 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     public static void main(String[] args) throws Exception {
         JADocumentHelper jHelper = new JADocumentHelper();
 
-        String str1 = "コーディング・フリスCEOは「消費者はシンプルなデザインを好むようになっており、われわれの予測よりも需要が低かった」と語った。";
+        String str1 = "コーディング・フリスCEOは「消費者はシンプルなデザインを好むようになっており、われわれの予測よりも需要が低かった」と語った。入居者の毎日の生活をサポートいたします。";
         String str2 = "室内に設置されたセントラルコントローラーは、各種IoT機器の操作だけでなく、コンシェルジュによる、水漏れなどのトラブルや退居時の連絡など、入居者の毎日の生活をサポートいたします。";
         String str3 = "現在、日本のスマートスピーカー所有率は5%程度(*4)に過ぎませんが、米国で昨年よりAmazonが実施しており、公式ブログでは今年から日本でも実施していく予定とされる報酬プログラム(*5)の開始などにより、参入企業も増加していくと見込まれます。";
 
 
-        List<String> tokens = jHelper.tokenize(str3);
-        List<String> qtTags = jHelper.getPosTagsJa(str3);
+        List<String> tokens = jHelper.tokenize(str1);
+        List<String> qtTags = jHelper.getPosTagsJa(str1);
+
+        String s [] = jHelper.getSentences(str1);
 
         for (int i =0; i<tokens.size(); i++){
             System.out.println(tokens.get(i) + "  |  " + TAGS.get(qtTags.get(i)));
