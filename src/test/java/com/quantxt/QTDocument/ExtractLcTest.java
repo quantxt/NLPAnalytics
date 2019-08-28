@@ -49,7 +49,6 @@ public class ExtractLcTest {
         assertNotNull(result);
         assertFalse(result.isEmpty());
         assertTrue(result.get("Company").size() == 1);
-        //TODO: this should be Amazon Inc.  with the dot
         assertEquals(result.get("Company").iterator().next().getKeyword(), "Amazon inciobi");
 
     }
@@ -68,7 +67,6 @@ public class ExtractLcTest {
         assertNotNull(result);
         assertFalse(result.isEmpty());
         assertTrue(result.get("Company").size() == 1);
-        //TODO: this should be Amazon Inc.  with the dot
         assertEquals(result.get("Company").iterator().next().getKeyword(), "Amazon corporate");
 
     }
@@ -90,8 +88,8 @@ public class ExtractLcTest {
 
             // synonyms;
             ArrayList<String> synonymMap = new ArrayList<>();
-            synonymMap.add("inciobi\tInc.");
-            synonymMap.add("corporate\tInc");
+            synonymMap.add("Inc\tinciobi");
+            synonymMap.add("Inc\tcorporate");
             speaker.setSynonyms(synonymMap);
         } catch (Exception e) {
             e.printStackTrace();

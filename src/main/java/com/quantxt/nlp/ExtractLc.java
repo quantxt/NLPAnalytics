@@ -10,8 +10,10 @@ import com.quantxt.types.Entity;
 import com.quantxt.types.NamedEntity;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.*;
+import org.apache.lucene.analysis.core.LetterTokenizer;
 import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
@@ -63,7 +65,7 @@ public class ExtractLc implements QTExtract {
     }
 
     enum AnalyzerType {
-        WHITESPACE, SIMPLE, STANDARD
+        WHITESPACE, SIMPLE, STANDARD, STEM
     }
 
     final private static String OPENH  = "<b>";
@@ -95,6 +97,7 @@ public class ExtractLc implements QTExtract {
     private Tagger tagger = null;
     private Mode mode = PHRASE;   //mode 1
     private ConcurrentHashMap<String, Double> tokenRank;
+    private AnalyzerType analyzer_type;
 
     static {
 
@@ -137,8 +140,9 @@ public class ExtractLc implements QTExtract {
     }
 
     public ExtractLc(QTDocument.Language lang){
-        this(AnalyzerType.WHITESPACE);
+        this(AnalyzerType.STANDARD);
         if (lang == null) return;
+        analyzer_type = AnalyzerType.STEM;
         switch (lang) {
             case ENGLISH:
                 this.index_analyzer = new EnglishAnalyzer();
@@ -161,9 +165,10 @@ public class ExtractLc implements QTExtract {
     }
 
     public ExtractLc(AnalyzerType analyzerType){
+        this.analyzer_type = analyzerType;
         switch (analyzerType) {
-            case SIMPLE: this.index_analyzer = new SimpleAnalyzer(); break;
-            case STANDARD: this.index_analyzer = new StandardAnalyzer(); break;
+            case SIMPLE: this.index_analyzer     = new SimpleAnalyzer(); break;
+            case STANDARD: this.index_analyzer   = new StandardAnalyzer(); break;
             case WHITESPACE: this.index_analyzer = new WhitespaceAnalyzer(); break;
         }
         this.search_analyzer = this.index_analyzer;
@@ -189,6 +194,7 @@ public class ExtractLc implements QTExtract {
     }
 
     public void setSynonyms(ArrayList<String> synonymPairs){
+        if (synonymPairs == null || synonymPairs.size() == 0) return;
         try {
             SynonymMap.Builder builder = new SynonymMap.Builder(true);
             // first argument is mapped to second
@@ -210,14 +216,38 @@ public class ExtractLc implements QTExtract {
             this.search_analyzer = new Analyzer() {
                 @Override
                 protected TokenStreamComponents createComponents(String fieldName) {
-                    StandardTokenizer tokenizer = new StandardTokenizer();
-
-                    TokenStream tokenStream = new EnglishPossessiveFilter(tokenizer);
-                    tokenStream = new LowerCaseFilter(tokenStream);
-                    tokenStream = new StopFilter(tokenStream, new CharArraySet(EMPTY_SET, true));
-                    tokenStream = new PorterStemFilter(tokenStream);
-                    TokenStream sysfilter = new SynonymGraphFilter(tokenStream, map, true);
-                    return new TokenStreamComponents(tokenizer, sysfilter);
+                    TokenStreamComponents tokenStreamComponents = null;
+                    switch (analyzer_type) {
+                        case WHITESPACE:
+                            WhitespaceTokenizer whitespaceTokenizer = new WhitespaceTokenizer();
+                            TokenStream tokenStream = new CachingTokenFilter(whitespaceTokenizer);
+                            TokenStream sysfilter = new SynonymGraphFilter(tokenStream, map, false);
+                            tokenStreamComponents = new TokenStreamComponents(whitespaceTokenizer, sysfilter);
+                            break;
+                        case SIMPLE:
+                            LetterTokenizer letterTokenizer = new LetterTokenizer();
+                            tokenStream = new LowerCaseFilter(letterTokenizer);
+                            sysfilter = new SynonymGraphFilter(tokenStream, map, true);
+                            tokenStreamComponents = new TokenStreamComponents(letterTokenizer, sysfilter);
+                            break;
+                        case STANDARD:
+                            StandardTokenizer standardTokenizer = new StandardTokenizer();
+                            tokenStream = new LowerCaseFilter(standardTokenizer);
+                            tokenStream = new StopFilter(tokenStream, new CharArraySet(EMPTY_SET, true));
+                            sysfilter = new SynonymGraphFilter(tokenStream, map, true);
+                            tokenStreamComponents = new TokenStreamComponents(standardTokenizer, sysfilter);
+                            break;
+                        case STEM:
+                            standardTokenizer = new StandardTokenizer();
+                            tokenStream = new EnglishPossessiveFilter(standardTokenizer);
+                            tokenStream = new LowerCaseFilter(tokenStream);
+                            tokenStream = new StopFilter(tokenStream, new CharArraySet(EMPTY_SET, true));
+                            tokenStream = new PorterStemFilter(tokenStream);
+                            sysfilter = new SynonymGraphFilter(tokenStream, map, true);
+                            tokenStreamComponents = new TokenStreamComponents(standardTokenizer, sysfilter);
+                            break;
+                    }
+                    return tokenStreamComponents;
                 }
             };
         }catch (IOException e) {
@@ -227,7 +257,7 @@ public class ExtractLc implements QTExtract {
 
 
     public ExtractLc(ArrayList<String> synonymPairs){
-        this(AnalyzerType.WHITESPACE);
+        this(AnalyzerType.STANDARD);
         setSynonyms(synonymPairs);
     }
 
@@ -235,7 +265,7 @@ public class ExtractLc implements QTExtract {
                      String taggerDir,
                      InputStream phraseFile) throws IOException
     {
-        this(AnalyzerType.WHITESPACE);
+        this(AnalyzerType.STANDARD);
         loadEntsAndPhs(entities, phraseFile);
         if (taggerDir != null) {
             tagger = Tagger.load(taggerDir);
