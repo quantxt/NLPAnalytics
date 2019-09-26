@@ -55,7 +55,6 @@ public class ENDocumentInfoTest {
             entMap.put("Title" , entityArray2.toArray(new Entity[entityArray2.size()]));
             entMap.put("Exposure" , entityArray3.toArray(new Entity[entityArray3.size()]));
             helper = new ENDocumentHelper();
-      //      enx = new Speaker(entMap, (String)null, null);
             enx = new ExtractLc(entMap, null, null);
             setUpIsDone = true;
         } catch (Exception e) {
@@ -468,6 +467,21 @@ public class ENDocumentInfoTest {
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5600000.0</td></tr></table>");
+
+    }
+
+    @Test
+    public void stringUnitTest2() {
+        // GIVEN
+        String str = "Bloomberg Barclays exposure to 10 yr : 5.6\n" +
+        "market";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        Pattern regexPad = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
+        doc.extractKeyValues(enx, str, regexPad, 5);
+        doc.convertValues2titleTable();
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td></tr></table>");
 
     }
 

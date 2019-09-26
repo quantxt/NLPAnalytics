@@ -1,13 +1,14 @@
 package com.quantxt.doc.helper;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.types.QTValueNumber;
-import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
@@ -32,9 +33,12 @@ import opennlp.tools.sentdetect.SentenceModel;
 /**
  * Created by dejani on 1/24/18.
  */
+
 public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private static Logger logger = LoggerFactory.getLogger(CommonQTDocumentHelper.class);
+
+    public enum QTPosTags {NOUNN, VERBB, INTJ, X, ADV, AUX, ADP, ADJ, CCONJ, PROPN, PRON, SYM, NUM, PUNCT}
 
     protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
     //Text normalization rules
@@ -71,7 +75,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private Set<String> pronouns;
     private Trie verbTree;
 
-    protected Analyzer analyzer;
+         Analyzer analyzer;
     protected Analyzer tokenizer;
 
     public CommonQTDocumentHelper(InputStream verbFilePath, String sentencesFilePath,
@@ -135,8 +139,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         // Stoplist
         if (!StringUtil.isEmpty(stoplistFilePath)) {
             stopwords = new CharArraySet(800, true);
-            try (FileInputStream fis = new FileInputStream(modelBaseDir + stoplistFilePath)) {
-                List<String> sl = IOUtils.readLines(fis, "UTF-8");
+            try {
+                List<String> sl = Files.readAllLines(Paths.get(modelBaseDir + stoplistFilePath));
                 for (String s : sl){
                     stopwords.add(s);
                 }
@@ -147,9 +151,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         logger.info("Models initiliazed");
     }
 
-    private void initVerbTree(String verbFilePath, boolean isSimple) throws Exception {
-        try (FileInputStream fis = new FileInputStream(getModelBaseDir() + verbFilePath)) {
-            byte[] verbArr = IOUtils.toByteArray(fis);
+    private void initVerbTree(String verbFilePath, boolean isSimple) {
+        try {
+            byte[] verbArr = Files.readAllBytes(Paths.get(getModelBaseDir() + verbFilePath));
             initVerbTree(verbArr, isSimple);
         } catch (Exception e) {
             logger.error("Error on initialize verbTree with for verbFilePath: {} with message: {}",
@@ -157,8 +161,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         }
     }
 
-    private void initVerbTree(InputStream contextFile, boolean isSimple) throws Exception {
-        byte[] verbArr = IOUtils.toByteArray(contextFile);
+    private void initVerbTree(InputStream contextFile, boolean isSimple) throws IOException {
+        byte[] verbArr = new byte[contextFile.available()];
+        contextFile.read(verbArr);
         initVerbTree(verbArr, isSimple);
     }
 

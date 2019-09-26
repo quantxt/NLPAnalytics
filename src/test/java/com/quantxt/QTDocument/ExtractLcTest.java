@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 public class ExtractLcTest {
 
     @Test
-    public void testParseNames() throws IOException {
+    public void testParseNames() {
         // GIVEN
         String str = "Amazon Inc. reported a gain on his earnings.";
         ExtractLc speaker = getSpeaker();
@@ -37,7 +37,7 @@ public class ExtractLcTest {
     }
 
     @Test
-    public void testSynonymNotStemable() throws IOException {
+    public void testSynonymNotStemable()  {
         // GIVEN
         String str = "Amazon inciobi reported a gain on his earnings.";
         ExtractLc speaker = getSpeaker();
@@ -49,13 +49,12 @@ public class ExtractLcTest {
         assertNotNull(result);
         assertFalse(result.isEmpty());
         assertTrue(result.get("Company").size() == 1);
-        //TODO: this should be Amazon Inc.  with the dot
         assertEquals(result.get("Company").iterator().next().getKeyword(), "Amazon inciobi");
 
     }
 
     @Test
-    public void testSynonymStemable() throws IOException {
+    public void testSynonymStemable() {
         // GIVEN
         // corporate will become corpor
         String str = "Amazon corporate reported a gain on his earnings.";
@@ -68,7 +67,6 @@ public class ExtractLcTest {
         assertNotNull(result);
         assertFalse(result.isEmpty());
         assertTrue(result.get("Company").size() == 1);
-        //TODO: this should be Amazon Inc.  with the dot
         assertEquals(result.get("Company").iterator().next().getKeyword(), "Amazon corporate");
 
     }
@@ -90,8 +88,8 @@ public class ExtractLcTest {
 
             // synonyms;
             ArrayList<String> synonymMap = new ArrayList<>();
-            synonymMap.add("inciobi\tInc.");
-            synonymMap.add("corporate\tInc");
+            synonymMap.add("Inc\tinciobi");
+            synonymMap.add("Inc\tcorporate");
             speaker.setSynonyms(synonymMap);
         } catch (Exception e) {
             e.printStackTrace();

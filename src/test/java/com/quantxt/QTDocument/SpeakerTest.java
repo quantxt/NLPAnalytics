@@ -25,7 +25,7 @@ import com.quantxt.types.Entity;
 public class SpeakerTest {
 
     @Test
-    public void testParseNames() throws IOException {
+    public void testParseNames()  {
         // GIVEN
         String str = "Amazon Inc. reported a gain on his earnings.";
         Speaker speaker = getSpeaker();
@@ -83,8 +83,7 @@ public class SpeakerTest {
         assertNull(speaker.getTagger());
     }
 
-    public static Speaker getSpeaker() {
-        Speaker speaker = null;
+    private  Speaker getSpeaker() {
         try {
             ArrayList<Entity> entityArray1 = new ArrayList<>();
             entityArray1.add(new Entity("Gilead Sciences, Inc.", null, true));
@@ -96,10 +95,10 @@ public class SpeakerTest {
             Map<String, Entity[]> entMap = new HashMap<>();
             entMap.put("Company", entityArray1.toArray(new Entity[entityArray1.size()]));
             entMap.put("Title", entityArray2.toArray(new Entity[entityArray2.size()]));
-            speaker = new Speaker(entMap, (String) null, null);
+            return new Speaker(entMap, (String) null, null);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return speaker;
+        return null;
     }
 }

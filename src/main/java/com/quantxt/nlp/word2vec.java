@@ -178,11 +178,11 @@ public class word2vec {
     }
 
     public static void main(String[] args) throws Exception {
-        FileInputStream fi = new FileInputStream(new File("data.txt"));
+        FileInputStream fi = new FileInputStream(new File(""));
         String out = "w2v.txt";
-        word2vec w2v = new word2vec(4, 25);
+        word2vec w2v = new word2vec(4, 300);
         long start = System.currentTimeMillis();
-        w2v.train(fi, out, false);
+        w2v.train(fi, out, true);
         long took = System.currentTimeMillis() - start;
         logger.info("run in " + took);
     }
