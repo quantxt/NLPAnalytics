@@ -4,6 +4,8 @@ import java.util.Iterator;
 
 public interface Workbook extends Iterable<Sheet> {
 
+    enum Type {EXCEL, EXCEL_XSSF}
+
     Iterator<Sheet> iterator();
 
     int getNumberOfSheets();
