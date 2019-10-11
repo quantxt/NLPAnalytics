@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.quantxt.io.Reader;
+import com.quantxt.io.model.WorkbookFactory;
 
 public class ExcelStreamReader implements Reader<InputStream, WorkbookData> {
 
@@ -46,9 +47,20 @@ public class ExcelStreamReader implements Reader<InputStream, WorkbookData> {
         }
         return workbook;
     }
+
+    public static Workbook getXSSFWorkbook(InputStream templateInputStream) throws Exception {
+        try {
+            Workbook workbook = new XSSFWorkbook(templateInputStream);
+            return workbook;
+        } catch (Exception e){
+            log.error("Unexpected error on init SheetHandler from templateInputStream", e);
+            return null;
+        }
+    }
+
     public static WorkbookData getWorkbookData(InputStream inputStream) throws Exception {
         Workbook workbook = getWorkbook(inputStream);
-        return new WorkbookData(workbook, null, ExcelIO.getEvalFunc(workbook));
+        return new WorkbookData(WorkbookFactory.create(workbook), null);
     }
 
 }

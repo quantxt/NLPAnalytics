@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.quantxt.io.Reader;
 import com.quantxt.io.Writer;
+import com.quantxt.io.model.WorkbookFactory;
 
 public class ExcelIO implements Writer<WorkbookData>, Reader<File, WorkbookData> {
 
@@ -39,7 +40,7 @@ public class ExcelIO implements Writer<WorkbookData>, Reader<File, WorkbookData>
     @Override
     public void write(WorkbookData data) {
         try (FileOutputStream fileOut = new FileOutputStream(data.getFileName())) {
-            data.getWorkbook().write(fileOut);
+            //data.getWorkbook().write(fileOut);
         } catch (Exception e) {
             log.error("Error on write Workbook info file: {}", data.getFileName());
         }
@@ -88,7 +89,7 @@ public class ExcelIO implements Writer<WorkbookData>, Reader<File, WorkbookData>
     public static WorkbookData getWorkbookData(File file) throws Exception {
         String name = file.getName().toLowerCase().trim();
         Workbook workbook = getWorkbook(file);
-        return new WorkbookData(workbook, name, getEvalFunc(workbook));
+        return new WorkbookData(WorkbookFactory.create(workbook), name);
     }
 
     public static Workbook getXLSBWorkbook(InputStream inputStream) throws Exception {

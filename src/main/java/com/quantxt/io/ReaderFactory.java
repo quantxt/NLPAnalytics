@@ -5,10 +5,11 @@ import java.io.InputStream;
 
 import com.quantxt.io.excel.ExcelIO;
 import com.quantxt.io.excel.ExcelStreamReader;
+import com.quantxt.io.excel.ExcelXSSFStreamReader;
 import com.quantxt.io.excel.WorkbookData;
 import com.quantxt.io.file.FileIO;
 
-public class ReaderFactory {
+public interface ReaderFactory {
 
     public static Reader<String, String> getFileReader() {
         return new FileIO();
@@ -20,6 +21,10 @@ public class ReaderFactory {
 
     public static Reader<InputStream, WorkbookData> getExcelStreamReader() {
         return new ExcelStreamReader();
+    }
+
+    public static Reader<InputStream, WorkbookData> getExcelXSSFStreamReader() {
+        return new ExcelXSSFStreamReader();
     }
 
 }

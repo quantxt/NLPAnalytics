@@ -1,25 +1,20 @@
 package com.quantxt.io.excel;
 
-import java.util.function.Function;
-
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellValue;
-import org.apache.poi.ss.usermodel.Workbook;
+import com.quantxt.io.model.Template;
+import com.quantxt.io.model.Workbook;
 
 public class WorkbookData {
 
     private Workbook workbook;
+    private Template template;
     private String fileName;
-    private Function<Cell, CellValue> evalFunc;
 
-    public WorkbookData(Workbook workbook, Function<Cell, CellValue> evalFunc) {
+    public WorkbookData(Workbook workbook) {
         this.workbook = workbook;
-        this.evalFunc = evalFunc;
     }
 
-    public WorkbookData(Workbook workbook, String fileName,
-            Function<Cell, CellValue> evalFunc) {
-        this(workbook, evalFunc);
+    public WorkbookData(Workbook workbook, String fileName) {
+        this(workbook);
         this.fileName = fileName;
     }
 
@@ -39,12 +34,12 @@ public class WorkbookData {
         this.fileName = fileName;
     }
 
-    public Function<Cell, CellValue> getEvalFunc() {
-        return evalFunc;
+    public Template getTemplate() {
+        return template;
     }
 
-    public void setEvalFunc(Function<Cell, CellValue> evalFunc) {
-        this.evalFunc = evalFunc;
+    public void setTemplate(Template template) {
+        this.template = template;
     }
 
 }

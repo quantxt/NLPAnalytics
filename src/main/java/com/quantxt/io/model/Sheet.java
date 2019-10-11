@@ -2,9 +2,7 @@ package com.quantxt.io.model;
 
 import java.util.Iterator;
 
-import org.apache.poi.ss.usermodel.Row;
-
-public interface Sheet {
+public interface Sheet extends Iterable<Row> {
 
     boolean isColumnHidden(int columnIndex);
 
@@ -17,5 +15,9 @@ public interface Sheet {
     Row getRow(int rownum);
 
     Iterator<Row> iterator();
+
+    Workbook getWorkbook();
+
+    Row createRow(int rownum);
 
 }
