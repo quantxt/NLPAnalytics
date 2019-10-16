@@ -1,14 +1,20 @@
 package com.quantxt.io.excel;
 
-import org.apache.poi.ss.usermodel.Workbook;
+import com.quantxt.io.model.Template;
+import com.quantxt.io.model.Workbook;
 
 public class WorkbookData {
 
     private Workbook workbook;
+    private Template template;
     private String fileName;
 
-    public WorkbookData(Workbook workbook, String fileName) {
+    public WorkbookData(Workbook workbook) {
         this.workbook = workbook;
+    }
+
+    public WorkbookData(Workbook workbook, String fileName) {
+        this(workbook);
         this.fileName = fileName;
     }
 
@@ -26,6 +32,14 @@ public class WorkbookData {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
+    }
+
+    public Template getTemplate() {
+        return template;
+    }
+
+    public void setTemplate(Template template) {
+        this.template = template;
     }
 
 }

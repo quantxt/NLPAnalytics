@@ -5,9 +5,10 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.io.ResourceIO;
+import com.quantxt.io.Reader;
+import com.quantxt.io.Writer;
 
-public class FileIO implements ResourceIO<FileData, String, String> {
+public class FileIO implements Writer<FileData>, Reader<String, String> {
 
     private static Logger log = LoggerFactory.getLogger(FileIO.class);
 
