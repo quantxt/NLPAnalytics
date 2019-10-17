@@ -11,3 +11,14 @@ test-output/**
 *.log
 *.diff
 /bin/
+
+######################
+# Intellij
+######################
+.idea/
+*.iml
+*.iws
+*.ipr
+*.ids
+*.orig
+classes/
