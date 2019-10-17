@@ -22,6 +22,7 @@ public class NLPUtil {
     private static Logger logger = LoggerFactory.getLogger(NLPUtil.class);
 
     public static String cleanDouble(String str) {
+        if (str == null || str.isEmpty()) return "";
         boolean isnegative = false;
 
         if (str.trim().startsWith("-")) {

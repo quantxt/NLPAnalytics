@@ -45,7 +45,7 @@ public class ExcelResultDataToStreamConverter implements Converter<ResultWrapper
                 for (Map.Entry<Integer, ResultCell> cellEntry : rowEntry.getValue().getCells().entrySet()) {
                     ResultCell resultCell = cellEntry.getValue();
                     if (!resultCell.isHighlight() && resultCell.isEmpty()) {
-                        logger.warn("===>>> Skip empty cell {}", resultCell.getAttribute().getName());
+                        logger.debug("===>>> Skip empty cell {}", resultCell.getAttribute().getName());
                         continue;
                     }
                     Cell newCell = newRow.createCell(cellEntry.getKey());

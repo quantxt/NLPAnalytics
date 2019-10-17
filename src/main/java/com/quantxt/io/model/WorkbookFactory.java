@@ -84,7 +84,7 @@ public class WorkbookFactory {
             }
             return value;
         } catch (RuntimeException re){
-            logger.error("Error in formula evaluator " + re.getMessage());
+            logger.debug("Error in formula evaluator " + re.getMessage());
         }
         return null;
     }
