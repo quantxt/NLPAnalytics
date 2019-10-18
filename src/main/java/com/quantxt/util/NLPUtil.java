@@ -98,4 +98,8 @@ public class NLPUtil {
         return objectStream;
     }
 
+    public static String convertCellIndexToColumnLetter(int cellIndex) {
+        return CellReference.convertNumToColString(cellIndex);
+    }
+
 }
