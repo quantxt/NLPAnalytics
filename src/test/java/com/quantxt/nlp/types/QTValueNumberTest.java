@@ -55,7 +55,7 @@ public class QTValueNumberTest {
         List<ExtIntervalSimple> list = new ArrayList<>();
         QTValueNumber.detect(str, str, list);
         assertTrue(list.size() == 4);
-        assertTrue(list.get(0).getDoubleValue() == 70000840);
+        assertTrue(list.get(0).getIntValue() == 70000840);
         assertTrue(list.get(2).getDoubleValue() == -6.09);
     }
 
@@ -65,7 +65,7 @@ public class QTValueNumberTest {
         List<ExtIntervalSimple> list = new ArrayList<>();
         QTValueNumber.detect(str, str, list);
         assertTrue(list.size() == 4);
-        assertTrue(list.get(0).getDoubleValue() == -70000840);
+        assertTrue(list.get(0).getIntValue() == -70000840);
     }
 
     @Test
