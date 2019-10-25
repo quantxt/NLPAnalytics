@@ -99,4 +99,14 @@ public class QTValueNumberTest {
         assertTrue(list.get(0).getDoubleValue() == 70000840.3);
         assertTrue(list.get(0).getType() == MONEY);
     }
+
+    @Test
+    public void moneyUnitComma() {
+        String str = "Q3 GAAP net loss of $21 million, a decrease of 79% year-over-year, representing a GAAP net margin of (4%) and GAAP diluted EPS of ($0.03).";
+        List<ExtIntervalSimple> list = new ArrayList<>();
+        QTValueNumber.detect(str, str, list);
+        assertTrue(list.size() == 5);
+        assertTrue(list.get(1).getDoubleValue() == 21000000.0);
+        assertTrue(list.get(1).getType() == MONEY);
+    }
 }

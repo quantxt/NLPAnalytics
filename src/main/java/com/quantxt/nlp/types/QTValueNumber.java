@@ -170,7 +170,7 @@ public class QTValueNumber {
                 String subStr = str.substring(end).trim();
                 Matcher unitMatch = units.matcher(subStr);
                 if (unitMatch.find() && unitMatch.start() < 3){
-                    String unitMatched = unitMatch.group().trim();
+                    String unitMatched = unitMatch.group(1);
                     switch (unitMatched) {
                         case "hundred" : mult *= 100; break;
                         case "thousand" : mult *= 1000; break;
