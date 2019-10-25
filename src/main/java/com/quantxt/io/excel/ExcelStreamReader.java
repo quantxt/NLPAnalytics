@@ -1,7 +1,6 @@
 package com.quantxt.io.excel;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.poifs.filesystem.OfficeXmlFileException;
@@ -29,26 +28,39 @@ public class ExcelStreamReader implements Reader<InputStream, WorkbookData> {
         return workbookData;
     }
 
+    private static byte[] getBytesFromStream(InputStream inputStream) throws IOException {
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            output.write(buffer, 0, bytesRead);
+        }
+        output.flush();
+
+        return output.toByteArray();
+    }
+
     public static Workbook getWorkbook(InputStream inputStream) throws Exception {
         Workbook workbook;
+        byte [] bytes = getBytesFromStream(inputStream);
         try {
-            workbook = new HSSFWorkbook(inputStream);
+            workbook = new HSSFWorkbook(new ByteArrayInputStream(bytes));
         } catch (OfficeXmlFileException e) {
             log.debug("office 2010 file");
             try {
-                workbook = new XSSFWorkbook(inputStream);
+                workbook = new XSSFWorkbook(new ByteArrayInputStream(bytes));
             } catch (XLSBUnsupportedException ee){
                 log.debug("Try Binary Excel XLSB");
-                workbook = ExcelIO.getXLSBWorkbook(inputStream);
+                workbook = ExcelIO.getXLSBWorkbook(new ByteArrayInputStream(bytes));
             }
         } catch (IOException e){
             log.debug("Try Binary Excel XLSB");
-            workbook = ExcelIO.getXLSBWorkbook(inputStream);
+            workbook = ExcelIO.getXLSBWorkbook(new ByteArrayInputStream(bytes));
         }
         return workbook;
     }
 
-    public static Workbook getXSSFWorkbook(InputStream templateInputStream) throws Exception {
+    public static Workbook getXSSFWorkbook(InputStream templateInputStream) {
         try {
             Workbook workbook = new XSSFWorkbook(templateInputStream);
             return workbook;
@@ -62,5 +74,4 @@ public class ExcelStreamReader implements Reader<InputStream, WorkbookData> {
         Workbook workbook = getWorkbook(inputStream);
         return new WorkbookData(WorkbookFactory.create(workbook), null);
     }
-
 }
