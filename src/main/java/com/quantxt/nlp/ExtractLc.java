@@ -26,6 +26,8 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.synonym.SynonymGraphFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
+import org.apache.lucene.analysis.tokenattributes.PackedTokenAttributeImpl;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -33,9 +35,7 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.spans.SpanNearQuery;
-import org.apache.lucene.search.spans.SpanTermQuery;
-import org.apache.lucene.search.uhighlight.UnifiedHighlighter;
+import org.apache.lucene.search.spans.*;
 import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.CharsRefBuilder;
@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import static com.quantxt.nlp.ExtractLc.Mode.*;
@@ -58,29 +59,21 @@ import static org.apache.lucene.analysis.CharArraySet.EMPTY_SET;
 public class ExtractLc implements QTExtract {
 
     final private static Logger logger = LoggerFactory.getLogger(ExtractLc.class);
-    final private static Pattern DIGITS = Pattern.compile("\\p{Digit}+");
 
     enum Mode {
-        EXACT_PHRASE, PHRASE, EXACT_SPAN, SPAN, PARTIAL_SPAN
+        ORDERED_SPAN, SPAN
     }
 
     enum AnalyzerType {
         WHITESPACE, SIMPLE, STANDARD, STEM
     }
 
-    final private static String OPENH  = "<b>";
-    final private static String CLOSEH = "</b>";
-    final private static int OPENHLENGTH  = OPENH.length();
-    final private static int CLOSEHLENGTH = CLOSEH.length();
-
     final private static String entTypeField = "enttypefield";
     final private static String entNameField = "entnamefield";
     final private static String searchField  = "searchfield";
 
-    final private static FieldType PositionField;
     final private static FieldType SearchField;
     final private static FieldType DataField;
-
 
     private QTField.QTFieldType qtFieldType = QTField.QTFieldType.DOUBLE;
     private Pattern pattern;
@@ -94,9 +87,9 @@ public class ExtractLc implements QTExtract {
 
     private List<String> search_terms = new ArrayList<>();
 
-    private Tagger tagger = null;
-    private Mode mode = PHRASE;   //mode 1
-    private ConcurrentHashMap<String, Double> tokenRank;
+    private transient Tagger tagger = null;
+    private Mode mode = ORDERED_SPAN;
+    private transient ConcurrentHashMap<String, Double> tokenRank;
     private AnalyzerType analyzer_type;
 
     static {
@@ -109,17 +102,12 @@ public class ExtractLc implements QTExtract {
         DataField.freeze();
 
         SearchField = new FieldType();
+        SearchField.setStoreTermVectors(true);
+        SearchField.setStoreTermVectorPositions(true);
         SearchField.setStored(true);
-        SearchField.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
+        SearchField.setTokenized(true);
+        SearchField.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
         SearchField.freeze();
-
-        PositionField = new FieldType();
-        PositionField.setStoreTermVectors(true);
-        PositionField.setStoreTermVectorPositions(true);
-        PositionField.setStored(true);
-        PositionField.setTokenized(true);
-        PositionField.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
-        PositionField.freeze();
     }
 
     private Analyzer search_analyzer;
@@ -131,11 +119,8 @@ public class ExtractLc implements QTExtract {
 
     public void setMode(int i){
         switch (i) {
-            case 0 : mode = EXACT_PHRASE; break;
-            case 1 : mode = PHRASE; break;
-            case 2 : mode = EXACT_SPAN; break;
-            case 3 : mode = SPAN; break;
-            case 4 : mode = PARTIAL_SPAN; break;
+            case 0 : mode = ORDERED_SPAN; break;
+            case 1 : mode = SPAN; break;
         }
     }
 
@@ -170,27 +155,9 @@ public class ExtractLc implements QTExtract {
             case SIMPLE: this.index_analyzer     = new SimpleAnalyzer(); break;
             case STANDARD: this.index_analyzer   = new StandardAnalyzer(); break;
             case WHITESPACE: this.index_analyzer = new WhitespaceAnalyzer(); break;
+            case STEM: this.index_analyzer = new EnglishAnalyzer(); break;
         }
         this.search_analyzer = this.index_analyzer;
-    }
-
-    private String tokenize(Analyzer analyzer, String str){
-        TokenStream ts = analyzer.tokenStream(searchField, str);
-        CharTermAttribute cattr = ts.addAttribute(CharTermAttribute.class);
-        StringBuilder sb = new StringBuilder();
-        try {
-            ts.reset();
-
-            while (ts.incrementToken()) {
-                String term = cattr.toString();
-                sb.append(term).append(" ");
-            }
-            ts.end();
-            ts.close();
-        } catch (Exception e){
-
-        }
-        return sb.toString().trim();
     }
 
     public void setSynonyms(ArrayList<String> synonymPairs){
@@ -203,10 +170,10 @@ public class ExtractLc implements QTExtract {
                 if (parts.length != 2) continue;
 
                 CharsRefBuilder inputCharsRef = new CharsRefBuilder();
-                SynonymMap.Builder.join(tokenize(index_analyzer, parts[0]).split(" +"), inputCharsRef);
+                SynonymMap.Builder.join(tokenize(index_analyzer, parts[0]), inputCharsRef);
 
                 CharsRefBuilder outputCharsRef = new CharsRefBuilder();
-                SynonymMap.Builder.join(tokenize(index_analyzer, parts[1]).split(" +"), outputCharsRef);
+                SynonymMap.Builder.join(tokenize(index_analyzer, parts[1]), outputCharsRef);
                 builder.add(inputCharsRef.get(), outputCharsRef.get(), true);
 
             }
@@ -287,95 +254,137 @@ public class ExtractLc implements QTExtract {
         return q;
     }
 
-    private void add2all(ArrayList<ArrayList<String>> paths, String t){
-        Iterator<ArrayList<String>> arrayIterator = paths.iterator();
-
-        while (arrayIterator.hasNext()){
-            ArrayList<String> arr = arrayIterator.next();
-            arr.add(t);
-        }
-    }
-
-    private void dubplicate(ArrayList<ArrayList<String>> paths, String term){
-        if (paths.size() == 0) return;
-        int lastIndex = paths.get(0).size() -1;
-        ArrayList<ArrayList<String>> pathcopy = new ArrayList<>(paths);
-        for (ArrayList<String> arr : pathcopy){
-            arr.set(lastIndex, term);
-        }
-        paths.addAll(pathcopy);
-
-
-    }
-
-    public Query getSpanQuery(Analyzer analyzer,
-                              String query,
-                              int slop,
-                              boolean allTerms) throws IOException {
-
-        TokenStream ts = analyzer.tokenStream(searchField, query);
-        CharTermAttribute cattr = ts.addAttribute(CharTermAttribute.class);
-        PositionIncrementAttribute pattr = ts.addAttribute(PositionIncrementAttribute.class);
-
-        ArrayList<ArrayList<String>> termArrays = new ArrayList<>();
-        termArrays.add(new ArrayList<>());
-        // get all paths -- flatten the graph
+    private String[] getTokenizedString(TokenStream tokenStream) {
+        CharTermAttribute cattr = tokenStream.addAttribute(CharTermAttribute.class);
+        ArrayList<String> tokens = new ArrayList<>();
         try {
-            ts.reset();
+            tokenStream.reset();
 
-            while (ts.incrementToken()) {
+            while (tokenStream.incrementToken()) {
                 String term = cattr.toString();
-
-                int positionIncrement = pattr.getPositionIncrement();
-                if (positionIncrement == 0){
-                    dubplicate(termArrays, term);
-                } else {
-                    add2all(termArrays, term);
-                }
-       //         logger.info(term + " " + pattr.getPositionIncrement());
+                tokens.add(term);
             }
+            tokenStream.end();
+            tokenStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (tokens.size() == 0) return null;
+        return tokens.toArray(new String[tokens.size()]);
+    }
 
-            if (termArrays.size() == 0) return null;
-            ts.end();
-        } finally {
-            ts.close();
+    private String[] tokenize(Analyzer analyzer, String str) {
+        TokenStream ts = analyzer.tokenStream(null, str);
+        return getTokenizedString(ts);
+    }
+
+
+    private SpanQuery parse(String query,
+                            int slop,
+                            AtomicInteger idx,
+                            boolean is_synonym_clause,
+                            boolean ordered)
+    {
+        List<SpanQuery> queryList = new ArrayList<>();
+        boolean mode_is_field = true;
+        StringBuilder fld = new StringBuilder();
+        StringBuilder term = new StringBuilder();
+
+        while (idx.get() < query.length()){
+            char c = query.charAt(idx.get());
+
+            switch (c) {
+                case '+':
+                    idx.incrementAndGet();
+                    break;
+                case ' ':
+                    mode_is_field = true;
+                    if (fld.length() > 0 && term.length() > 0) {
+                        SpanTermQuery spanTermQuery = new SpanTermQuery(new Term(fld.toString(), term.toString()));
+                        fld = new StringBuilder();
+                        term = new StringBuilder();
+                        queryList.add(spanTermQuery);
+                    }
+                    idx.incrementAndGet();
+                    break;
+                case ':':
+                    mode_is_field = false;
+                    idx.incrementAndGet();
+                    break;
+                case '(':
+                    idx.incrementAndGet();
+                    boolean synonym_clause = false;
+                    if (fld.toString().equals("Synonym")){
+                        synonym_clause = true;
+                    }
+                    SpanQuery spanQuery = parse(query, slop, idx, synonym_clause, ordered);
+                    queryList.add(spanQuery);
+                    break;
+                case ')':
+                    idx.incrementAndGet();
+                    if (fld.length() > 0 && term.length() > 0) {
+                        SpanTermQuery spanTQuery = new SpanTermQuery(new Term(fld.toString(), term.toString()));
+                        queryList.add(spanTQuery);
+                    }
+                    if (queryList.size() == 0) {
+                        logger.error("This is an empty Span..");
+                        return null;
+                    } else if (queryList.size() == 1) {
+                        return queryList.get(0);
+                    } else {
+                        if (is_synonym_clause) {
+                            SpanOrQuery spanOrQuery = new SpanOrQuery(queryList.toArray(new SpanQuery[queryList.size()]));
+                            return spanOrQuery;
+                        } else {
+                            SpanNearQuery.Builder spanNearBuilder = new SpanNearQuery.Builder(searchField, ordered);
+                            spanNearBuilder.setSlop(slop);
+                            for (SpanQuery sq : queryList) {
+                                spanNearBuilder.addClause(sq);
+                            }
+                            return spanNearBuilder.build();
+                        }
+                    }
+                default:
+                    if (mode_is_field) {
+                        fld.append(c);
+                    } else {
+                        term.append(c);
+                    }
+                    idx.incrementAndGet();
+            }
         }
 
-        if (termArrays.size() == 1) {
-            ArrayList<String> termArray = termArrays.get(0);
-            if (termArray.size() > 1) {
-                SpanNearQuery.Builder querybuilder = new SpanNearQuery.Builder(searchField, true);
-                querybuilder.setSlop(slop);
-                for (String term : termArray) {
-                    Term t = new Term(searchField, term);
-                    querybuilder.addClause(new SpanTermQuery(t));
-                }
-                Query spanquery = querybuilder.build();
-        //        logger.info(spanquery.toString());
-                return spanquery;
-            } else {
-                return new TermQuery(new Term(searchField, termArray.get(0)));
-            }
+        if (fld.length() > 0 && term.length() > 0) {
+            SpanTermQuery spanTermQuery = new SpanTermQuery(new Term(fld.toString(), term.toString()));
+            queryList.add(spanTermQuery);
+        }
+
+        if (queryList.size() == 0) return null;
+        if (queryList.size() == 1) {
+            return queryList.get(0);
         } else {
-            BooleanQuery.Builder builder = new BooleanQuery.Builder();
-            HashSet<String> uniqterms = new HashSet<>();
-            BooleanClause.Occur boolean_mode = allTerms ? BooleanClause.Occur.MUST : BooleanClause.Occur.SHOULD;
-            for (ArrayList<String> termArray : termArrays){
-                String hash = String.join(" " , termArray);
-                if (uniqterms.contains(hash))continue;
-                uniqterms.add(hash);
-                SpanNearQuery.Builder querybuilder = new SpanNearQuery.Builder(searchField, true);
-                querybuilder.setSlop(slop);
-                for (String term : termArray) {
-                    Term t = new Term(searchField, term);
-                    querybuilder.addClause(new SpanTermQuery(t));
-                }
-                Query spanquery = querybuilder.build();
-        //        logger.info(spanquery.toString());
-                builder.add(spanquery, boolean_mode);
+            SpanNearQuery.Builder spanNearBuilder = new SpanNearQuery.Builder(searchField, true);
+            spanNearBuilder.setSlop(slop);
+            for (SpanQuery spanQuery : queryList) {
+                spanNearBuilder.addClause(spanQuery);
             }
-            return builder.build();
+            return spanNearBuilder.build();
         }
+    }
+
+    public SpanQuery getSpanQuery(Analyzer analyzer,
+                                  String query,
+                                  int slop,
+                                  boolean ordered)
+    {
+        QueryParser qp = new QueryParser(searchField, analyzer);
+        BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
+        Query q = qp.createBooleanQuery(searchField, query, matching_mode);
+        String query_dsl = q.toString();
+    //    logger.info(query_dsl);
+        AtomicInteger parse_start = new AtomicInteger();
+        SpanQuery spanQuery = parse(query_dsl, slop, parse_start, false, ordered);
+        return spanQuery;
     }
 
     public  Query getFuzzyQuery(Analyzer analyzer, String query) throws IOException {
@@ -393,98 +402,6 @@ public class ExtractLc implements QTExtract {
         return bqueryBuilder.build();
     }
 
-    private String mergeCloseFragment(String f){
-        // if </b> and <b> are nearby
-        int start = 0;
-        int utteranceLength = f.length();
-        while (start >= 0 && start < utteranceLength){
-            int endPhraseInFragment = f.indexOf(CLOSEH, start);   // find </b>
-            if (endPhraseInFragment < 0) return f;
-            int startPhraseInFragment = f.indexOf(OPENH, endPhraseInFragment);   // find <b>
-            if (startPhraseInFragment < 0) return f;
-            // </b  '>'  vmdn  '<' b>
-            start = endPhraseInFragment; //it is at </b '>'
-            if (startPhraseInFragment - endPhraseInFragment < (CLOSEHLENGTH + 4)) {// DO NOT HARDCODE THIS NUMBER!! 4 for length of /b>
-                //TODO: do some analysis on between to make sure it can be merged
-                //TODO: for example if between is a number don't merge it
-                String between = f.substring(endPhraseInFragment + CLOSEHLENGTH, startPhraseInFragment);
-        //        if (between.length() < 1) continue;
-        //        Matcher m = DIGITS.matcher(between);
-        //        if (m.find()) continue;
-                String f1 = f.substring(0, endPhraseInFragment);
-                String f2 = f.substring(startPhraseInFragment+OPENHLENGTH);
-                f = f1 + between + f2;
-                utteranceLength -= (CLOSEHLENGTH + OPENHLENGTH);
-            } else {
-                start++;
-
-            }
-        }
-
-        return f;
-
-    }
-
-    private ArrayList<Emit> getFragmentsHelper(final String entType,
-                                               final String str,
-                                               final IndexSearcher searcher,
-                                               final Analyzer analyzer,
-                                               final Document matchedDoc,
-                                               final Query query) throws IOException {
-        ArrayList<Emit> emits = new ArrayList<>();
-
-        TopDocs res = searcher.search(query, 1);
-        if (res.totalHits.value == 0) return emits;
-
-        int fragmentstart = 0;
-        String foundValue = matchedDoc.getField(entNameField).stringValue();
-
-        UnifiedHighlighter uhighlighter = new UnifiedHighlighter(searcher, analyzer);
-        String[] fragments = uhighlighter.highlight(searchField, query, res);
-
-        for (String rawFragment : fragments) {
-            String f = mergeCloseFragment(rawFragment);
-      //      String f = rawFragment;
-            String freduced = f.replace(OPENH, "").replace(CLOSEH, "");
-            //now start and end on fragment need to be shifted to match str
-            int offset = str.indexOf(freduced, fragmentstart);
-            if (offset < 0) {// this is impossible!
-                logger.error("Can not find fragment in String {} --> {}", f, str);
-                continue;
-            }
-
-            int start = 0;
-            int subFragmentNumber = 0;
-            while (start >= 0) {
-                int startPhraseInFragment = f.indexOf(OPENH, start);
-                if (startPhraseInFragment < 0) break;
-                int endPhraseInFragment = f.indexOf(CLOSEH, startPhraseInFragment);
-                if (endPhraseInFragment < 0) break;
-                subFragmentNumber++;
-
-                int startPhraseInStr = startPhraseInFragment - (OPENHLENGTH + CLOSEHLENGTH) * (subFragmentNumber -1 ) + offset;
-                int endPhraseInStr = endPhraseInFragment - (OPENHLENGTH + CLOSEHLENGTH) * (subFragmentNumber -1 ) - OPENHLENGTH + offset;
-
-                fragmentstart += offset;
-
-                String keyword = str.substring(startPhraseInStr, endPhraseInStr);
-
-                //Check if this is partial token and if so extend to the first starting space
-                //this has to be a word noundary officially
-
-                logger.debug("KEY {} ---- Fragment {} ", keyword, f);
-
-                Emit emit = new Emit(startPhraseInStr, endPhraseInStr, keyword);
-                NamedEntity namedEntity = new NamedEntity(foundValue, null);
-                namedEntity.setEntity(entType, new Entity(foundValue, null, true));
-                emit.addCustomeData(namedEntity);
-                emits.add(emit);
-                start = endPhraseInFragment + OPENHLENGTH;
-            }
-        }
-        return emits;
-    }
-
     private IndexSearcher getIndexSearcher(Analyzer analyzer,
                                            String str) throws IOException {
 
@@ -493,7 +410,7 @@ public class ExtractLc implements QTExtract {
         IndexWriter writer = new IndexWriter(mMapDirectory, config);
 
         Document doc = new Document();
-        doc.add(new Field(searchField, str, PositionField));
+        doc.add(new Field(searchField, str, SearchField));
         writer.addDocument(doc);
         writer.close();
         DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
@@ -510,36 +427,80 @@ public class ExtractLc implements QTExtract {
 
         //TODO: this is messy; re-factor it with proper multi-field index
         for (Document matchedDoc : matchedDocs) {
-            Query query = null;
+            SpanQuery query = null;
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
         //    logger.info("quuu " + query_string_raw);
             String query_string = QueryParser.escape(query_string_raw);
             switch (mode) {
-                case EXACT_PHRASE : query = getPhraseQuery(search_analyzer , query_string, 0); break;
-                case PHRASE : query = getPhraseQuery(search_analyzer , query_string, 1); break;
-                case EXACT_SPAN : query = getSpanQuery(search_analyzer , query_string, 0, true); break;
-                case SPAN : query = getSpanQuery(search_analyzer , query_string, 1, true); break;
-                case PARTIAL_SPAN : query = getSpanQuery(search_analyzer , query_string, 1, false); break;
+                case ORDERED_SPAN : query = getSpanQuery(search_analyzer , query_string, 1, true); break;
+                case SPAN : query = getSpanQuery(search_analyzer , query_string, 1, false); break;
             }
-            emits.addAll(getFragmentsHelper(entType, str, searcher, search_analyzer, matchedDoc, query));
+            Spans spans = query.createWeight(searcher, ScoreMode.COMPLETE_NO_SCORES, 1f)
+                            .getSpans(searcher.getIndexReader().leaves().get(0), SpanWeight.Postings.POSITIONS);
+            if (spans == null) continue;
+
+            int s = spans.nextDoc();
+            int spanstart = spans.nextStartPosition();
+            String foundValue = matchedDoc.getField(entNameField).stringValue();
+            while (spanstart < 2147483647) {
+                int spanend = spans.endPosition() -1;
+                TokenStream ts = search_analyzer.tokenStream(searchField, str);
+                PositionIncrementAttribute positionIncrementAttribute = ts.getAttribute(PositionIncrementAttribute.class);
+                OffsetAttribute offsetAttribute = ts.getAttribute(OffsetAttribute.class);
+                try {
+                    ts.reset();
+                    int cursur = -1;
+                    int startPhraseInStr = -1;
+                    int endPhraseInStr = -1;
+                    while (ts.incrementToken()) {
+                        int positionIncrement = positionIncrementAttribute.getPositionIncrement();
+                        cursur += positionIncrement;
+                        int start = offsetAttribute.startOffset();
+                        int end = offsetAttribute.endOffset();
+                        if (cursur == (spanstart)) {
+                            startPhraseInStr = start;
+                            endPhraseInStr = end;
+                        }
+                        if (cursur == (spanend)) {
+                            endPhraseInStr = end;
+                            break;
+                        }
+                    }
+                    ts.end();
+                    if (startPhraseInStr >=0 && endPhraseInStr > 0) {
+                        String keyword = str.substring(startPhraseInStr, endPhraseInStr);
+                        //        logger.info("KEYWORD: {}", keyword);
+                        Emit emit = new Emit(startPhraseInStr, endPhraseInStr, keyword);
+                        NamedEntity namedEntity = new NamedEntity(foundValue, null);
+                        namedEntity.setEntity(entType, new Entity(foundValue, null, true));
+                        emit.addCustomeData(namedEntity);
+                        emits.add(emit);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    ts.close();
+                }
+                spanstart = spans.nextStartPosition();
+            }
         }
 
-        ArrayList<Emit> output = new ArrayList<>(emits);
-        output.sort((Emit s1, Emit s2)-> s1.getEnd()- (s2.getEnd()));
+        ArrayList<Emit> emits_sorted = new ArrayList<>(emits);
+        emits_sorted.sort((Emit s1, Emit s2)-> s1.getEnd()- (s2.getEnd()));
 
         //remove overlaps?
         boolean removeOverlaps = true; //TODO: make this a switch
         if (removeOverlaps) {
             ArrayList<Emit> noOverlapOutput = new ArrayList<>();
 
-            for (int i = 0; i < output.size(); i++) {
-                final Emit firstEmit = output.get(i);
+            for (int i = 0; i < emits_sorted.size(); i++) {
+                final Emit firstEmit = emits_sorted.get(i);
                 int firstEmitStart = firstEmit.getStart();
                 int firstEmitEnd = firstEmit.getEnd();
                 boolean hasAnoverlappigParent = false;
-                for (int j = 0; j < output.size(); j++) {
+                for (int j = 0; j < emits_sorted.size(); j++) {
                     if (i == j) continue;
-                    final Emit secondEmit = output.get(j);
+                    final Emit secondEmit = emits_sorted.get(j);
                     int secondEmitStart = secondEmit.getStart();
                     int secondEmitEnd = secondEmit.getEnd();
                     if (secondEmitStart >= firstEmitEnd) break;
@@ -556,7 +517,7 @@ public class ExtractLc implements QTExtract {
             return noOverlapOutput;
         }
 
-        return new ArrayList<>(emits);
+        return new ArrayList<>(emits_sorted);
     }
 
     private IndexSearcher getSearcherFromEntities(String entType,
@@ -674,10 +635,11 @@ public class ExtractLc implements QTExtract {
         uts.add("in united states");
 
         ArrayList<String> synonymMap = new ArrayList<>();
-        synonymMap.add("america\tunited states");
-        synonymMap.add("will\tshall");
-        synonymMap.add("fox\troobah");
-        synonymMap.add("fox\tgobreh");
+        synonymMap.add("america\tunited states of america");
+        synonymMap.add("will be\tshall");
+   //     synonymMap.add("fox\troobah");
+   //     synonymMap.add("fox\tgobreh");
+        synonymMap.add("fox\tgobreh siahe");
         synonymMap.add("fox\tpishi");
 
         ExtractLc lnindex = new ExtractLc(synonymMap);
@@ -699,9 +661,10 @@ public class ExtractLc implements QTExtract {
         lnindex.phraseTree = new IndexSearcher(dreader);
 
         String q = "so I will be the only fox in the america for you.";
-     //   String q = "******";
+        lnindex.getSpanQuery(lnindex.search_analyzer, q, 1, true);
+
         Query query = lnindex.getMultimatcheQuery(lnindex.search_analyzer, q);
-        logger.info(query.toString());
+
         TopDocs res = lnindex.phraseTree.search(query, 40);
 
         List<Document> matchedDocs = new ArrayList<>();
@@ -753,7 +716,6 @@ public class ExtractLc implements QTExtract {
 
         String escaped_query = QueryParser.escape(query_string);
         HashMap<String, Collection<Emit>> res = new HashMap<>();
-    //    HashSet<Integer> uniqDocs = new HashSet<>();
 
         try {
             if (hidden_entities != null){
@@ -762,8 +724,6 @@ public class ExtractLc implements QTExtract {
                 List<Document> matchedDocs = new ArrayList<>();
                 for (ScoreDoc hit : topdocs.scoreDocs) {
                     int id = hit.doc;
-        //            if (uniqDocs.contains(id)) continue;
-        //            uniqDocs.add(id);
                     Document doclookedup = hidden_entities.doc(id);
                     matchedDocs.add(doclookedup);
                 }
@@ -781,8 +741,6 @@ public class ExtractLc implements QTExtract {
                 List<Document> matchedDocs = new ArrayList<>();
                 for (ScoreDoc hit : topdocs.scoreDocs) {
                     int id = hit.doc;
-            //        if (uniqDocs.contains(id)) continue;
-            //        uniqDocs.add(id);
                     Document doclookedup = indexSearcher.doc(id);
                     matchedDocs.add(doclookedup);
                 }
@@ -792,6 +750,7 @@ public class ExtractLc implements QTExtract {
             }
 
         } catch (Exception e ){
+            e.printStackTrace();
             logger.error("Error in name search {}: query_string '{}'", e.getMessage() , query_string);
         }
         return res;
