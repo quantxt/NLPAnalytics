@@ -1,4 +1,4 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.search;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,6 +33,7 @@ import static org.apache.lucene.analysis.CharArraySet.EMPTY_SET;
 /**
  * Created by matin on 3/28/18.
  */
+@Deprecated
 public class LcText<T> {
 
     final private static Logger logger = LoggerFactory.getLogger(LcText.class);

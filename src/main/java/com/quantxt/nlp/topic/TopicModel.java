@@ -1,4 +1,4 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.topic;
 
 
 import com.quantxt.doc.QTDocument;

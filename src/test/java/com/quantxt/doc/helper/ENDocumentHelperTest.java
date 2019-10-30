@@ -6,10 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
 import org.jsoup.Jsoup;
@@ -19,9 +16,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;
-import com.quantxt.helper.types.ExtInterval;
-import com.quantxt.nlp.Speaker;
-import com.quantxt.types.Entity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

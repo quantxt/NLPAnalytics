@@ -1,11 +1,12 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.search;
 
 import com.google.gson.*;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.QTExtract;
 import com.quantxt.helper.types.QTField;
-import com.quantxt.nlp.types.Tagger;
+import com.quantxt.nlp.topic.word2vec;
+import com.quantxt.nlp.topic.Tagger;
 import com.quantxt.trie.Emit;
 import com.quantxt.trie.Trie;
 import com.quantxt.types.Entity;
@@ -24,13 +25,15 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import static com.quantxt.nlp.search.QTAdvancedSearch.HIDDEH_ENTITY;
+
 /**
  * Created by matin on 10/9/16.
  */
 
+@Deprecated
 public class Speaker implements QTExtract {
     final private static Logger logger = LoggerFactory.getLogger(Speaker.class);
-    final public static String HIDDEH_ENTITY = "hidden";
 
     private Trie phraseTree = null;
     private Trie hidden_entities;

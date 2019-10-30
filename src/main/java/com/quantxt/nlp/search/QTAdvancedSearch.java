@@ -1,14 +1,12 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.search;
 
-import com.google.gson.Gson;
 import com.quantxt.doc.QTDocument;
-import com.quantxt.doc.QTExtract;
-import com.quantxt.helper.types.QTField;
-import com.quantxt.nlp.types.Tagger;
 import com.quantxt.trie.Emit;
+import com.quantxt.types.Dictionary;
 import com.quantxt.types.Entity;
 import com.quantxt.types.NamedEntity;
-import org.apache.commons.io.IOUtils;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.LetterTokenizer;
 import org.apache.lucene.analysis.core.SimpleAnalyzer;
@@ -27,7 +25,6 @@ import org.apache.lucene.analysis.synonym.SynonymGraphFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
-import org.apache.lucene.analysis.tokenattributes.PackedTokenAttributeImpl;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -42,31 +39,18 @@ import org.apache.lucene.util.CharsRefBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 
-import static com.quantxt.nlp.ExtractLc.Mode.*;
-import static com.quantxt.nlp.Speaker.HIDDEH_ENTITY;
 import static org.apache.lucene.analysis.CharArraySet.EMPTY_SET;
 
-/**
- * Created by matin on 12/2/18.
- */
+@Getter
+@Setter
+public class QTAdvancedSearch extends Dictionary {
 
-public class ExtractLc implements QTExtract {
-
-    final private static Logger logger = LoggerFactory.getLogger(ExtractLc.class);
-
-    enum Mode {
-        ORDERED_SPAN, SPAN
-    }
-
-    enum AnalyzerType {
-        WHITESPACE, SIMPLE, STANDARD, STEM
-    }
+    final private static Logger logger = LoggerFactory.getLogger(QTAdvancedSearch.class);
+    final public static String HIDDEH_ENTITY = "hidden";
 
     final private static String entTypeField = "enttypefield";
     final private static String entNameField = "entnamefield";
@@ -74,23 +58,6 @@ public class ExtractLc implements QTExtract {
 
     final private static FieldType SearchField;
     final private static FieldType DataField;
-
-    private QTField.QTFieldType qtFieldType = QTField.QTFieldType.DOUBLE;
-    private Pattern pattern;
-    private int [] groups;
-
-    private int topN = 100;
-    private IndexSearcher phraseTree = null;
-    private IndexSearcher hidden_entities;
-
-    private Map<String, IndexSearcher> nameTree = new HashMap<>();
-
-    private List<String> search_terms = new ArrayList<>();
-
-    private transient Tagger tagger = null;
-    private Mode mode = ORDERED_SPAN;
-    private transient ConcurrentHashMap<String, Double> tokenRank;
-    private AnalyzerType analyzer_type;
 
     static {
 
@@ -110,48 +77,15 @@ public class ExtractLc implements QTExtract {
         SearchField.freeze();
     }
 
+    private int topN = 100;
+    private Map<String, IndexSearcher> dictionaryIndexMap = new HashMap<>();
     private Analyzer search_analyzer;
     private Analyzer index_analyzer;
 
-    public void setTopN(int i){
-        topN = i;
-    }
 
-    public void setMode(int i){
-        switch (i) {
-            case 0 : mode = ORDERED_SPAN; break;
-            case 1 : mode = SPAN; break;
-        }
-    }
-
-    public ExtractLc(QTDocument.Language lang){
-        this(AnalyzerType.STANDARD);
-        if (lang == null) return;
-        analyzer_type = AnalyzerType.STEM;
-        switch (lang) {
-            case ENGLISH:
-                this.index_analyzer = new EnglishAnalyzer();
-                break;
-            case SPANISH:
-                this.index_analyzer = new SpanishAnalyzer();
-                break;
-            case RUSSIAN:
-                this.index_analyzer = new RussianAnalyzer();
-                break;
-            case JAPANESE:
-                this.index_analyzer = new JapaneseAnalyzer();
-                break;
-            case FRENCH:
-                this.index_analyzer = new FrenchAnalyzer();
-                break;
-            default:
-                this.index_analyzer = new EnglishAnalyzer();
-        }
-    }
-
-    public ExtractLc(AnalyzerType analyzerType){
-        this.analyzer_type = analyzerType;
-        switch (analyzerType) {
+    public QTAdvancedSearch(){
+        super();
+        switch (analyzType) {
             case SIMPLE: this.index_analyzer     = new SimpleAnalyzer(); break;
             case STANDARD: this.index_analyzer   = new StandardAnalyzer(); break;
             case WHITESPACE: this.index_analyzer = new WhitespaceAnalyzer(); break;
@@ -160,7 +94,41 @@ public class ExtractLc implements QTExtract {
         this.search_analyzer = this.index_analyzer;
     }
 
-    public void setSynonyms(ArrayList<String> synonymPairs){
+    public QTAdvancedSearch(QTDocument.Language lang,
+                            ArrayList<String> synonymPairs){
+        super();
+        switch (analyzType) {
+            case SIMPLE: this.index_analyzer     = new SimpleAnalyzer(); break;
+            case STANDARD: this.index_analyzer   = new StandardAnalyzer(); break;
+            case WHITESPACE: this.index_analyzer = new WhitespaceAnalyzer(); break;
+            case STEM: {
+                switch (lang) {
+                    case ENGLISH:
+                        this.index_analyzer = new EnglishAnalyzer();
+                        break;
+                    case SPANISH:
+                        this.index_analyzer = new SpanishAnalyzer();
+                        break;
+                    case RUSSIAN:
+                        this.index_analyzer = new RussianAnalyzer();
+                        break;
+                    case JAPANESE:
+                        this.index_analyzer = new JapaneseAnalyzer();
+                        break;
+                    case FRENCH:
+                        this.index_analyzer = new FrenchAnalyzer();
+                        break;
+                    default:
+                        this.index_analyzer = new EnglishAnalyzer();
+                }
+            }
+            break;
+        }
+        this.search_analyzer = this.index_analyzer;
+        setSynonyms(synonymPairs);
+    }
+
+    private void setSynonyms(ArrayList<String> synonymPairs){
         if (synonymPairs == null || synonymPairs.size() == 0) return;
         try {
             SynonymMap.Builder builder = new SynonymMap.Builder(true);
@@ -184,7 +152,7 @@ public class ExtractLc implements QTExtract {
                 @Override
                 protected TokenStreamComponents createComponents(String fieldName) {
                     TokenStreamComponents tokenStreamComponents = null;
-                    switch (analyzer_type) {
+                    switch (analyzType) {
                         case WHITESPACE:
                             WhitespaceTokenizer whitespaceTokenizer = new WhitespaceTokenizer();
                             TokenStream tokenStream = new CachingTokenFilter(whitespaceTokenizer);
@@ -222,24 +190,6 @@ public class ExtractLc implements QTExtract {
         }
     }
 
-
-    public ExtractLc(ArrayList<String> synonymPairs){
-        this(AnalyzerType.STANDARD);
-        setSynonyms(synonymPairs);
-    }
-
-    public ExtractLc(Map<String, Entity[]> entities,
-                     String taggerDir,
-                     InputStream phraseFile) throws IOException
-    {
-        this(AnalyzerType.STANDARD);
-        loadEntsAndPhs(entities, phraseFile);
-        if (taggerDir != null) {
-            tagger = Tagger.load(taggerDir);
-            logger.info("Speaker for " + taggerDir + " is created");
-        }
-    }
-
     public Query getPhraseQuery(Analyzer analyzer, String query, int slop) {
         QueryParser qp = new QueryParser(searchField, analyzer);
         Query q = qp.createPhraseQuery(searchField, query, slop);
@@ -250,7 +200,7 @@ public class ExtractLc implements QTExtract {
         QueryParser qp = new QueryParser(searchField, analyzer);
         BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
         Query q = qp.createBooleanQuery(searchField, query, matching_mode);
-    //    logger.info(" ++ " + q.toString());
+        //    logger.info(" ++ " + q.toString());
         return q;
     }
 
@@ -381,7 +331,7 @@ public class ExtractLc implements QTExtract {
         BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
         Query q = qp.createBooleanQuery(searchField, query, matching_mode);
         String query_dsl = q.toString();
-    //    logger.info(query_dsl);
+        //    logger.info(query_dsl);
         AtomicInteger parse_start = new AtomicInteger();
         SpanQuery spanQuery = parse(query_dsl, slop, parse_start, false, ordered);
         return spanQuery;
@@ -429,14 +379,18 @@ public class ExtractLc implements QTExtract {
         for (Document matchedDoc : matchedDocs) {
             SpanQuery query = null;
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
-        //    logger.info("quuu " + query_string_raw);
+            //    logger.info("quuu " + query_string_raw);
             String query_string = QueryParser.escape(query_string_raw);
             switch (mode) {
-                case ORDERED_SPAN : query = getSpanQuery(search_analyzer , query_string, 1, true); break;
-                case SPAN : query = getSpanQuery(search_analyzer , query_string, 1, false); break;
+                case ORDERED_SPAN :
+                    query = getSpanQuery(search_analyzer , query_string, 1, true);
+                    break;
+                case SPAN :
+                    query = getSpanQuery(search_analyzer , query_string, 1, false);
+                    break;
             }
             Spans spans = query.createWeight(searcher, ScoreMode.COMPLETE_NO_SCORES, 1f)
-                            .getSpans(searcher.getIndexReader().leaves().get(0), SpanWeight.Postings.POSITIONS);
+                    .getSpans(searcher.getIndexReader().leaves().get(0), SpanWeight.Postings.POSITIONS);
             if (spans == null) continue;
 
             int s = spans.nextDoc();
@@ -577,56 +531,54 @@ public class ExtractLc implements QTExtract {
         return new IndexSearcher(dreader);
     }
 
-    private void loadEntsAndPhs(Map<String, Entity[]> entityMap,
-                                InputStream phraseFile) throws IOException
+    public void init(Map<String, Entity[]> entityMap)
     {
-        if (phraseFile != null)
-        {
-            IndexWriterConfig config = new IndexWriterConfig(index_analyzer);
-            Directory mMapDirectory = new ByteBuffersDirectory();
-            IndexWriter writer = new IndexWriter(mMapDirectory, config);
+        try {
+            for (Map.Entry<String, Entity[]> e : entityMap.entrySet()) {
+                String entType = e.getKey();
+                Entity[] entities = e.getValue();
 
-            String line;
-            int num = 0;
-            BufferedReader br = new BufferedReader(new InputStreamReader(phraseFile, "UTF-8"));
-            while ((line = br.readLine()) != null) {
-                Document doc = new Document();
-                doc.add(new Field(searchField, line, SearchField));
-                writer.addDocument(doc);
-                num++;
+                IndexSearcher indexSearcher = getSearcherFromEntities(entType, entities);
+                dictionaryIndexMap.put(entType, indexSearcher);
             }
-            logger.info(num + " phrases loaded for tagging");
-            DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
-            phraseTree = new IndexSearcher(dreader);
-            writer.close();
-        }
-
-        Gson gson = new Gson();
-
-        //names
-        if (entityMap == null){
-            byte[] subjectArr = IOUtils.toByteArray(ExtractLc.class.getClassLoader().getResource("subject.json").openStream());
-            entityMap = new HashMap<>();
-            entityMap.put("Person", gson.fromJson(new String(subjectArr, "UTF-8"), Entity[].class));
-        }
-
-        for (Map.Entry<String, Entity[]> e : entityMap.entrySet()) {
-            String entType = e.getKey();
-            Entity [] entities = e.getValue();
-
-            for (Entity entity : e.getValue()) {
-                String entity_name = entity.getName();
-                search_terms.add(entity_name);
-            }
-            IndexSearcher indexSearcher = getSearcherFromEntities(entType, entities);
-            if (entType.equals(HIDDEH_ENTITY)){
-                hidden_entities = indexSearcher;
-            } else {
-                nameTree.put(entType, indexSearcher);
-            }
+        } catch (Exception e){
+            e.printStackTrace();
         }
     }
 
+    @Override
+    public Map<String, Collection<Emit>> search(final String query_string) {
+
+        String escaped_query = QueryParser.escape(query_string);
+        HashMap<String, Collection<Emit>> res = new HashMap<>();
+
+        try {
+
+            for (Map.Entry<String, IndexSearcher> e : dictionaryIndexMap.entrySet()) {
+                IndexSearcher indexSearcher = e.getValue();
+                String entType = e.getKey();
+                Query query = getMultimatcheQuery(search_analyzer, escaped_query);
+                TopDocs topdocs = indexSearcher.search(query, topN);
+
+                List<Document> matchedDocs = new ArrayList<>();
+                for (ScoreDoc hit : topdocs.scoreDocs) {
+                    int id = hit.doc;
+                    Document doclookedup = indexSearcher.doc(id);
+                    matchedDocs.add(doclookedup);
+                }
+
+                if (matchedDocs.size() == 0 ) continue;
+                res.put(entType, getFragments(entType, matchedDocs, query_string));
+            }
+
+        } catch (Exception e ){
+            e.printStackTrace();
+            logger.error("Error in name search {}: query_string '{}'", e.getMessage() , query_string);
+        }
+        return res;
+    }
+
+    /*
     public static void main(String[] args) throws Exception {
         ArrayList<String> uts = new ArrayList<>();
         uts.add("the cat");
@@ -637,8 +589,8 @@ public class ExtractLc implements QTExtract {
         ArrayList<String> synonymMap = new ArrayList<>();
         synonymMap.add("america\tunited states of america");
         synonymMap.add("will be\tshall");
-   //     synonymMap.add("fox\troobah");
-   //     synonymMap.add("fox\tgobreh");
+        //     synonymMap.add("fox\troobah");
+        //     synonymMap.add("fox\tgobreh");
         synonymMap.add("fox\tgobreh siahe");
         synonymMap.add("fox\tpishi");
 
@@ -680,125 +632,5 @@ public class ExtractLc implements QTExtract {
         lnindex.getFragments("NEW", matchedDocs, q);
 
     }
-
-    @Override
-    public double[] tag(String s) {
-        return new double[0];
-    }
-
-    @Override
-    public double terSimilarity(String s, String s1) {
-        return 0;
-    }
-
-
-    public Map<String, Double> popTokenRank(List<String> tokens, int nums){
-        word2vec w2v = tagger.getW2v();
-        if (w2v == null) return null;
-        tokenRank = new ConcurrentHashMap<>();
-        for (String t : tokens) {
-            Collection<String> closests = w2v.getClosest(t, nums);
-            tokenRank.put(t, 1d);
-            for (String c : closests){
-                double r = w2v.getDistance(c, t);
-                Double r_cur = tokenRank.get(c);
-                if (r_cur == null){
-                    r_cur = 0d;
-                }
-                tokenRank.put(c, r + r_cur);
-            }
-        }
-        return tokenRank;
-    }
-
-    @Override
-    public Map<String, Collection<Emit>> parseNames(final String query_string) {
-
-        String escaped_query = QueryParser.escape(query_string);
-        HashMap<String, Collection<Emit>> res = new HashMap<>();
-
-        try {
-            if (hidden_entities != null){
-                Query query = getMultimatcheQuery(search_analyzer, escaped_query);
-                TopDocs topdocs = hidden_entities.search(query, topN);
-                List<Document> matchedDocs = new ArrayList<>();
-                for (ScoreDoc hit : topdocs.scoreDocs) {
-                    int id = hit.doc;
-                    Document doclookedup = hidden_entities.doc(id);
-                    matchedDocs.add(doclookedup);
-                }
-                if (matchedDocs.size() > 0 ) {
-                    res.put(HIDDEH_ENTITY, getFragments(HIDDEH_ENTITY, matchedDocs, query_string));
-                }
-            }
-
-            for (Map.Entry<String, IndexSearcher> e : nameTree.entrySet()) {
-                IndexSearcher indexSearcher = e.getValue();
-                String entType = e.getKey();
-                Query query = getMultimatcheQuery(search_analyzer, escaped_query);
-                TopDocs topdocs = indexSearcher.search(query, topN);
-
-                List<Document> matchedDocs = new ArrayList<>();
-                for (ScoreDoc hit : topdocs.scoreDocs) {
-                    int id = hit.doc;
-                    Document doclookedup = indexSearcher.doc(id);
-                    matchedDocs.add(doclookedup);
-                }
-
-                if (matchedDocs.size() == 0 ) continue;
-                res.put(entType, getFragments(entType, matchedDocs, query_string));
-            }
-
-        } catch (Exception e ){
-            e.printStackTrace();
-            logger.error("Error in name search {}: query_string '{}'", e.getMessage() , query_string);
-        }
-        return res;
-    }
-
-    public double getSentenceRank(List<String> parts){
-        double rank  = 0;
-        for (String p : parts){
-            Double d = tokenRank.get(p);
-            if (d != null){
-                rank += d;
-            }
-        }
-        return rank;
-    }
-
-    @Override
-    public boolean hasEntities() {
-        return nameTree.size() > 0;
-    }
-
-    @Override
-    public QTField.QTFieldType getType() {
-        return qtFieldType;
-    }
-
-    @Override
-    public void setType(QTField.QTFieldType type) {
-        this.qtFieldType = type;
-    }
-
-    @Override
-    public Pattern getPattern() {
-        return pattern;
-    }
-
-    @Override
-    public void setPattern(Pattern ptr) {
-        this.pattern = ptr;
-    }
-
-    @Override
-    public int[] getGroups() {
-        return groups;
-    }
-
-    @Override
-    public void setGroups(int[] groups) {
-        this.groups = groups;
-    }
+    */
 }

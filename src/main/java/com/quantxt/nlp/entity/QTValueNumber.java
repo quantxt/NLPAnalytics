@@ -1,4 +1,4 @@
-package com.quantxt.nlp.types;
+package com.quantxt.nlp.entity;
 
 import com.quantxt.helper.DateResolver;
 import com.quantxt.helper.types.ExtIntervalSimple;
@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.quantxt.helper.types.QTField.QTFieldType.*;
-import static com.quantxt.nlp.types.QTValue.getPad;
+import static com.quantxt.nlp.entity.QTValue.getPad;
 
 /**
  * Created by matin on 11/24/18.
@@ -164,6 +164,7 @@ public class QTValueNumber {
                         t = INT;
                     }
                 }
+
                 ExtIntervalSimple ext = new ExtIntervalSimple(start, end);
                 ext.setType(t);
 

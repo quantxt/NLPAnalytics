@@ -1,6 +1,7 @@
 package com.quantxt.nlp.types;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
+import com.quantxt.nlp.entity.QTValueNumber;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

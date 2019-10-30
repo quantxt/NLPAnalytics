@@ -1,4 +1,4 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.search;
 
 import com.google.gson.*;
 import com.quantxt.helper.types.Extraction;
@@ -19,6 +19,8 @@ import java.util.*;
 /**
  * Created by matin on 4/4/17.
  */
+
+@Deprecated
 public class Extract {
 
     final private static Logger logger = LoggerFactory.getLogger(Extract.class);

@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
+import com.quantxt.nlp.search.LcText;
 import org.junit.Test;
 
 import com.google.gson.JsonArray;

@@ -3,6 +3,8 @@ package com.quantxt.doc;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.quantxt.nlp.topic.Tagger;
+import com.quantxt.types.Dictionary;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,11 +55,6 @@ public class ENDocumentInfo extends QTDocument {
         }
 
         return childs;
-    }
-
-    @Override
-    public double[] getVectorizedTitle(QTExtract speaker) {
-        return speaker.tag(title);
     }
 
     @Override

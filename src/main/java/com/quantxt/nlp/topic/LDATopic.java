@@ -1,4 +1,4 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.topic;
 
 import com.quantxt.types.MapSort;
 import org.slf4j.Logger;

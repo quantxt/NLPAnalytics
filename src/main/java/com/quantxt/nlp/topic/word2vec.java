@@ -1,4 +1,4 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.topic;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,8 +20,6 @@ import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.quantxt.doc.ENDocumentInfo;
 
 
 /**

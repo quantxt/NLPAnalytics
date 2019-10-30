@@ -1,11 +1,10 @@
 package com.quantxt.QTDocument;
 
-import com.quantxt.nlp.ExtractLc;
+import com.quantxt.nlp.search.ExtractLc;
 import com.quantxt.trie.Emit;
 import com.quantxt.types.Entity;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
