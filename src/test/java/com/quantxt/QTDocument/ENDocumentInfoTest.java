@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.entity.QTValueNumber;
 import com.quantxt.nlp.search.QTAdvancedSearch;
+import com.quantxt.types.DictItm;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -33,7 +34,7 @@ public class ENDocumentInfoTest {
     private static QTAdvancedSearch qtAdvancedSearch;
     private static ENDocumentHelper helper;
     private static boolean setUpIsDone = false;
-    private static Map<String, Entity[]> entMap = new HashMap<>();
+    private static Map<String, List<DictItm>> global_dicts = new HashMap<>();
 
     @BeforeClass
     public static void init() {
@@ -41,20 +42,24 @@ public class ENDocumentInfoTest {
             return;
         }
         try {
-            ArrayList<Entity> entityArray1 = new ArrayList<>();
-            entityArray1.add(new Entity("Gilead Sciences, Inc." , new String[]{"Gilead Sciences , Inc."} , true));
-            entityArray1.add(new Entity("Amazon Inc." , new String[]{"Amazon"} , true));
-            ArrayList<Entity> entityArray2 = new ArrayList<>();
-            entityArray2.add(new Entity("Director" , new String[]{"Director"} , true));
-            entityArray2.add(new Entity("Senior Director" , new String[]{"Senior Director"} , true));
-            ArrayList<Entity> entityArray3 = new ArrayList<>();
-            entityArray3.add(new Entity("10 Year Exposure" , new String[]{"10 yr" , "10 yr", "ten year"} , true));
-            entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
-            entMap.put("Title" , entityArray2.toArray(new Entity[entityArray2.size()]));
-            entMap.put("Exposure" , entityArray3.toArray(new Entity[entityArray3.size()]));
+            ArrayList<DictItm> d1_items = new ArrayList<>();
+            d1_items.add(new DictItm("Gilead Sciences, Inc.", "Gilead Sciences, Inc.", "Gilead Sciences , Inc."));
+            d1_items.add(new DictItm("Amazon Inc.", "Amazon Inc.", "Amazon"));
+
+            ArrayList<DictItm> d2_items = new ArrayList<>();
+            d2_items.add(new DictItm("Director", "Director"));
+            d2_items.add(new DictItm("Senior Director", "Senior Director"));
+
+            ArrayList<DictItm> d3_items = new ArrayList<>();
+            d3_items.add(new DictItm("10 Year Exposure", "10 Year Exposure", "10 yr", "ten year"));
+
+
+            global_dicts.put("Company" , d1_items);
+            global_dicts.put("Title" , d2_items);
+            global_dicts.put("Exposure" , d3_items);
             helper = new ENDocumentHelper();
             qtAdvancedSearch = new QTAdvancedSearch();
-            qtAdvancedSearch.init(entMap);
+            qtAdvancedSearch.init(global_dicts);
             setUpIsDone = true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -72,15 +77,16 @@ public class ENDocumentInfoTest {
                 result.write(buffer, 0, length);
             }
 
+            ArrayList<DictItm> items = new ArrayList<>();
+            items.add(new DictItm("FEIN OR SOC SEC", "FEIN OR SOC SEC"));
 
-            ArrayList<Entity> entityArray1 = new ArrayList<>();
-            entityArray1.add(new Entity("FEIN OR SOC SEC" , new String[]{"FEIN OR SOC SEC"} , true));
-            Map<String, Entity[]> entMap = new HashMap<>();
-            entMap.put("FEIN" , entityArray1.toArray(new Entity[entityArray1.size()]));
+            Map<String, List<DictItm>> dicts = new HashMap<>();
+            dicts.put("FEIN" , items);
 
             Pattern keyPaddingPattern = Pattern.compile("[\\s\\#]+");
+
             QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-            qtAdvancedSearch.init(entMap);
+            qtAdvancedSearch.init(dicts);
             qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
             qtAdvancedSearch.setSearch_distance(130);
             qtAdvancedSearch.setValType(STRING);
@@ -220,7 +226,7 @@ public class ENDocumentInfoTest {
         qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         doc.extractKeyValues(qtAdvancedSearch, str);
         doc.convertValues2titleTable();
@@ -239,7 +245,7 @@ public class ENDocumentInfoTest {
         qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         doc.extractKeyValues(qtAdvancedSearch, str);
         doc.convertValues2titleTable();
@@ -259,7 +265,7 @@ public class ENDocumentInfoTest {
         qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         doc.extractKeyValues(qtAdvancedSearch, "");
         doc.convertValues2titleTable();
@@ -279,7 +285,7 @@ public class ENDocumentInfoTest {
         qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         doc.extractKeyValues(qtAdvancedSearch, "");
 
@@ -300,7 +306,7 @@ public class ENDocumentInfoTest {
         qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         doc.extractKeyValues(qtAdvancedSearch, "");
 
@@ -321,7 +327,7 @@ public class ENDocumentInfoTest {
         qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         doc.extractKeyValues(qtAdvancedSearch, "");
 
@@ -339,7 +345,7 @@ public class ENDocumentInfoTest {
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
@@ -356,11 +362,13 @@ public class ENDocumentInfoTest {
     @Test
     public void findSpane1() {
         String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
-        entityArray1.add(new Entity("Sovereign" , new String[]{"Sovereign"} , true));
-        entityArray1.add(new Entity("Quasi Sovereign" , new String[]{"Quasi Sovereign"} , true));
-                Map<String, Entity[]> entMap = new HashMap<>();
-        entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+
+        dictItms.add(new DictItm("Sovereign" ,"Sovereign"));
+        dictItms.add(new DictItm("Quasi Sovereign" , "Quasi Sovereign"));
+
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Company" , dictItms);
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
@@ -386,13 +394,13 @@ public class ENDocumentInfoTest {
                         "GAAP Financial Measures tables. 2 CUSTOMER METRICS Total Branded Postpaid Net Additions " +
                         "Branded Postpaid Customers (in thousands) Branded postpaid phone net customer additions " +
                         "were 774,000 in Q3 2018, compared to 686,000 in Q2 2018 and 595,000 in Q3 2017.";
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
+        ArrayList<DictItm> dictItms = new ArrayList<>();
 
-        entityArray1.add(new Entity("Branded postpaid net customer additions" , new String[]{"Branded postpaid net customer additions were"} , true));
-        entityArray1.add(new Entity("Branded postpaid phone net customer additions" ,new String [] {"Branded postpaid phone net customer additions were"}, true));
-        entityArray1.add(new Entity("net customer additions" , new String[]{"net customer additions"} , true));
-        Map<String, Entity[]> entMap = new HashMap<>();
-        entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        dictItms.add(new DictItm("Branded postpaid net customer additions" , "Branded postpaid net customer additions", "Branded postpaid net customer additions were"));
+        dictItms.add(new DictItm("Branded postpaid phone net customer additions" , "Branded postpaid phone net customer additions", "Branded postpaid phone net customer additions were"));
+        dictItms.add(new DictItm("net customer additions" , "net customer additions", "net customer additions"));
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Company" , dictItms);
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
@@ -414,10 +422,10 @@ public class ENDocumentInfoTest {
     @Test
     public void findSpane3() {
         String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
-        entityArray1.add(new Entity("Net market value" , new String[]{"Net market value, as of"} , true));
-        Map<String, Entity[]> entMap = new HashMap<>();
-        entMap.put("Net value" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Net market value" , "Net market value", "Net market value, as of"));
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Net value" , dictItms);
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
         qtAdvancedSearch.init(entMap);
@@ -439,17 +447,17 @@ public class ENDocumentInfoTest {
     @Test
     public void findSpane4() {
         String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
-        entityArray1.add(new Entity("Returns" , new String[]{"returned"} , true));
-        Map<String, Entity[]> entMap1 = new HashMap<>();
-        entMap1.put("Fund Performance" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        ArrayList<DictItm> dictItms_1 = new ArrayList<>();
+        dictItms_1.add(new DictItm("Returns" , "Returns", "returned"));
+        Map<String, List<DictItm>> entMap1 = new HashMap<>();
+        entMap1.put("Fund Performance" , dictItms_1);
         QTAdvancedSearch qtAdvancedSearch_1 = new QTAdvancedSearch();
         qtAdvancedSearch_1.init(entMap1);
 
-        ArrayList<Entity> entityArray2 = new ArrayList<>();
-        entityArray2.add(new Entity("Net market value" , new String[]{"Net market value, as of"} , true));
-        Map<String, Entity[]> entMap2 = new HashMap<>();
-        entMap2.put("Net value" , entityArray2.toArray(new Entity[entityArray2.size()]));
+        ArrayList<DictItm> dictItms_2 = new ArrayList<>();
+        dictItms_2.add(new DictItm("Net market value" , "Net market value", "Net market value, as of"));
+        Map<String, List<DictItm>> entMap2 = new HashMap<>();
+        entMap2.put("Net value" , dictItms_2);
         QTAdvancedSearch qtAdvancedSearch_2 = new QTAdvancedSearch();
         qtAdvancedSearch_2.init(entMap2);
 
@@ -485,10 +493,10 @@ public class ENDocumentInfoTest {
     @Test
     public void findSpane5() {
         String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
-        entityArray1.add(new Entity("Returns" , new String[]{"returned"} , true));
-        Map<String, Entity[]> entMap = new HashMap<>();
-        entMap.put("Fund Performance" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Returns" , "Returns", "returned"));
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Fund Performance" , dictItms);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
@@ -519,7 +527,7 @@ public class ENDocumentInfoTest {
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
@@ -540,7 +548,7 @@ public class ENDocumentInfoTest {
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
 
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
 
@@ -584,14 +592,14 @@ public class ENDocumentInfoTest {
                 "73,329 \n";
 
 
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
+        ArrayList<DictItm> dictItms = new ArrayList<>();
 
-        entityArray1.add(new Entity("Cash and cash equivalents" , new String[]{"Cash and cash equivalents"} , true));
-        entityArray1.add(new Entity("Prepaid expenses and other current assets" ,new String [] {"Prepaid expenses and other current assets"}, true));
-        entityArray1.add(new Entity("Warrant liability" , new String[]{"Warrant liability"} , true));
+        dictItms.add(new DictItm("Cash and cash equivalents" , "Cash and cash equivalents"));
+        dictItms.add(new DictItm("Prepaid expenses and other current assets" ,"Prepaid expenses and other current assets"));
+        dictItms.add(new DictItm("Warrant liability" , "Warrant liability"));
 
-        Map<String, Entity[]> entMap = new HashMap<>();
-        entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Company" , dictItms);
         Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;\\$]+)");
 
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
@@ -629,12 +637,12 @@ public class ENDocumentInfoTest {
                 ")% ";
 
 
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
+        ArrayList<DictItm> dictItms = new ArrayList<>();
 
-        entityArray1.add(new Entity("Total selling, general and administrative expense" , new String[]{"Total selling, general and administrative expense"} , true));
+        dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
-        Map<String, Entity[]> entMap = new HashMap<>();
-        entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Company" , dictItms);
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
         qtAdvancedSearch.init(entMap);
@@ -679,7 +687,7 @@ public class ENDocumentInfoTest {
         Map<String, Entity[]> entMap = new HashMap<>();
         entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
         QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
+        qtAdvancedSearch.init(global_dicts);
         qtAdvancedSearch.setSearch_distance(5);
         qtAdvancedSearch.setValType(DOUBLE);
 

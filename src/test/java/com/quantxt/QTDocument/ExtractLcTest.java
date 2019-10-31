@@ -1,6 +1,5 @@
 package com.quantxt.QTDocument;
 
-import com.quantxt.nlp.search.ExtractLc;
 import com.quantxt.trie.Emit;
 import com.quantxt.types.Entity;
 import org.junit.Test;

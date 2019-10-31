@@ -2,9 +2,8 @@ package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
 import com.quantxt.trie.Emit;
+import com.quantxt.types.DictItm;
 import com.quantxt.types.Dictionary;
-import com.quantxt.types.Entity;
-import com.quantxt.types.NamedEntity;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.lucene.analysis.*;
@@ -43,6 +42,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.quantxt.types.Dictionary.AnalyzType.STANDARD;
 import static org.apache.lucene.analysis.CharArraySet.EMPTY_SET;
 
 @Getter
@@ -52,8 +52,7 @@ public class QTAdvancedSearch extends Dictionary {
     final private static Logger logger = LoggerFactory.getLogger(QTAdvancedSearch.class);
     final public static String HIDDEH_ENTITY = "hidden";
 
-    final private static String entTypeField = "enttypefield";
-    final private static String entNameField = "entnamefield";
+    final private static String dataField    = "dataField";
     final private static String searchField  = "searchfield";
 
     final private static FieldType SearchField;
@@ -78,25 +77,21 @@ public class QTAdvancedSearch extends Dictionary {
     }
 
     private int topN = 100;
-    private Map<String, IndexSearcher> dictionaryIndexMap = new HashMap<>();
-    private Analyzer search_analyzer;
+
+    private Map<String, IndexSearcher> indexSearcherMap = new HashMap<>();
+    final private Analyzer search_analyzer;
     private Analyzer index_analyzer;
 
-
     public QTAdvancedSearch(){
-        super();
-        switch (analyzType) {
-            case SIMPLE: this.index_analyzer     = new SimpleAnalyzer(); break;
-            case STANDARD: this.index_analyzer   = new StandardAnalyzer(); break;
-            case WHITESPACE: this.index_analyzer = new WhitespaceAnalyzer(); break;
-            case STEM: this.index_analyzer = new EnglishAnalyzer(); break;
-        }
+        this.analyzType = STANDARD;
+        this.mode = Dictionary.Mode.ORDERED_SPAN;
+        this.index_analyzer = getTypeAnalyzer(STANDARD);
         this.search_analyzer = this.index_analyzer;
     }
 
     public QTAdvancedSearch(QTDocument.Language lang,
-                            ArrayList<String> synonymPairs){
-        super();
+                            ArrayList<String> synonymPairs)
+    {
         switch (analyzType) {
             case SIMPLE: this.index_analyzer     = new SimpleAnalyzer(); break;
             case STANDARD: this.index_analyzer   = new StandardAnalyzer(); break;
@@ -124,12 +119,25 @@ public class QTAdvancedSearch extends Dictionary {
             }
             break;
         }
-        this.search_analyzer = this.index_analyzer;
-        setSynonyms(synonymPairs);
+        this.search_analyzer = getSynonymAnalyzer(synonymPairs, index_analyzer);
     }
 
-    private void setSynonyms(ArrayList<String> synonymPairs){
-        if (synonymPairs == null || synonymPairs.size() == 0) return;
+
+    protected Analyzer getTypeAnalyzer(Dictionary.AnalyzType analyzType){
+        Analyzer analyzer = null;
+        switch (analyzType) {
+            case SIMPLE: analyzer     = new SimpleAnalyzer(); break;
+            case STANDARD: analyzer   = new StandardAnalyzer(); break;
+            case WHITESPACE: analyzer = new WhitespaceAnalyzer(); break;
+            case STEM: analyzer       = new EnglishAnalyzer(); break;
+        }
+        return analyzer;
+    }
+
+    protected Analyzer getSynonymAnalyzer(ArrayList<String> synonymPairs,
+                                          Analyzer index_analyzer)
+    {
+        if (synonymPairs == null || synonymPairs.size() == 0) return index_analyzer;
         try {
             SynonymMap.Builder builder = new SynonymMap.Builder(true);
             // first argument is mapped to second
@@ -148,7 +156,7 @@ public class QTAdvancedSearch extends Dictionary {
 
             final SynonymMap map = builder.build();
 
-            this.search_analyzer = new Analyzer() {
+            Analyzer analyzer = new Analyzer() {
                 @Override
                 protected TokenStreamComponents createComponents(String fieldName) {
                     TokenStreamComponents tokenStreamComponents = null;
@@ -185,9 +193,11 @@ public class QTAdvancedSearch extends Dictionary {
                     return tokenStreamComponents;
                 }
             };
-        }catch (IOException e) {
+            return analyzer;
+        } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;
     }
 
     public Query getPhraseQuery(Analyzer analyzer, String query, int slop) {
@@ -200,7 +210,6 @@ public class QTAdvancedSearch extends Dictionary {
         QueryParser qp = new QueryParser(searchField, analyzer);
         BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
         Query q = qp.createBooleanQuery(searchField, query, matching_mode);
-        //    logger.info(" ++ " + q.toString());
         return q;
     }
 
@@ -223,7 +232,7 @@ public class QTAdvancedSearch extends Dictionary {
         return tokens.toArray(new String[tokens.size()]);
     }
 
-    private String[] tokenize(Analyzer analyzer, String str) {
+    protected String[] tokenize(Analyzer analyzer, String str) {
         TokenStream ts = analyzer.tokenStream(null, str);
         return getTokenizedString(ts);
     }
@@ -337,7 +346,7 @@ public class QTAdvancedSearch extends Dictionary {
         return spanQuery;
     }
 
-    public  Query getFuzzyQuery(Analyzer analyzer, String query) throws IOException {
+    public Query getFuzzyQuery(Analyzer analyzer, String query) throws IOException {
         BooleanQuery.Builder bqueryBuilder = new BooleanQuery.Builder();
         TokenStream tokens = analyzer.tokenStream(searchField, query);
         CharTermAttribute cattr = tokens.addAttribute(CharTermAttribute.class);
@@ -367,11 +376,9 @@ public class QTAdvancedSearch extends Dictionary {
         return new IndexSearcher(dreader);
     }
 
-    private Collection<Emit> getFragments(final String entType,
-                                          final Collection<Document> matchedDocs,
+    private Collection<Emit> getFragments(final Collection<Document> matchedDocs,
                                           final String str) throws Exception
     {
-
         HashSet<Emit> emits = new HashSet<>();
         IndexSearcher searcher = getIndexSearcher(search_analyzer, str);
 
@@ -379,7 +386,6 @@ public class QTAdvancedSearch extends Dictionary {
         for (Document matchedDoc : matchedDocs) {
             SpanQuery query = null;
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
-            //    logger.info("quuu " + query_string_raw);
             String query_string = QueryParser.escape(query_string_raw);
             switch (mode) {
                 case ORDERED_SPAN :
@@ -395,7 +401,7 @@ public class QTAdvancedSearch extends Dictionary {
 
             int s = spans.nextDoc();
             int spanstart = spans.nextStartPosition();
-            String foundValue = matchedDoc.getField(entNameField).stringValue();
+            String dataValue = matchedDoc.getField(dataField).stringValue();
             while (spanstart < 2147483647) {
                 int spanend = spans.endPosition() -1;
                 TokenStream ts = search_analyzer.tokenStream(searchField, str);
@@ -425,9 +431,7 @@ public class QTAdvancedSearch extends Dictionary {
                         String keyword = str.substring(startPhraseInStr, endPhraseInStr);
                         //        logger.info("KEYWORD: {}", keyword);
                         Emit emit = new Emit(startPhraseInStr, endPhraseInStr, keyword);
-                        NamedEntity namedEntity = new NamedEntity(foundValue, null);
-                        namedEntity.setEntity(entType, new Entity(foundValue, null, true));
-                        emit.addCustomeData(namedEntity);
+                        emit.addCustomeData(dataValue);
                         emits.add(emit);
                     }
                 } catch (Exception e) {
@@ -474,6 +478,31 @@ public class QTAdvancedSearch extends Dictionary {
         return new ArrayList<>(emits_sorted);
     }
 
+    private IndexSearcher getSearcherFromEntities(List<DictItm> dictItms) throws IOException
+    {
+        IndexWriterConfig config = new IndexWriterConfig(index_analyzer);
+        Directory mMapDirectory = new ByteBuffersDirectory();
+        IndexWriter writer = new IndexWriter(mMapDirectory, config);
+
+        for (DictItm dictItm : dictItms){
+
+            String item_key = dictItm.getKey();
+            List<String> item_vals = dictItm.getValue();
+
+            for (String iv : item_vals) {
+                Document doc = new Document();
+                doc.add(new Field(searchField, iv, SearchField));
+                doc.add(new Field(dataField, item_key, DataField));
+                writer.addDocument(doc);
+            }
+        }
+
+        writer.close();
+        DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
+        return new IndexSearcher(dreader);
+    }
+
+    /*
     private IndexSearcher getSearcherFromEntities(String entType,
                                                   Entity[] entities) throws IOException
     {
@@ -530,7 +559,24 @@ public class QTAdvancedSearch extends Dictionary {
         DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
         return new IndexSearcher(dreader);
     }
+    */
 
+    @Override
+    public void init(Map<String, List<DictItm>> dictionaries)
+    {
+        try {
+            for (Map.Entry<String, List<DictItm>> dictionary : dictionaries.entrySet()) {
+                String dictionary_name = dictionary.getKey();
+                List<DictItm> dictionary_vals = dictionary.getValue();
+                IndexSearcher indexSearcher = getSearcherFromEntities(dictionary_vals);
+                indexSearcherMap.put(dictionary_name, indexSearcher);
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    /*
     public void init(Map<String, Entity[]> entityMap)
     {
         try {
@@ -539,12 +585,13 @@ public class QTAdvancedSearch extends Dictionary {
                 Entity[] entities = e.getValue();
 
                 IndexSearcher indexSearcher = getSearcherFromEntities(entType, entities);
-                dictionaryIndexMap.put(entType, indexSearcher);
+                indexSearcherMap.put(entType, indexSearcher);
             }
         } catch (Exception e){
             e.printStackTrace();
         }
     }
+    */
 
     @Override
     public Map<String, Collection<Emit>> search(final String query_string) {
@@ -554,7 +601,7 @@ public class QTAdvancedSearch extends Dictionary {
 
         try {
 
-            for (Map.Entry<String, IndexSearcher> e : dictionaryIndexMap.entrySet()) {
+            for (Map.Entry<String, IndexSearcher> e : indexSearcherMap.entrySet()) {
                 IndexSearcher indexSearcher = e.getValue();
                 String entType = e.getKey();
                 Query query = getMultimatcheQuery(search_analyzer, escaped_query);
@@ -568,7 +615,7 @@ public class QTAdvancedSearch extends Dictionary {
                 }
 
                 if (matchedDocs.size() == 0 ) continue;
-                res.put(entType, getFragments(entType, matchedDocs, query_string));
+                res.put(entType, getFragments(matchedDocs, query_string));
             }
 
         } catch (Exception e ){

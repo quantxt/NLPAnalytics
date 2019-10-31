@@ -15,7 +15,6 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.quantxt.nlp.search.Speaker;
 import com.quantxt.trie.Emit;
 import com.quantxt.types.Entity;
 
