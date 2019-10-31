@@ -1,4 +1,4 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.comp;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

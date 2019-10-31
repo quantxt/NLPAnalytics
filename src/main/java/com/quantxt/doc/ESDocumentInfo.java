@@ -55,11 +55,6 @@ public class ESDocumentInfo extends QTDocument {
     }
 
     @Override
-    public double[] getVectorizedTitle(QTExtract speaker) {
-        return speaker.tag(title);
-    }
-
-    @Override
     public String Translate(String text, Language inLang, Language outLang) {
         logger.error("Translation is not supported at this time");
         return null;

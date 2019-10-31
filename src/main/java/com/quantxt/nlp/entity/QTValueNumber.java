@@ -1,4 +1,4 @@
-package com.quantxt.nlp.types;
+package com.quantxt.nlp.entity;
 
 import com.quantxt.helper.DateResolver;
 import com.quantxt.helper.types.ExtIntervalSimple;
@@ -11,8 +11,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.PERCENT;
-import static com.quantxt.nlp.types.QTValue.getPad;
+import static com.quantxt.helper.types.QTField.QTFieldType.*;
+import static com.quantxt.nlp.entity.QTValue.getPad;
 
 /**
  * Created by matin on 11/24/18.
@@ -160,16 +160,18 @@ public class QTValueNumber {
                     Matcher currency_matcher = currencies.matcher(string_to_look_for_currencieis);
                     if (currency_matcher.find()){
                         t = QTField.QTFieldType.MONEY;
+                    } else if (extractionStr.indexOf(".") < 0){
+                        t = INT;
                     }
                 }
+
                 ExtIntervalSimple ext = new ExtIntervalSimple(start, end);
                 ext.setType(t);
-
 
                 String subStr = str.substring(end).trim();
                 Matcher unitMatch = units.matcher(subStr);
                 if (unitMatch.find() && unitMatch.start() < 3){
-                    String unitMatched = unitMatch.group();
+                    String unitMatched = unitMatch.group(1);
                     switch (unitMatched) {
                         case "hundred" : mult *= 100; break;
                         case "thousand" : mult *= 1000; break;
@@ -180,8 +182,13 @@ public class QTValueNumber {
                 if (t != PERCENT) {
                     parsed *= mult;
                 }
-                ext.setDoubleValue(parsed);
+
+                if (t == INT){
+                    int int_value = (int) parsed;
+                    ext.setIntValue(int_value);
+                }
                 ext.setCustomData(String.valueOf(parsed));
+                ext.setDoubleValue(parsed);
                 valIntervals.add(ext);
             } catch (Exception e){
                 logger.error(e.getMessage() + " " + extractionStr);
@@ -198,24 +205,13 @@ public class QTValueNumber {
         return str;
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
-        String body = "06/12/2019 06/12/2020 $ $ $\n" +
-                "DIRECT AGENCY\n" +
-                "APPLICANT INFORMATION\n" +
-                "NAME (First Named Insured) AND MAILING ADDRESS (including ZIP+4) GL CODE SIC NAICS FEIN OR SOC SEC #\n" +
-                "Seasons Condo Assoc of Ft Lauderdale, Inc The\n" +
-                "c/o Castle Management, LLc 62003 8641 59-2051726\n" +
-                "12270 SW 3rd Street BUSINESS PHONE #: (954) 462-8902\n" +
-                "Suite 200\n" +
-                "Plantation, FL 33325 WEBSITE ADDRESS\n" +
-                "http://www.floridaseasons.com/index.html\n" +
-                "CORPORATION JOINT VENTURE NOT FOR PROFIT ORG SUBCHAPTER \"S\" CORPORATION X Condo Association\n" +
-                "INDIVIDUAL LLC NO. OF MEMBERSAND MANAGERS: PARTNERSHIP TRUST";
+        String body = "Mortgage banking revenue \nincreased \nby \n$13.5 million \nin the \nthird quarter of 2019 \nas compared to the \nsecond quarter of 2019 \nprimarily as a result of higher production revenues and an increase in the fair value of the mortgage servicing rights portfolio \nin the third quarter of 2019.";
         String p = "(\\d{2}\\-\\d{7})";
         int[] g = new int[]{1};
         List<ExtIntervalSimple> valIntervals = new ArrayList<>();
-        detectPattern(body, null, Pattern.compile(p), g, valIntervals);
+        detect(body, "", valIntervals);
         logger.info("Done");
     }
 }

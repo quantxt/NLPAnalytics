@@ -1,4 +1,4 @@
-package com.quantxt.nlp;
+package com.quantxt.nlp.topic;
 
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultStreamTokenizer;
 import org.deeplearning4j.text.tokenization.tokenizer.DefaultTokenizer;

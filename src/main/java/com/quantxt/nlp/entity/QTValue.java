@@ -1,4 +1,4 @@
-package com.quantxt.nlp.types;
+package com.quantxt.nlp.entity;
 
 import com.quantxt.interval.Interval;
 import org.slf4j.Logger;
