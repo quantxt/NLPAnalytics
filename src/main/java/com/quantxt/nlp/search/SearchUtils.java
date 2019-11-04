@@ -219,10 +219,13 @@ public class SearchUtils {
 
 
     public static Analyzer getSynonymAnalyzer(ArrayList<String> synonymPairs,
+                                              ArrayList<String> stopwords,
                                               DictSearch.AnalyzType analyzType,
                                               Analyzer index_analyzer)
     {
         if (synonymPairs == null || synonymPairs.size() == 0) return index_analyzer;
+        CharArraySet stopWords_charArray = stopwords == null || stopwords.size() == 0?
+                CharArraySet.EMPTY_SET : new CharArraySet(stopwords, false);
         try {
             SynonymMap.Builder builder = new SynonymMap.Builder(true);
             // first argument is mapped to second
@@ -273,7 +276,7 @@ public class SearchUtils {
                         case STANDARD:
                             StandardTokenizer standardTokenizer = new StandardTokenizer();
                             tokenStream = new LowerCaseFilter(standardTokenizer);
-                            tokenStream = new org.apache.lucene.analysis.StopFilter(tokenStream, new CharArraySet(EMPTY_SET, true));
+                            tokenStream = new org.apache.lucene.analysis.StopFilter(tokenStream, stopWords_charArray);
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
                             tokenStreamComponents = new TokenStreamComponents(standardTokenizer, sysfilter);
                             break;
@@ -281,7 +284,7 @@ public class SearchUtils {
                             standardTokenizer = new StandardTokenizer();
                             tokenStream = new EnglishPossessiveFilter(standardTokenizer);
                             tokenStream = new LowerCaseFilter(tokenStream);
-                            tokenStream = new StopFilter(tokenStream, new CharArraySet(EMPTY_SET, true));
+                            tokenStream = new StopFilter(tokenStream, stopWords_charArray);
                             tokenStream = new PorterStemFilter(tokenStream);
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
                             tokenStreamComponents = new TokenStreamComponents(standardTokenizer, sysfilter);

@@ -6,6 +6,7 @@ import com.quantxt.types.DictSearch;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
@@ -73,10 +74,13 @@ public class DctSearhFld {
 
     public DctSearhFld(QTDocument.Language lang,
                        ArrayList<String> synonymPairs,
+                       ArrayList<String> stopwords,
                        DictSearch.Mode mode,
                        DictSearch.AnalyzType analyzType,
                        List<DictItm> dictionary_items)
     {
+        CharArraySet stopWords_charArray = stopwords == null || stopwords.size() == 0?
+                CharArraySet.EMPTY_SET : new CharArraySet(stopwords, false);
         this.analyzType = analyzType;
         this.mode = mode;
         switch (analyzType){
@@ -98,38 +102,38 @@ public class DctSearhFld {
                 break;
             case STANDARD:
                 this.search_fld = searchFieldPfx;
-                this.index_analyzer = new StandardAnalyzer();
+                this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
                 break;
             case STEM: {
                 this.search_fld = searchFieldPfx + ".stem";
                 switch (lang) {
                     case ENGLISH:
-                        this.index_analyzer = new EnglishAnalyzer();
+                        this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
                         break;
                     case SPANISH:
-                        this.index_analyzer = new SpanishAnalyzer();
+                        this.index_analyzer = new SpanishAnalyzer(stopWords_charArray);
                         break;
                     case RUSSIAN:
-                        this.index_analyzer = new RussianAnalyzer();
+                        this.index_analyzer = new RussianAnalyzer(stopWords_charArray);
                         break;
                     case JAPANESE:
                         this.index_analyzer = new JapaneseAnalyzer();
                         break;
                     case FRENCH:
-                        this.index_analyzer = new FrenchAnalyzer();
+                        this.index_analyzer = new FrenchAnalyzer(stopWords_charArray);
                         break;
                     default:
-                        this.index_analyzer = new EnglishAnalyzer();
+                        this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
                 }
             }
             break;
             default:
-                this.index_analyzer = new StandardAnalyzer();
+                this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
                 this.search_fld = searchFieldPfx;
         }
         this.dictionary_items = dictionary_items;
         this.indexSearcher = getSearcherFromEntities();
-        this.search_analyzer = getSynonymAnalyzer(synonymPairs, analyzType, index_analyzer);
+        this.search_analyzer = getSynonymAnalyzer(synonymPairs, stopwords, analyzType, index_analyzer);
     }
 
     private IndexSearcher getSearcherFromEntities()

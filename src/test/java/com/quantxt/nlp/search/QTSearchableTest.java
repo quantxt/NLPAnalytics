@@ -42,7 +42,7 @@ public class QTSearchableTest {
             synonym_pairs.add("Inc\tinciobi");
             synonym_pairs.add("Inc\tcorporate");
             Dictionary dictionary = new Dictionary(entMap);
-            qtSearchable = new QTSearchable(dictionary, null, synonym_pairs,
+            qtSearchable = new QTSearchable(dictionary, null, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
             setUpIsDone = true;
         } catch (Exception e) {
@@ -96,5 +96,38 @@ public class QTSearchableTest {
         assertTrue(result.get("Company").size() == 1);
         assertEquals(result.get("Company").iterator().next().getKeyword(), "Amazon corporate");
 
+    }
+
+    @Test
+    public void testStopWord() {
+        try {
+            ArrayList<DictItm> dictItms_1 = new ArrayList<>();
+            dictItms_1.add(new DictItm("Gilead Sciences, Inc.", "Gilead Sciences, Inc."));
+            dictItms_1.add(new DictItm("Amazon Inc.", "Amazon Inc.", "Amazon"));
+            dictItms_1.add(new DictItm("Amazon Inc.", "Amazon Inc."));
+
+            Map<String, List<DictItm>> entMap = new HashMap<>();
+            entMap.put("Company", dictItms_1);
+
+            // synonyms;
+            ArrayList<String> stopword = new ArrayList<>();
+            stopword.add("inc");
+            Dictionary dictionary = new Dictionary(entMap);
+            QTSearchable qtSearchable = new QTSearchable(dictionary, null, null, stopword,
+                    DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
+            // GIVEN
+            String str = "Gilead Sciences, Inc. reported a gain on his earnings.";
+
+            // WHEN
+            Map<String, Collection<Emit>> result = qtSearchable.search(str);
+
+            // THEN
+            assertNotNull(result);
+            assertFalse(result.isEmpty());
+            assertTrue(result.get("Company").size() == 1);
+            assertEquals(result.get("Company").iterator().next().getKeyword(), "Gilead Sciences");
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }

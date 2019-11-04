@@ -32,6 +32,7 @@ public class QTSearchable extends DictSearch {
     private Map<String, DctSearhFld> docSearchFldMap = new HashMap<>();
     final private QTDocument.Language lang;
     final private ArrayList<String> synonymPairs;
+    final private ArrayList<String> stopWords;
 
 
     public QTSearchable(Dictionary dictionary){
@@ -40,17 +41,20 @@ public class QTSearchable extends DictSearch {
         this.mode = DictSearch.Mode.ORDERED_SPAN;
         this.analyzType = DictSearch.AnalyzType.STANDARD;
         this.dictionary = dictionary;
+        this.stopWords = null;
         initDocSearchFldMap(dictionary.getVocab_map());
     }
 
     public QTSearchable(Dictionary dictionary,
                         QTDocument.Language lang,
                         ArrayList<String> synonymPairs,
+                        ArrayList<String> stopWords,
                         DictSearch.Mode mode,
                         DictSearch.AnalyzType analyzType)
     {
         this.lang = lang;
         this.synonymPairs = synonymPairs;
+        this.stopWords = stopWords;
         this.mode = mode;
         this.analyzType = analyzType;
         this.dictionary = dictionary;
@@ -63,7 +67,8 @@ public class QTSearchable extends DictSearch {
             for (Map.Entry<String, List<DictItm>> vocab : vocab_map.entrySet()) {
                 String vocab_name = vocab.getKey();
                 List<DictItm> vocab_items = vocab.getValue();
-                DctSearhFld dctSearhFld = new DctSearhFld(lang, synonymPairs, mode, analyzType , vocab_items);
+                DctSearhFld dctSearhFld = new DctSearhFld(lang, synonymPairs, stopWords,
+                        mode, analyzType , vocab_items);
                 docSearchFldMap.put(vocab_name, dctSearhFld);
             }
         } catch (Exception e){
@@ -95,8 +100,8 @@ public class QTSearchable extends DictSearch {
 
                 if (matchedDocs.size() == 0) continue;
                 res.put(vocab_name, getFragments(matchedDocs, mode,
-                        dctSearhFld.getSearch_analyzer(),
-                        dctSearhFld.getIndex_analyzer() ,search_fld, query_string));
+                        dctSearhFld.getIndex_analyzer(), dctSearhFld.getSearch_analyzer(),
+                        search_fld, query_string));
             }
 
 
