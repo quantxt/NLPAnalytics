@@ -1,23 +1,20 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.trie.Emit;
 import com.quantxt.types.DictItm;
-import com.quantxt.types.Entity;
+import com.quantxt.types.DictSearch;
+import com.quantxt.types.Dictionary;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.*;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
-/**
- * Created by matin on 30/10/2019.
- */
+public class QTSearchableTest {
 
-public class QTAdvancedSearchTest {
-
-    private static QTAdvancedSearch qtAdvancedSearch;
+    private static QTSearchable qtSearchable;
     private static boolean setUpIsDone = false;
 
 
@@ -41,11 +38,12 @@ public class QTAdvancedSearchTest {
             entMap.put("Title", dictItms_2);
 
             // synonyms;
-            ArrayList<String> synonymMap = new ArrayList<>();
-            synonymMap.add("Inc\tinciobi");
-            synonymMap.add("Inc\tcorporate");
-            qtAdvancedSearch = new QTAdvancedSearch(null, synonymMap);
-            qtAdvancedSearch.init(entMap);
+            ArrayList<String> synonym_pairs = new ArrayList<>();
+            synonym_pairs.add("Inc\tinciobi");
+            synonym_pairs.add("Inc\tcorporate");
+            Dictionary dictionary = new Dictionary(entMap);
+            qtSearchable = new QTSearchable(dictionary, null, synonym_pairs,
+                    DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
             setUpIsDone = true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -57,7 +55,7 @@ public class QTAdvancedSearchTest {
         String str = "Amazon Inc. reported a gain on his earnings.";
 
         // WHEN
-        Map<String, Collection<Emit>> result = qtAdvancedSearch.search(str);
+        Map<String, Collection<Emit>> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
@@ -74,7 +72,7 @@ public class QTAdvancedSearchTest {
         String str = "Amazon inciobi reported a gain on his earnings.";
 
         // WHEN
-        Map<String, Collection<Emit>> result = qtAdvancedSearch.search(str);
+        Map<String, Collection<Emit>> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
@@ -90,7 +88,7 @@ public class QTAdvancedSearchTest {
         String str = "Amazon corporate reported a gain on his earnings.";
 
         // WHEN
-        Map<String, Collection<Emit>> result = qtAdvancedSearch.search(str);
+        Map<String, Collection<Emit>> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
