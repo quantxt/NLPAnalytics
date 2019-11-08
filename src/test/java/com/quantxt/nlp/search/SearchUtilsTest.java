@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -19,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 public class SearchUtilsTest {
 
     private static QTSearchable qtSearchable;
+    private static QTSearchable qtSearchable_exact;
     private static boolean setUpIsDone = false;
 
     @BeforeClass
@@ -43,6 +45,8 @@ public class SearchUtilsTest {
             Dictionary dictionary = new Dictionary(entMap);
             qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STEM);
+            qtSearchable_exact = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
+                    DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.EXACT_CI);
             setUpIsDone = true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -72,4 +76,21 @@ public class SearchUtilsTest {
         assertTrue(stas.get("dicttest.stem").size()==3);
         assertTrue(stas.get("dicttest.stem").get("tea")==1L);
     }
+
+
+    @Test
+    public void parseMultiTermsQuery() {
+        // GIVEN
+        String query_Dsl = "DUMMY_FIELD.exact:report listed DUMMY_FIELD.exact:profit";
+
+        // WHEN
+        SpanQuery result = SearchUtils.parse(query_Dsl,
+                "DUMMY_FIELD.exact",
+         1,
+        new AtomicInteger(0),
+        false, true);
+
+        assertEquals(result.toString(), "spanNear([DUMMY_FIELD.exact:report listed, DUMMY_FIELD.exact:profit], 1, true)");
+    }
+
 }

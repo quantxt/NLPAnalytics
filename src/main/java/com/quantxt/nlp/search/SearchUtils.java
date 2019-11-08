@@ -341,17 +341,16 @@ public class SearchUtils {
         return bqueryBuilder.build();
     }
 
-    private static SpanQuery parse(String query,
-                            String search_fld,
-                            int slop,
-                            AtomicInteger idx,
-                            boolean is_synonym_clause,
-                            boolean ordered)
+    protected static SpanQuery parse(String query,
+                                     String search_fld,
+                                     int slop,
+                                     AtomicInteger idx,
+                                     boolean is_synonym_clause,
+                                     boolean ordered)
     {
         LinkedHashSet<SpanQuery> queryList = new LinkedHashSet<>();
-        boolean mode_is_field = true;
-        StringBuilder fld = new StringBuilder();
-        StringBuilder term = new StringBuilder();
+        String fld = "";
+        StringBuilder str = new StringBuilder();
 
         while (idx.get() < query.length()){
             int current_idx = idx.get();
@@ -361,30 +360,47 @@ public class SearchUtils {
                 case '+':
                     break;
                 case ' ':
-                    mode_is_field = true;
-                    if (fld.length() > 0 && term.length() > 0) {
-                        SpanTermQuery spanTermQuery = new SpanTermQuery(new Term(fld.toString(), term.toString()));
-                        fld = new StringBuilder();
-                        term = new StringBuilder();
-                        queryList.add(spanTermQuery);
+                    //check if this start of a field or continuation of token str
+                    int index_of_next_colon = query.indexOf(':', current_idx+1);
+                    int index_of_next_space = query.indexOf(' ', current_idx+1);
+                    int index_of_next_paran = query.indexOf('(', current_idx+1);
+
+                    if (index_of_next_paran == -1){
+                        index_of_next_paran = query.length();
+                    }
+                    if (index_of_next_space == -1){
+                        index_of_next_space = query.length();
+                    }
+
+                    if (index_of_next_colon < index_of_next_space || index_of_next_paran < index_of_next_space) {
+                        // so next string is a field
+                        if (fld.length() > 0 && str.length() > 0) {
+                            SpanTermQuery spanTermQuery = new SpanTermQuery(new Term(fld, str.toString()));
+                            fld = "";
+                            str = new StringBuilder();
+                            queryList.add(spanTermQuery);
+                        }
+                    } else {
+                        str.append(c);
                     }
                     break;
+
                 case ':':
-                    mode_is_field = false;
+                    fld = str.toString();
+                    str = new StringBuilder();
                     break;
                 case '(':
                     boolean synonym_clause = false;
-                    if (fld.toString().equals("Synonym")){
+                    if (str.toString().equals("Synonym")){
                         synonym_clause = true;
                     }
                     SpanQuery spanQuery = parse(query, search_fld, slop, idx, synonym_clause, ordered);
                     queryList.add(spanQuery);
-                    fld = new StringBuilder();
-                    term = new StringBuilder();
+                    str = new StringBuilder();
                     break;
                 case ')':
-                    if (fld.length() > 0 && term.length() > 0) {
-                        SpanTermQuery spanTQuery = new SpanTermQuery(new Term(fld.toString(), term.toString()));
+                    if (fld.length() > 0 && str.length() > 0) {
+                        SpanTermQuery spanTQuery = new SpanTermQuery(new Term(fld, str.toString()));
                         queryList.add(spanTQuery);
                     }
                     if (queryList.size() == 0) {
@@ -406,16 +422,12 @@ public class SearchUtils {
                         }
                     }
                 default:
-                    if (mode_is_field) {
-                        fld.append(c);
-                    } else {
-                        term.append(c);
-                    }
+                    str.append(c);
             }
         }
 
-        if (fld.length() > 0 && term.length() > 0) {
-            SpanTermQuery spanTermQuery = new SpanTermQuery(new Term(fld.toString(), term.toString()));
+        if (fld.length() > 0 && str.length() > 0) {
+            SpanTermQuery spanTermQuery = new SpanTermQuery(new Term(fld, str.toString()));
             queryList.add(spanTermQuery);
         }
 
