@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.trie.Emit;
+import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
@@ -16,10 +16,7 @@ import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
+import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.search.spans.*;
@@ -30,15 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.quantxt.nlp.search.DctSearhFld.DataField;
 import static com.quantxt.nlp.search.DctSearhFld.SearchFieldType;
-import static org.apache.lucene.analysis.CharArraySet.EMPTY_SET;
 
 public class SearchUtils {
 
@@ -111,14 +104,16 @@ public class SearchUtils {
         return new IndexSearcher(dreader);
     }
 
-    public static Collection<Emit> getFragments(final Collection<Document> matchedDocs,
-                                                 final DictSearch.Mode mode,
-                                                 final Analyzer index_analyzer,
-                                                 final Analyzer search_analyzer,
-                                                 final String searchField,
-                                                 final String str) throws Exception
+    public static Collection<QTMatch> getFragments(final Collection<Document> matchedDocs,
+                                                   final DictSearch.Mode mode,
+                                                   final int minFuzzyTermLength,
+                                                   final Analyzer index_analyzer,
+                                                   final Analyzer search_analyzer,
+                                                   final String searchField,
+                                                   final String vocab_name,
+                                                   final String str) throws Exception
     {
-        HashSet<Emit> emits = new HashSet<>();
+        List<QTMatch> matchs = new ArrayList<>();
         IndexSearcher searcher = getIndexSearcher(index_analyzer, searchField, str);
 
         //TODO: this is messy; re-factor it with proper multi-field index
@@ -128,14 +123,24 @@ public class SearchUtils {
             String query_string = QueryParser.escape(query_string_raw);
             switch (mode) {
                 case ORDERED_SPAN :
-                    query = getSpanQuery(search_analyzer , searchField, query_string, 1, true);
+                    query = getSpanQuery(search_analyzer , searchField, query_string, 1, minFuzzyTermLength, false, true);
                     break;
+                case PARTIAL_SPAN:
                 case SPAN :
-                    query = getSpanQuery(search_analyzer , searchField, query_string, 1, false);
+                    query = getSpanQuery(search_analyzer , searchField, query_string, 1, minFuzzyTermLength, false, false);
+                    break;
+                case FUZZY_ORDERED_SPAN:
+                    query = getSpanQuery(search_analyzer , searchField, query_string, 1, minFuzzyTermLength, true, true);
+                    break;
+                case PARTIAL_FUZZY_SPAN:
+                case FUZZY_SPAN:
+                    query = getSpanQuery(search_analyzer , searchField, query_string, 1, minFuzzyTermLength, true, false);
                     break;
             }
-            Spans spans = query.createWeight(searcher, ScoreMode.COMPLETE_NO_SCORES, 1f)
-                    .getSpans(searcher.getIndexReader().leaves().get(0), SpanWeight.Postings.POSITIONS);
+            if (query == null) continue;
+            SpanWeight span_weights = query.createWeight(searcher, ScoreMode.COMPLETE_NO_SCORES, 1f);
+            if (span_weights == null) continue;
+            Spans spans = span_weights.getSpans(searcher.getIndexReader().leaves().get(0), SpanWeight.Postings.POSITIONS);
             if (spans == null) continue;
 
             int s = spans.nextDoc();
@@ -169,9 +174,10 @@ public class SearchUtils {
                     if (startPhraseInStr >=0 && endPhraseInStr > 0) {
                         String keyword = str.substring(startPhraseInStr, endPhraseInStr);
                         //        logger.info("KEYWORD: {}", keyword);
-                        Emit emit = new Emit(startPhraseInStr, endPhraseInStr, keyword);
-                        emit.addCustomeData(dataValue);
-                        emits.add(emit);
+                        QTMatch qtMatch = new QTMatch(startPhraseInStr, endPhraseInStr, keyword);
+                        qtMatch.setCustomData(dataValue);
+                        qtMatch.setGroup(vocab_name);
+                        matchs.add(qtMatch);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -182,44 +188,40 @@ public class SearchUtils {
             }
         }
 
-        ArrayList<Emit> emits_sorted = new ArrayList<>(emits);
-        emits_sorted.sort((Emit s1, Emit s2)-> s1.getEnd()- (s2.getEnd()));
+        ArrayList<QTMatch> matchs_sorted_by_length = new ArrayList<>(matchs);
+        matchs_sorted_by_length.sort((QTMatch s1, QTMatch s2)-> (s2.getEnd() - s2.getStart()) - (s1.getEnd() - s1.getStart()));
 
-        //remove overlaps?
-        boolean removeOverlaps = true; //TODO: make this a switch
-        if (removeOverlaps) {
-            ArrayList<Emit> noOverlapOutput = new ArrayList<>();
+        boolean [] overlaps = new boolean[matchs_sorted_by_length.size()];
 
-            for (int i = 0; i < emits_sorted.size(); i++) {
-                final Emit firstEmit = emits_sorted.get(i);
-                int firstEmitStart = firstEmit.getStart();
-                int firstEmitEnd = firstEmit.getEnd();
-                boolean hasAnoverlappigParent = false;
-                for (int j = 0; j < emits_sorted.size(); j++) {
-                    if (i == j) continue;
-                    final Emit secondEmit = emits_sorted.get(j);
-                    int secondEmitStart = secondEmit.getStart();
-                    int secondEmitEnd = secondEmit.getEnd();
-                    if (secondEmitStart >= firstEmitEnd) break;
-                    if ((secondEmitStart <= firstEmitStart) && (secondEmitEnd >= firstEmitEnd)) {
-                        hasAnoverlappigParent = true;
-                        break;
-                    }
-                }
-
-                if (!hasAnoverlappigParent) {
-                    noOverlapOutput.add(firstEmit);
+        for (int i = 0; i < matchs_sorted_by_length.size(); i++) {
+            if (overlaps[i]) continue;
+            final QTMatch firstMatch = matchs_sorted_by_length.get(i);
+            int firstMatchStart = firstMatch.getStart();
+            int firstMatchEnd   = firstMatch.getEnd();
+            for (int j = i+1; j < matchs_sorted_by_length.size(); j++) {
+                if (overlaps[j]) continue;
+                final QTMatch otherMatch = matchs_sorted_by_length.get(j);
+                int otherMatchStart = otherMatch.getStart();
+                int otherMatchEnd   = otherMatch.getEnd();
+                if ((otherMatchStart >= firstMatchStart) && (otherMatchEnd <= firstMatchEnd) &&
+                firstMatch.getGroup().equals(otherMatch.getGroup())) {
+                    overlaps[j] = true;
                 }
             }
-            return noOverlapOutput;
         }
+        ArrayList<QTMatch> noOverlapOutput = new ArrayList<>();
+        for (int i = 0; i < matchs_sorted_by_length.size(); i++){
+            if (overlaps[i]) continue;
+            noOverlapOutput.add(matchs_sorted_by_length.get(i));
+        }
+        noOverlapOutput.sort((QTMatch s1, QTMatch s2)-> (s1.getStart() -  s2.getStart()));
+        return noOverlapOutput;
 
-        return new ArrayList<>(emits_sorted);
     }
 
 
-    public static Analyzer getSynonymAnalyzer(ArrayList<String> synonymPairs,
-                                              ArrayList<String> stopwords,
+    public static Analyzer getSynonymAnalyzer(List<String> synonymPairs,
+                                              List<String> stopwords,
                                               DictSearch.AnalyzType analyzType,
                                               Analyzer index_analyzer)
     {
@@ -301,14 +303,17 @@ public class SearchUtils {
     }
 
     public static SpanQuery getSpanQuery(Analyzer analyzer,
-                                  String fld,
-                                  String query,
-                                  int slop,
-                                  boolean ordered)
+                                         String fld,
+                                         String query,
+                                         int slop,
+                                         int minTermLength,
+                                         boolean isFuzzy,
+                                         boolean ordered)
     {
         QueryParser qp = new QueryParser("", analyzer);
         BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
-        Query q = qp.createBooleanQuery(fld, query, matching_mode);
+        Query q = isFuzzy ? getFuzzyQuery(analyzer, fld, query, minTermLength) :
+                qp.createBooleanQuery(fld, query, matching_mode);
         String query_dsl = q.toString();
         //    logger.info(query_dsl);
         AtomicInteger parse_start = new AtomicInteger();
@@ -316,18 +321,23 @@ public class SearchUtils {
         return spanQuery;
     }
 
-    public static Query getFuzzyQuery(Analyzer analyzer, String fld, String query) throws IOException {
+    public static Query getFuzzyQuery(Analyzer analyzer, String fld, String query, int minTermLength) {
         BooleanQuery.Builder bqueryBuilder = new BooleanQuery.Builder();
         TokenStream tokens = analyzer.tokenStream("", query);
-        CharTermAttribute cattr = tokens.addAttribute(CharTermAttribute.class);
-        tokens.reset();
-        while (tokens.incrementToken()){
-            String term = cattr.toString();
-            bqueryBuilder.add(new FuzzyQuery(new Term(fld, term), 1, 2, 50, false), BooleanClause.Occur.MUST);
+        try {
+            CharTermAttribute cattr = tokens.addAttribute(CharTermAttribute.class);
+            tokens.reset();
+            while (tokens.incrementToken()) {
+                String term = cattr.toString();
+                if (term.length() < minTermLength) continue;
+                bqueryBuilder.add(new FuzzyQuery(new Term(fld, term), 2, 2, 50, false), BooleanClause.Occur.MUST);
+            }
+            tokens.end();
+            tokens.close();
+        } catch (Exception e){
+            e.printStackTrace();
         }
 
-        tokens.end();
-        tokens.close();
         return bqueryBuilder.build();
     }
 
@@ -338,17 +348,17 @@ public class SearchUtils {
                             boolean is_synonym_clause,
                             boolean ordered)
     {
-        List<SpanQuery> queryList = new ArrayList<>();
+        LinkedHashSet<SpanQuery> queryList = new LinkedHashSet<>();
         boolean mode_is_field = true;
         StringBuilder fld = new StringBuilder();
         StringBuilder term = new StringBuilder();
 
         while (idx.get() < query.length()){
-            char c = query.charAt(idx.get());
-
+            int current_idx = idx.get();
+            char c = query.charAt(current_idx);
+            idx.incrementAndGet();
             switch (c) {
                 case '+':
-                    idx.incrementAndGet();
                     break;
                 case ' ':
                     mode_is_field = true;
@@ -358,23 +368,21 @@ public class SearchUtils {
                         term = new StringBuilder();
                         queryList.add(spanTermQuery);
                     }
-                    idx.incrementAndGet();
                     break;
                 case ':':
                     mode_is_field = false;
-                    idx.incrementAndGet();
                     break;
                 case '(':
-                    idx.incrementAndGet();
                     boolean synonym_clause = false;
                     if (fld.toString().equals("Synonym")){
                         synonym_clause = true;
                     }
                     SpanQuery spanQuery = parse(query, search_fld, slop, idx, synonym_clause, ordered);
                     queryList.add(spanQuery);
+                    fld = new StringBuilder();
+                    term = new StringBuilder();
                     break;
                 case ')':
-                    idx.incrementAndGet();
                     if (fld.length() > 0 && term.length() > 0) {
                         SpanTermQuery spanTQuery = new SpanTermQuery(new Term(fld.toString(), term.toString()));
                         queryList.add(spanTQuery);
@@ -383,7 +391,7 @@ public class SearchUtils {
                         logger.error("This is an empty Span..");
                         return null;
                     } else if (queryList.size() == 1) {
-                        return queryList.get(0);
+                        return queryList.iterator().next();
                     } else {
                         if (is_synonym_clause) {
                             SpanOrQuery spanOrQuery = new SpanOrQuery(queryList.toArray(new SpanQuery[queryList.size()]));
@@ -403,7 +411,6 @@ public class SearchUtils {
                     } else {
                         term.append(c);
                     }
-                    idx.incrementAndGet();
             }
         }
 
@@ -414,7 +421,7 @@ public class SearchUtils {
 
         if (queryList.size() == 0) return null;
         if (queryList.size() == 1) {
-            return queryList.get(0);
+            return queryList.iterator().next();
         } else {
             SpanNearQuery.Builder spanNearBuilder = new SpanNearQuery.Builder(search_fld, true);
             spanNearBuilder.setSlop(slop);

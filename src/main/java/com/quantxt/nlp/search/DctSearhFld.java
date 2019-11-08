@@ -1,7 +1,6 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,19 +15,10 @@ import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
-import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexOptions;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.store.ByteBuffersDirectory;
-import org.apache.lucene.store.Directory;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static com.quantxt.nlp.search.SearchUtils.getExactCaseInsensetiveAnalyzer;
@@ -61,51 +51,63 @@ public class DctSearhFld {
         SearchFieldType.freeze();
     }
 
-
-
-    final private List<DictItm> dictionary_items;
-    final private IndexSearcher indexSearcher;
     final private Analyzer search_analyzer;
     final private Analyzer index_analyzer;
     final private DictSearch.AnalyzType analyzType;
     final private DictSearch.Mode mode;
     final private String search_fld;
+    private int priority;
 
 
     public DctSearhFld(QTDocument.Language lang,
-                       ArrayList<String> synonymPairs,
-                       ArrayList<String> stopwords,
+                       List<String> synonymPairs,
+                       List<String> stopwords,
                        DictSearch.Mode mode,
                        DictSearch.AnalyzType analyzType,
-                       List<DictItm> dictionary_items)
+                       String customPfx)
     {
         CharArraySet stopWords_charArray = stopwords == null || stopwords.size() == 0?
                 CharArraySet.EMPTY_SET : new CharArraySet(stopwords, false);
+        String pfx = customPfx == null ? searchFieldPfx : customPfx;
         this.analyzType = analyzType;
         this.mode = mode;
+        switch (mode) {
+            case ORDERED_SPAN: priority = 1000; break;
+            case SPAN: priority = 100; break;
+            case FUZZY_ORDERED_SPAN: priority = 10; break;
+            case FUZZY_SPAN: priority = 0; break;
+            default: priority = 0;
+
+        }
         switch (analyzType){
             case EXACT:
-                this.search_fld = searchFieldPfx + ".exact";
+                this.search_fld = pfx + ".exact";
                 this.index_analyzer = new KeywordAnalyzer();
+                this.priority += 0;
                 break;
             case EXACT_CI:
-                this.search_fld = searchFieldPfx + ".exact_ci";
+                this.search_fld = pfx + ".exact_ci";
                 this.index_analyzer = getExactCaseInsensetiveAnalyzer();
+                this.priority += 1;
                 break;
             case WHITESPACE:
-                this.search_fld = searchFieldPfx + ".whitespace";
+                this.search_fld = pfx + ".whitespace";
                 this.index_analyzer = new WhitespaceAnalyzer();
+                this.priority += 2;
                 break;
             case SIMPLE:
-                this.search_fld = searchFieldPfx + ".simple";
+                this.search_fld = pfx + ".simple";
                 this.index_analyzer = new SimpleAnalyzer();
+                this.priority += 3;
                 break;
             case STANDARD:
-                this.search_fld = searchFieldPfx;
+                this.search_fld = pfx;
                 this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
+                this.priority += 4;
                 break;
             case STEM: {
-                this.search_fld = searchFieldPfx + ".stem";
+                this.search_fld = pfx + ".stem";
+                this.priority += 5;
                 switch (lang) {
                     case ENGLISH:
                         this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
@@ -129,39 +131,9 @@ public class DctSearhFld {
             break;
             default:
                 this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
-                this.search_fld = searchFieldPfx;
+                this.search_fld = pfx;
+                this.priority += 4;
         }
-        this.dictionary_items = dictionary_items;
-        this.indexSearcher = getSearcherFromEntities();
         this.search_analyzer = getSynonymAnalyzer(synonymPairs, stopwords, analyzType, index_analyzer);
-    }
-
-    private IndexSearcher getSearcherFromEntities()
-    {
-        IndexWriterConfig config = new IndexWriterConfig(index_analyzer);
-        Directory mMapDirectory = new ByteBuffersDirectory();
-        try {
-            IndexWriter writer = new IndexWriter(mMapDirectory, config);
-
-            for (DictItm dictItm : dictionary_items) {
-
-                String item_key = dictItm.getKey();
-                List<String> item_vals = dictItm.getValue();
-
-                for (String iv : item_vals) {
-                    Document doc = new Document();
-                    doc.add(new Field(search_fld, iv, SearchFieldType));
-                    doc.add(new Field(DataField, item_key, DataFieldType));
-                    writer.addDocument(doc);
-                }
-            }
-
-            writer.close();
-            DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
-            return new IndexSearcher(dreader);
-        } catch (Exception e){
-            e.printStackTrace();
-            return null;
-        }
     }
 }

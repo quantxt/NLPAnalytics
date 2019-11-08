@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -31,27 +32,42 @@ public class FRDocumentInfo extends QTDocument {
     }
 
     @Override
-    public List<QTDocument> getChilds(boolean splitOnNewLine) {
-        List<QTDocument> childs = new ArrayList<>();
+    public List<QTDocument> getChunks(CHUNK chunking) {
+        List<QTDocument> chunk_docs = new ArrayList<>();
         if (body == null || body.isEmpty())
-            return childs;
+            return chunk_docs;
 
-        String[] sentences = null;
-        if (splitOnNewLine){
-            sentences = body.split("[\\n\\r]+");
-        } else {
-            sentences = helper.getSentences(body);
+        List<String> chunks = new ArrayList<>();
+        switch (chunking){
+            case NONE:
+                chunks.add(body);
+                break;
+            case LINE:
+                String [] lines = body.split("[\\n\\r]+");
+                chunks.addAll(Arrays.asList(lines));
+                break;
+            case SENTENCE:
+                String [] sentences = helper.getSentences(body);;
+                chunks.addAll(Arrays.asList(sentences));
+                break;
+            case PARAGRAPH:
+                String [] paragraphs = body.split("[\\?\\.][\\n\\r]+");
+                chunks.addAll(Arrays.asList(paragraphs));
+                break;
         }
 
-        for (String s : sentences){
-            FRDocumentInfo sDoc = new FRDocumentInfo("", s.trim(), helper);
+        for (String chk : chunks) {
+            String str = chk.trim();
+            if (str.isEmpty()) continue;
+            FRDocumentInfo sDoc = new FRDocumentInfo("", str, helper);
             sDoc.setDate(getDate());
             sDoc.setLink(getLink());
             sDoc.setSource(getSource());
             sDoc.setLanguage(getLanguage());
-            childs.add(sDoc);
+            chunk_docs.add(sDoc);
         }
-        return childs;
+
+        return chunk_docs;
     }
 
     @Override

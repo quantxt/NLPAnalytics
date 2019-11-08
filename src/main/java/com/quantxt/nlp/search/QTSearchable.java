@@ -1,8 +1,7 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.trie.Emit;
-import com.quantxt.types.DictItm;
+import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import lombok.Getter;
@@ -17,91 +16,57 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static com.quantxt.nlp.search.SearchUtils.getFragments;
-import static com.quantxt.nlp.search.SearchUtils.getMultimatcheQuery;
+import static com.quantxt.nlp.search.SearchUtils.*;
 
 @Getter
 @Setter
-public class QTSearchable extends DictSearch {
+public class QTSearchable extends QTSearchableBase<QTMatch> {
 
     final private static Logger logger = LoggerFactory.getLogger(QTSearchable.class);
-    final public static String HIDDEH_ENTITY = "hidden";
 
-    private int topN = 100;
-
-    private Map<String, DctSearhFld> docSearchFldMap = new HashMap<>();
-    final private QTDocument.Language lang;
-    final private ArrayList<String> synonymPairs;
-    final private ArrayList<String> stopWords;
-
-
-    public QTSearchable(Dictionary dictionary){
-        this.lang = null;
-        this.synonymPairs = null;
-        this.mode = DictSearch.Mode.ORDERED_SPAN;
-        this.analyzType = DictSearch.AnalyzType.STANDARD;
-        this.dictionary = dictionary;
-        this.stopWords = null;
-        initDocSearchFldMap(dictionary.getVocab_map());
+    public QTSearchable(Dictionary dictionary) {
+        super(dictionary);
     }
 
     public QTSearchable(Dictionary dictionary,
-                        QTDocument.Language lang,
-                        ArrayList<String> synonymPairs,
-                        ArrayList<String> stopWords,
-                        DictSearch.Mode mode,
-                        DictSearch.AnalyzType analyzType)
-    {
-        this.lang = lang;
-        this.synonymPairs = synonymPairs;
-        this.stopWords = stopWords;
-        this.mode = mode;
-        this.analyzType = analyzType;
-        this.dictionary = dictionary;
-        initDocSearchFldMap(dictionary.getVocab_map());
-    }
-
-    private void initDocSearchFldMap(Map<String, List<DictItm>> vocab_map)
-    {
-        try {
-            for (Map.Entry<String, List<DictItm>> vocab : vocab_map.entrySet()) {
-                String vocab_name = vocab.getKey();
-                List<DictItm> vocab_items = vocab.getValue();
-                DctSearhFld dctSearhFld = new DctSearhFld(lang, synonymPairs, stopWords,
-                        mode, analyzType , vocab_items);
-                docSearchFldMap.put(vocab_name, dctSearhFld);
-            }
-        } catch (Exception e){
-            e.printStackTrace();
-        }
+                            QTDocument.Language lang,
+                            List<String> synonymPairs,
+                            List<String> stopWords,
+                            DictSearch.Mode mode,
+                            DictSearch.AnalyzType analyzType) {
+        super(dictionary, lang, synonymPairs, stopWords, mode, analyzType);
     }
 
     @Override
-    public Map<String, Collection<Emit>> search(final String query_string) {
+    public List<QTMatch> search(final String query_string) {
 
         String escaped_query = QueryParser.escape(query_string);
-        HashMap<String, Collection<Emit>> res = new HashMap<>();
+        ArrayList<QTMatch> res = new ArrayList<>();
 
         try {
 
-            for (Map.Entry<String, DctSearhFld> dctSearhFldEntry : docSearchFldMap.entrySet()) {
-                DctSearhFld dctSearhFld = dctSearhFldEntry.getValue();
-                String search_fld = dctSearhFld.getSearch_fld();
+            for (Map.Entry<String, List<DctSearhFld>> dctSearhFldEntry : docSearchFldMap.entrySet()) {
+                List<DctSearhFld> dctSearhFldList = dctSearhFldEntry.getValue();
                 String vocab_name = dctSearhFldEntry.getKey();
-                Query query = getMultimatcheQuery(dctSearhFld.getSearch_analyzer(), search_fld, escaped_query);
-                TopDocs topdocs = dctSearhFld.getIndexSearcher().search(query, topN);
-
                 List<Document> matchedDocs = new ArrayList<>();
-                for (ScoreDoc hit : topdocs.scoreDocs) {
-                    int id = hit.doc;
-                    Document doclookedup = dctSearhFld.getIndexSearcher().doc(id);
-                    matchedDocs.add(doclookedup);
-                }
+                for (DctSearhFld dctSearhFld : dctSearhFldList) {
+                    String search_fld = dctSearhFld.getSearch_fld();
+                    Query query = getMultimatcheQuery(dctSearhFld.getSearch_analyzer(), search_fld, escaped_query);
+                    TopDocs topdocs = indexSearcher.search(query, topN);
 
-                if (matchedDocs.size() == 0) continue;
-                res.put(vocab_name, getFragments(matchedDocs, mode,
-                        dctSearhFld.getIndex_analyzer(), dctSearhFld.getSearch_analyzer(),
-                        search_fld, query_string));
+                    for (ScoreDoc hit : topdocs.scoreDocs) {
+                        int id = hit.doc;
+                        Document doclookedup = indexSearcher.doc(id);
+                        matchedDocs.add(doclookedup);
+                    }
+
+                    if (matchedDocs.size() == 0) continue;
+                    for (Mode m : mode) {
+                        res.addAll(getFragments(matchedDocs, m, minFuzzyTermLength,
+                                dctSearhFld.getIndex_analyzer(), dctSearhFld.getSearch_analyzer(),
+                                search_fld, vocab_name, query_string));
+                    }
+                }
             }
 
 

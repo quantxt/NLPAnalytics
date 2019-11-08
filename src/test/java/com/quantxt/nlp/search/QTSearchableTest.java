@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.trie.Emit;
+import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
@@ -55,14 +55,15 @@ public class QTSearchableTest {
         String str = "Amazon Inc. reported a gain on his earnings.";
 
         // WHEN
-        Map<String, Collection<Emit>> result = qtSearchable.search(str);
+        List<QTMatch> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
         assertFalse(result.isEmpty());
-        assertTrue(result.get("Company").size() == 1);
+        assertTrue(result.size() == 1);
         //TODO: this should be Amazon Inc.  with the dot
-        assertEquals(result.get("Company").iterator().next().getKeyword(), "Amazon Inc");
+        assertEquals(result.get(0).getGroup(), "Company");
+        assertEquals(result.get(0).getKeyword(), "Amazon Inc");
 
     }
 
@@ -72,13 +73,13 @@ public class QTSearchableTest {
         String str = "Amazon inciobi reported a gain on his earnings.";
 
         // WHEN
-        Map<String, Collection<Emit>> result = qtSearchable.search(str);
+        List<QTMatch> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
         assertFalse(result.isEmpty());
-        assertTrue(result.get("Company").size() == 1);
-        assertEquals(result.get("Company").iterator().next().getKeyword(), "Amazon inciobi");
+        assertTrue(result.size() == 1);
+        assertEquals(result.get(0).getKeyword(), "Amazon inciobi");
 
     }
 
@@ -88,13 +89,13 @@ public class QTSearchableTest {
         String str = "Amazon corporate reported a gain on his earnings.";
 
         // WHEN
-        Map<String, Collection<Emit>> result = qtSearchable.search(str);
+        List<QTMatch> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
         assertFalse(result.isEmpty());
-        assertTrue(result.get("Company").size() == 1);
-        assertEquals(result.get("Company").iterator().next().getKeyword(), "Amazon corporate");
+        assertTrue(result.size() == 1);
+        assertEquals(result.get(0).getKeyword(), "Amazon corporate");
 
     }
 
@@ -119,13 +120,13 @@ public class QTSearchableTest {
             String str = "Gilead Sciences, Inc. reported a gain on his earnings.";
 
             // WHEN
-            Map<String, Collection<Emit>> result = qtSearchable.search(str);
+            List<QTMatch> result = qtSearchable.search(str);
 
             // THEN
             assertNotNull(result);
             assertFalse(result.isEmpty());
-            assertTrue(result.get("Company").size() == 1);
-            assertEquals(result.get("Company").iterator().next().getKeyword(), "Gilead Sciences");
+            assertTrue(result.size() == 1);
+           assertEquals(result.get(0).getKeyword(), "Gilead Sciences");
         } catch (Exception e){
             e.printStackTrace();
         }
