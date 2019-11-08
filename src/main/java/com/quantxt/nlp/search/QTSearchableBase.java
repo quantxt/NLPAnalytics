@@ -237,7 +237,7 @@ public class QTSearchableBase<T> extends DictSearch {
                         dctSearhFlds.add(dctSearhFld);
                     }
                 }
-                dctSearhFlds.sort((DctSearhFld s1, DctSearhFld s2) -> s2.getPriority() - s1.getPriority());
+                dctSearhFlds.sort((DctSearhFld s1, DctSearhFld s2) -> s1.getPriority() - s2.getPriority());
                 docSearchFldMap.put(vocab_name, dctSearhFlds);
             }
         } catch (Exception e) {
