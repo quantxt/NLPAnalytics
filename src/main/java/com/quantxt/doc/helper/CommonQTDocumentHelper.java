@@ -8,7 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
-import com.quantxt.nlp.types.QTValueNumber;
+import com.quantxt.nlp.entity.QTValueNumber;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;

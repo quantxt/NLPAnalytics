@@ -1,6 +1,6 @@
 package com.quantxt.nlp.comp.mkin.aligner;
 
-import com.quantxt.nlp.TopicModel;
+import com.quantxt.nlp.topic.TopicModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

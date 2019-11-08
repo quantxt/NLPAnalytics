@@ -1,16 +1,11 @@
 package com.quantxt.doc;
 
-import com.google.gson.Gson;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.JADocumentHelper;
-import com.quantxt.helper.types.ExtInterval;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -40,66 +35,65 @@ public class JADocumentInfo extends QTDocument {
     }
 
     @Override
-    public List<QTDocument> getChilds(boolean splitOnNewLine) {
-        List<QTDocument> childs = new ArrayList<>();
+    public List<QTDocument> getChunks(CHUNK chunking) {
+        List<QTDocument> chunk_docs = new ArrayList<>();
         if (body == null || body.isEmpty())
-            return childs;
+            return chunk_docs;
 
-        if (splitOnNewLine) {
-            String[] sentences = body.split("\\n");
-            for (String s : sentences) {
-                ENDocumentInfo sDoc = new ENDocumentInfo("", s.trim(), helper);
-                sDoc.setDate(getDate());
-                sDoc.setLink(getLink());
-                sDoc.setSource(getSource());
-                sDoc.setLanguage(getLanguage());
-                childs.add(sDoc);
-            }
-        } else {
-            List<String> tokens = helper.tokenize(body);
-            List<String> postags = ((JADocumentHelper) helper).getPosTagsJa(body);
-            ArrayList<String> sentTokens = new ArrayList();
-            JADocumentInfo sDoc;
-            int start = 0;
+        List<String> chunks = new ArrayList<>();
+        switch (chunking){
+            case NONE:
+                chunks.add(body);
+                break;
+            case LINE:
+                String[] lines = body.split("\\n");
+                chunks.addAll(Arrays.asList(lines));
+                break;
+            case SENTENCE:
+                List<String> tokens = helper.tokenize(body);
+                List<String> postags = ((JADocumentHelper) helper).getPosTagsJa(body);
+                ArrayList<String> sentTokens = new ArrayList();
+                int start = 0;
 
-            for (int i = 0; i < postags.size(); i++) {
-                String token = tokens.get(i);
+                for (int i = 0; i < postags.size(); i++) {
+                    String token = tokens.get(i);
 
-                String tag = postags.get(i);
-                sentTokens.add(token);
-                CommonQTDocumentHelper.QTPosTags qtPosTag = ((JADocumentHelper) helper).getQtPosTag(tag);
-                if (token.equals("。") || puntuations.contains(token) || qtPosTag == CommonQTDocumentHelper.QTPosTags.PUNCT)
-                {
-                    int end = body.indexOf(token, start) + token.length();
-                    String raw = body.substring(start, end);
-                    start = end;
-                    sDoc = new JADocumentInfo("", raw, helper);
-                    sDoc.setDate(getDate());
-                    sDoc.setLink(getLink());
-                    sDoc.setSource(getSource());
-                    sDoc.setLanguage(getLanguage());
-                    childs.add(sDoc);
-                    sentTokens = new ArrayList();
+                    String tag = postags.get(i);
+                    sentTokens.add(token);
+                    CommonQTDocumentHelper.QTPosTags qtPosTag = ((JADocumentHelper) helper).getQtPosTag(tag);
+                    if (token.equals("。") || puntuations.contains(token) || qtPosTag == CommonQTDocumentHelper.QTPosTags.PUNCT)
+                    {
+                        int end = body.indexOf(token, start) + token.length();
+                        String raw = body.substring(start, end);
+                        start = end;
+                        chunks.add(raw);
+                        sentTokens = new ArrayList();
+                    }
                 }
-            }
 
-            if (sentTokens.size() > 0) {
-                String raw = body.substring(start);
-                sDoc = new JADocumentInfo("", raw, helper);
-                sDoc.setDate(getDate());
-                sDoc.setLink(getLink());
-                sDoc.setSource(getSource());
-                sDoc.setLanguage(getLanguage());
-                childs.add(sDoc);
-            }
+                if (sentTokens.size() > 0) {
+                    String raw = body.substring(start);
+                    chunks.add(raw);
+                }
+                break;
+            case PARAGRAPH:
+                String [] paragraphs = body.split("[\\?\\.][\\n\\r]+");
+                chunks.addAll(Arrays.asList(paragraphs));
+                break;
         }
 
-        return childs;
-    }
+        for (String chk : chunks) {
+            String str = chk.trim();
+            if (str.isEmpty()) continue;
+            JADocumentInfo sDoc = new JADocumentInfo("", str, helper);
+            sDoc.setDate(getDate());
+            sDoc.setLink(getLink());
+            sDoc.setSource(getSource());
+            sDoc.setLanguage(getLanguage());
+            chunk_docs.add(sDoc);
+        }
 
-    @Override
-    public double [] getVectorizedTitle(QTExtract speaker){
-        return speaker.tag(title);
+        return chunk_docs;
     }
 
     @Override

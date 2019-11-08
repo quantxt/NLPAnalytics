@@ -1,4 +1,4 @@
-package com.quantxt.nlp.types;
+package com.quantxt.io.pdf;
 
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;

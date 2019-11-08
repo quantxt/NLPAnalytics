@@ -1,8 +1,6 @@
-package com.quantxt.nlp.types;
+package com.quantxt.nlp.topic;
 
-import com.quantxt.nlp.word2vec;
 import com.quantxt.types.MapSort;
-import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.api.ndarray.INDArray;
