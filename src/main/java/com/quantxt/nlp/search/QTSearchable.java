@@ -9,8 +9,6 @@ import lombok.Setter;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +21,8 @@ import static com.quantxt.nlp.search.SearchUtils.*;
 public class QTSearchable extends QTSearchableBase<QTMatch> {
 
     final private static Logger logger = LoggerFactory.getLogger(QTSearchable.class);
+
+    private int minTermLength = 5;
 
     public QTSearchable(Dictionary dictionary) {
         super(dictionary);
@@ -42,28 +42,29 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
 
         String escaped_query = QueryParser.escape(query_string);
         ArrayList<QTMatch> res = new ArrayList<>();
-
+        boolean useFuzzyMatching = false;
+        for (Mode m : mode){
+            if  (m ==  Mode.FUZZY_SPAN || m == Mode.FUZZY_ORDERED_SPAN
+                    || m == Mode.PARTIAL_FUZZY_SPAN){
+                useFuzzyMatching = true;
+                break;
+            }
+        }
         try {
 
             for (Map.Entry<String, List<DctSearhFld>> dctSearhFldEntry : docSearchFldMap.entrySet()) {
                 List<DctSearhFld> dctSearhFldList = dctSearhFldEntry.getValue();
                 String vocab_name = dctSearhFldEntry.getKey();
-                List<Document> matchedDocs = new ArrayList<>();
                 for (DctSearhFld dctSearhFld : dctSearhFldList) {
                     String search_fld = dctSearhFld.getSearch_fld();
-                    Query query = getMultimatcheQuery(dctSearhFld.getSearch_analyzer(), search_fld, escaped_query);
-                    TopDocs topdocs = indexSearcher.search(query, topN);
-
-                    for (ScoreDoc hit : topdocs.scoreDocs) {
-                        int id = hit.doc;
-                        Document doclookedup = indexSearcher.doc(id);
-                        matchedDocs.add(doclookedup);
-                    }
+                    Query query = useFuzzyMatching ? getFuzzyQuery(dctSearhFld.getSearch_analyzer(), search_fld, escaped_query, minTermLength) :
+                            getMultimatcheQuery(dctSearhFld.getSearch_analyzer(), search_fld, escaped_query);
+                    List<Document> matchedDocs = getMatchedDocs(query);
 
                     if (matchedDocs.size() == 0) continue;
                     for (Mode m : mode) {
                         res.addAll(getFragments(matchedDocs, m, minFuzzyTermLength,
-                                dctSearhFld.getIndex_analyzer(), dctSearhFld.getSearch_analyzer(),
+                                dctSearhFld.getIndex_analyzer(), dctSearhFld.getSearch_analyzer(), dctSearhFld.getMirror_synonym_search_analyzer(),
                                 search_fld, vocab_name, query_string));
                     }
                 }

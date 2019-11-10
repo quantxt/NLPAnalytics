@@ -7,7 +7,6 @@ import lombok.Setter;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
-import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
@@ -19,10 +18,10 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.search.BooleanQuery;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import static com.quantxt.nlp.search.SearchUtils.getExactCaseInsensetiveAnalyzer;
-import static com.quantxt.nlp.search.SearchUtils.getSynonymAnalyzer;
+import static com.quantxt.nlp.search.SearchUtils.*;
 
 @Setter
 @Getter
@@ -52,6 +51,7 @@ public class DctSearhFld {
     }
 
     final private Analyzer search_analyzer;
+    final private Analyzer mirror_synonym_search_analyzer;
     final private Analyzer index_analyzer;
     final private DictSearch.AnalyzType analyzType;
     final private DictSearch.Mode mode;
@@ -97,7 +97,8 @@ public class DctSearhFld {
                 break;
             case SIMPLE:
                 this.search_fld = pfx + ".simple";
-                this.index_analyzer = new SimpleAnalyzer();
+        //        this.index_analyzer = new SimpleAnalyzer();
+                this.index_analyzer = getNgramAnalyzer(stopWords_charArray);
                 this.priority += 3;
                 break;
             case STANDARD:
@@ -135,5 +136,16 @@ public class DctSearhFld {
                 this.priority += 4;
         }
         this.search_analyzer = getSynonymAnalyzer(synonymPairs, stopwords, analyzType, index_analyzer);
+        if (synonymPairs != null && synonymPairs.size() >0){
+            List<String> bisideSynonymPairs = new ArrayList<>(synonymPairs);
+            for (String s : synonymPairs) {
+                String[] parts = s.split("\\t");
+                if (parts.length != 2) continue;
+                bisideSynonymPairs.add(parts[1]+"\t" + parts[0]);
+            }
+            this.mirror_synonym_search_analyzer = getSynonymAnalyzer(bisideSynonymPairs, stopwords, analyzType, index_analyzer);
+        } else {
+            this.mirror_synonym_search_analyzer = this.search_analyzer;
+        }
     }
 }

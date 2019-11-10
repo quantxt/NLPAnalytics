@@ -1,6 +1,7 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
+import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
@@ -21,6 +22,7 @@ public class SearchUtilsTest {
 
     private static QTSearchable qtSearchable;
     private static QTSearchable qtSearchable_exact;
+    private static QTSearchable qtSearchable_fuzzy;
     private static boolean setUpIsDone = false;
 
     @BeforeClass
@@ -30,7 +32,7 @@ public class SearchUtilsTest {
         }
         try {
             ArrayList<DictItm> dictItms = new ArrayList<>();
-            dictItms.add(new DictItm("Profit", "profit." ));
+            dictItms.add(new DictItm("Profit", "profit" ));
             dictItms.add(new DictItm("Hot Drink", "coffee" ));
             dictItms.add(new DictItm("Hot Drink", "tea" ));
             dictItms.add(new DictItm("Cold Drink", "water" ));
@@ -41,12 +43,14 @@ public class SearchUtilsTest {
             // synonyms;
             ArrayList<String> synonym_pairs = new ArrayList<>();
             synonym_pairs.add("ert\tearning");
-            synonym_pairs.add("profit\tgain");
+            synonym_pairs.add("gain\tprofit");
             Dictionary dictionary = new Dictionary(entMap);
             qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STEM);
             qtSearchable_exact = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.EXACT_CI);
+            qtSearchable_fuzzy = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+                    DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
             setUpIsDone = true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -56,14 +60,53 @@ public class SearchUtilsTest {
     @Test
     public void parseTermsQuery() {
         // GIVEN
+        String str = "Amazon Inc. reported a profit on his earnings.";
+
+        List<QTMatch> res = qtSearchable.search(str);
+        assertTrue(res.size() == 1);
+        assertTrue(res.get(0).getCustomData().equals("Profit"));
+        assertTrue(res.get(0).getKeyword().equals("profit"));
+    }
+
+
+    @Test
+    public void parseTermsSynonymQuery() {
+        // GIVEN
         String str = "Amazon Inc. reported a gain on his earnings.";
 
         // WHEN
         SpanQuery result = SearchUtils.getSpanQuery(qtSearchable.docSearchFldMap.get("Dict_Test").get(0).getSearch_analyzer(),
-                "DUMMY_FIELD", "report profit", 1, 5, false, true);
+                "DUMMY_FIELD", "report gain", 1, 5, false, true);
 
         assertEquals(result.toString(), "spanNear([DUMMY_FIELD:report, spanOr([DUMMY_FIELD:gain, DUMMY_FIELD:profit])], 1, true)");
+        List<QTMatch> res = qtSearchable.search(str);
+        assertTrue(res.size() == 1);
+        assertTrue(res.get(0).getCustomData().equals("Profit"));
+        assertTrue(res.get(0).getKeyword().equals("gain"));
     }
+
+    @Test
+    public void parseTermsFuzzy1EditQuery() {
+        // GIVEN
+        String str = "Amazon Inc. reported a profti on his earnings.";
+
+        List<QTMatch> res = qtSearchable_fuzzy.search(str);
+        assertTrue(res.size() == 1);
+        assertTrue(res.get(0).getCustomData().equals("Profit"));
+        assertTrue(res.get(0).getKeyword().equals("profti"));
+    }
+
+    @Test
+    public void parseTermsFuzzySynonymEditQuery() {
+        // GIVEN
+        String str = "Amazon Inc. reported a gain on his earnings.";
+
+        List<QTMatch> res = qtSearchable_fuzzy.search(str);
+        assertTrue(res.size() == 1);
+        assertTrue(res.get(0).getCustomData().equals("Profit"));
+        assertTrue(res.get(0).getKeyword().equals("profti"));
+    }
+
 
     @Test
     public void OOVCoverage() {
@@ -88,9 +131,24 @@ public class SearchUtilsTest {
                 "DUMMY_FIELD.exact",
          1,
         new AtomicInteger(0),
-        false, true);
+        false, false,true);
 
         assertEquals(result.toString(), "spanNear([DUMMY_FIELD.exact:report listed, DUMMY_FIELD.exact:profit], 1, true)");
+    }
+
+    @Test
+    public void parseMultiTermsEndofStrQuery() {
+        // GIVEN
+        String query_Dsl = "DUMMY_FIELD.exact:report listed";
+
+        // WHEN
+        SpanQuery result = SearchUtils.parse(query_Dsl,
+                "DUMMY_FIELD.exact",
+                1,
+                new AtomicInteger(0),
+                false, false, true);
+
+        assertEquals(result.toString(), "DUMMY_FIELD.exact:report listed");
     }
 
 }
