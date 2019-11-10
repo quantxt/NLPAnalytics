@@ -21,9 +21,12 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.MMapDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +47,8 @@ public class QTSearchableBase<T> extends DictSearch {
     protected int topN = 100;
     protected int minFuzzyTermLength = 5;
 
-    protected IndexSearcher indexSearcher;
+    protected transient IndexSearcher indexSearcher;
+    protected String index_path;
 
     protected Map<String, List<DctSearhFld>> docSearchFldMap = new HashMap<>();
     final protected QTDocument.Language lang;
@@ -59,8 +63,7 @@ public class QTSearchableBase<T> extends DictSearch {
         this.analyzType = new DictSearch.AnalyzType[]{STANDARD};
         this.dictionary = dictionary;
         this.stopWords = null;
-        initDocSearchFldMap();
-        createIndex();
+        init();
     }
 
     public QTSearchableBase(Dictionary dictionary,
@@ -75,8 +78,7 @@ public class QTSearchableBase<T> extends DictSearch {
         this.mode = new DictSearch.Mode[]{mode};
         this.analyzType = new DictSearch.AnalyzType[]{analyzType};
         this.dictionary = dictionary;
-        initDocSearchFldMap();
-        createIndex();
+        init();
     }
 
     public QTSearchableBase(Dictionary dictionary,
@@ -91,25 +93,26 @@ public class QTSearchableBase<T> extends DictSearch {
         this.mode = mode;
         this.analyzType = analyzType;
         this.dictionary = dictionary;
+        init();
+    }
+
+    protected void init(){
         initDocSearchFldMap();
         createIndex();
     }
 
-    public List<Document> getMatchedDocs(Query query){
+    public List<Document> getMatchedDocs(Query query) throws IOException {
         List<Document> matchedDocs = new ArrayList<>();
-        try {
-            TopDocs topdocs = indexSearcher.search(query, topN);
+        TopDocs topdocs = indexSearcher.search(query, topN);
 
-            if (topdocs.totalHits.value == 0) return matchedDocs;
+        if (topdocs.totalHits.value == 0) return matchedDocs;
 
-            for (ScoreDoc hit : topdocs.scoreDocs) {
-                int id = hit.doc;
-                Document doclookedup = indexSearcher.doc(id);
-                matchedDocs.add(doclookedup);
-            }
-        } catch (Exception e){
-            e.printStackTrace();
+        for (ScoreDoc hit : topdocs.scoreDocs) {
+            int id = hit.doc;
+            Document doclookedup = indexSearcher.doc(id);
+            matchedDocs.add(doclookedup);
         }
+
         return matchedDocs;
     }
 
@@ -135,7 +138,6 @@ public class QTSearchableBase<T> extends DictSearch {
                         map.put(t, count + 1);
                     }
                 }
-
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -160,10 +162,15 @@ public class QTSearchableBase<T> extends DictSearch {
         }
 
         PerFieldAnalyzerWrapper pfaw = new PerFieldAnalyzerWrapper(new KeywordAnalyzer(), analyzerMap);
-
+        Directory mMapDirectory = null;
 
         IndexWriterConfig config = new IndexWriterConfig(pfaw);
-        Directory mMapDirectory = new ByteBuffersDirectory();
+        try {
+            mMapDirectory = index_path == null ? new ByteBuffersDirectory() :
+                    new MMapDirectory(Paths.get(index_path));
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
         try {
             IndexWriter writer = new IndexWriter(mMapDirectory, config);
