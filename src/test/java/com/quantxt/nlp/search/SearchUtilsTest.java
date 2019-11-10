@@ -7,6 +7,7 @@ import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.apache.lucene.search.spans.SpanQuery;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -96,6 +97,7 @@ public class SearchUtilsTest {
         assertTrue(res.get(0).getKeyword().equals("profti"));
     }
 
+    @Ignore
     @Test
     public void parseTermsFuzzySynonymEditQuery() {
         // GIVEN
