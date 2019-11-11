@@ -109,8 +109,8 @@ public class ENDocumentInfoTest {
         String str = "Gilead Sciences , Inc. told to reuters reporters.";
         QTDocument doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Gilead Sciences, Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Gilead Sciences, Inc.");
     }
 
     @Test
@@ -118,8 +118,8 @@ public class ENDocumentInfoTest {
         String str = "Amazon Inc. reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
@@ -127,8 +127,8 @@ public class ENDocumentInfoTest {
         String str = "Amazon reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
@@ -136,8 +136,8 @@ public class ENDocumentInfoTest {
         String str = "Amazon Corp reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
@@ -145,8 +145,8 @@ public class ENDocumentInfoTest {
         String str = "Amazon LLC announced a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
@@ -154,7 +154,7 @@ public class ENDocumentInfoTest {
         String str = "He works as a high rank Senior Director in Amazon";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertTrue(entityMap.get("Title").contains("Senior Director"));
     }
 
