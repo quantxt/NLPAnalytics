@@ -258,11 +258,22 @@ public class SearchUtils {
                 String[] parts = s.split("\\t");
                 if (parts.length != 2) continue;
 
+                String[] inTokens = tokenize(index_analyzer, parts[0]);
+                if (inTokens == null || inTokens.length == 0){
+                    logger.error("p[0] {} wasn't accepted as a synonym", parts[0]);
+                    continue;
+                }
+                String[] outToens = tokenize(index_analyzer, parts[1]);
+                if (outToens == null || outToens.length == 0){
+                    logger.error("p[1] {} wasn't accepted as a synonym", parts[0]);
+                    continue;
+                }
                 CharsRefBuilder inputCharsRef = new CharsRefBuilder();
-                SynonymMap.Builder.join(tokenize(index_analyzer, parts[0]), inputCharsRef);
+                SynonymMap.Builder.join(inTokens, inputCharsRef);
 
                 CharsRefBuilder outputCharsRef = new CharsRefBuilder();
-                SynonymMap.Builder.join(tokenize(index_analyzer, parts[1]), outputCharsRef);
+                SynonymMap.Builder.join(outToens, outputCharsRef);
+
                 builder.add(inputCharsRef.get(), outputCharsRef.get(), true);
 
             }

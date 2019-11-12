@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +40,9 @@ import static com.quantxt.types.DictSearch.Mode.ORDERED_SPAN;
 
 @Getter
 @Setter
-public class QTSearchableBase<T> extends DictSearch {
+public class QTSearchableBase<T> extends DictSearch implements Serializable  {
+
+    private static final long serialVersionUID = -2557457339416308514L;
 
     final private static Logger logger = LoggerFactory.getLogger(QTSearchableBase.class);
     final public static String HIDDEH_ENTITY = "hidden";
@@ -51,10 +54,13 @@ public class QTSearchableBase<T> extends DictSearch {
     protected String index_path;
 
     protected Map<String, List<DctSearhFld>> docSearchFldMap = new HashMap<>();
-    final protected QTDocument.Language lang;
-    final protected List<String> synonymPairs;
-    final protected List<String> stopWords;
+    protected QTDocument.Language lang;
+    protected List<String> synonymPairs;
+    protected List<String> stopWords;
 
+
+    public QTSearchableBase(){
+    }
 
     public QTSearchableBase(Dictionary dictionary) {
         this.lang = null;
@@ -63,42 +69,42 @@ public class QTSearchableBase<T> extends DictSearch {
         this.analyzType = new DictSearch.AnalyzType[]{STANDARD};
         this.dictionary = dictionary;
         this.stopWords = null;
-        init();
+        this.index_path = null;
+        initDocSearchFldMap();
     }
 
     public QTSearchableBase(Dictionary dictionary,
-                        QTDocument.Language lang,
-                        List<String> synonymPairs,
-                        List<String> stopWords,
-                        DictSearch.Mode mode,
-                        DictSearch.AnalyzType analyzType) {
+                            String index_path,
+                            QTDocument.Language lang,
+                            List<String> synonymPairs,
+                            List<String> stopWords,
+                            DictSearch.Mode mode,
+                            DictSearch.AnalyzType analyzType) {
         this.lang = lang;
+        this.index_path = index_path;
         this.synonymPairs = synonymPairs;
         this.stopWords = stopWords;
         this.mode = new DictSearch.Mode[]{mode};
         this.analyzType = new DictSearch.AnalyzType[]{analyzType};
         this.dictionary = dictionary;
-        init();
+        initDocSearchFldMap();
     }
 
     public QTSearchableBase(Dictionary dictionary,
-                        QTDocument.Language lang,
-                        List<String> synonymPairs,
-                        List<String> stopWords,
-                        DictSearch.Mode[] mode,
-                        DictSearch.AnalyzType[] analyzType) {
+                            String index_path,
+                            QTDocument.Language lang,
+                            List<String> synonymPairs,
+                            List<String> stopWords,
+                            DictSearch.Mode[] mode,
+                            DictSearch.AnalyzType[] analyzType) {
         this.lang = lang;
+        this.index_path = index_path;
         this.synonymPairs = synonymPairs;
         this.stopWords = stopWords;
         this.mode = mode;
         this.analyzType = analyzType;
         this.dictionary = dictionary;
-        init();
-    }
-
-    protected void init(){
         initDocSearchFldMap();
-        createIndex();
     }
 
     public List<Document> getMatchedDocs(Query query) throws IOException {
@@ -152,7 +158,23 @@ public class QTSearchableBase<T> extends DictSearch {
         return MapSort.sortdescByValue(sorted_map);
     }
 
-    private void createIndex() {
+    public QTSearchableBase load() {
+        if (index_path == null){
+            logger.error("Path to Index must be set");
+            return null;
+        }
+        initDocSearchFldMap();
+        try {
+            Directory mMapDirectory = new MMapDirectory(Paths.get(index_path));
+            DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
+            indexSearcher = new IndexSearcher(dreader);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return this;
+    }
+
+    public QTSearchableBase create() {
         Map<String, Analyzer> analyzerMap = new HashMap<>();
 
         for (Map.Entry<String, List<DctSearhFld>> e : docSearchFldMap.entrySet()) {
@@ -200,6 +222,7 @@ public class QTSearchableBase<T> extends DictSearch {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return this;
     }
 
     public  Map<String, Map<String, Long>> getTermCoverage(String str)

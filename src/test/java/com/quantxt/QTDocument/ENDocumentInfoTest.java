@@ -85,7 +85,7 @@ public class ENDocumentInfoTest {
 
             Pattern keyPaddingPattern = Pattern.compile("[\\s\\#]+");
 
-            Dictionary dictionary = new Dictionary(dicts, "test", STRING, 130,
+            Dictionary dictionary = new Dictionary(dicts, "test", KEYWORD, 130,
                     keyPaddingPattern, Pattern.compile("(\\d+\\-\\d+)"), new int []{1});
             QTSearchable qtSearchable = new QTSearchable(dictionary);
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
@@ -109,8 +109,8 @@ public class ENDocumentInfoTest {
         String str = "Gilead Sciences , Inc. told to reuters reporters.";
         QTDocument doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Gilead Sciences, Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Gilead Sciences, Inc.");
     }
 
     @Test
@@ -118,8 +118,8 @@ public class ENDocumentInfoTest {
         String str = "Amazon Inc. reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
@@ -127,8 +127,8 @@ public class ENDocumentInfoTest {
         String str = "Amazon reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
@@ -136,8 +136,8 @@ public class ENDocumentInfoTest {
         String str = "Amazon Corp reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
@@ -145,8 +145,8 @@ public class ENDocumentInfoTest {
         String str = "Amazon LLC announced a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
@@ -154,7 +154,7 @@ public class ENDocumentInfoTest {
         String str = "He works as a high rank Senior Director in Amazon";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertTrue(entityMap.get("Title").contains("Senior Director"));
     }
 
@@ -440,7 +440,7 @@ public class ENDocumentInfoTest {
         entMap1.put("Fund Performance" , dictItms_1);
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
-        Dictionary dictionary_1 = new Dictionary(entMap1, "test", STRING, 25,
+        Dictionary dictionary_1 = new Dictionary(entMap1, "test", KEYWORD, 25,
                 keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
@@ -463,7 +463,6 @@ public class ENDocumentInfoTest {
         // THEN
         assertFalse(doc.getValues() == null);
 
-        logger.error(doc.getTitle());
         assertEquals(doc.getTitle(),
                 "<table width=\"100%\"><tr><td>Net market value</td><td>10/31/18</td></tr><tr><td>Returns</td><td>-2.67</td></tr></table>");
 
@@ -477,7 +476,7 @@ public class ENDocumentInfoTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Fund Performance" , dictItms);
         Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
-        Dictionary dictionary = new Dictionary(entMap, "test", STRING, 25,
+        Dictionary dictionary = new Dictionary(entMap, "test", KEYWORD, 25,
                 keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
@@ -491,6 +490,34 @@ public class ENDocumentInfoTest {
                 "<table width=\"100%\"><tr><td>Returns</td><td>-2.67</td></tr></table>");
 
     }
+
+    @Test
+    public void STRING_mode() {
+        String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
+        ArrayList<DictItm> dictItms_1 = new ArrayList<>();
+        dictItms_1.add(new DictItm("Returns" , "Returns", "returned"));
+        Map<String, List<DictItm>> entMap1 = new HashMap<>();
+        entMap1.put("Fund Performance" , dictItms_1);
+
+        Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
+        Dictionary dictionary_1 = new Dictionary(entMap1, "test", STRING, 25,
+                keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+        QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
+
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+
+        doc.extractKeyValues(qtSearchable_1, "");
+
+        doc.convertValues2titleTable();
+
+        // THEN
+        assertFalse(doc.getValues() == null);
+
+        assertEquals(doc.getTitle(),
+                "<table width=\"100%\"><tr><td>Returns</td><td>InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.</td></tr></table>");
+
+    }
+
 
     @Test
     public void stringUnitTest1() {
