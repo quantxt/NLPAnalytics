@@ -18,6 +18,7 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.search.BooleanQuery;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +26,9 @@ import static com.quantxt.nlp.search.SearchUtils.*;
 
 @Setter
 @Getter
-public class DctSearhFld {
+public class DctSearhFld implements Serializable {
+
+    private static final long serialVersionUID = -1000275390599103497L;
 
     final public static FieldType SearchFieldType;
     final public static FieldType DataFieldType;
@@ -50,9 +53,9 @@ public class DctSearhFld {
         SearchFieldType.freeze();
     }
 
-    final private Analyzer search_analyzer;
-    final private Analyzer mirror_synonym_search_analyzer;
-    final private Analyzer index_analyzer;
+    final private transient Analyzer search_analyzer;
+    final private transient Analyzer mirror_synonym_search_analyzer;
+    final private transient Analyzer index_analyzer;
     final private DictSearch.AnalyzType analyzType;
     final private DictSearch.Mode mode;
     final private String search_fld;

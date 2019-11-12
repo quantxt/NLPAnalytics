@@ -26,15 +26,17 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
 
     public QTSearchable(Dictionary dictionary) {
         super(dictionary);
+        this.create();
     }
 
     public QTSearchable(Dictionary dictionary,
-                            QTDocument.Language lang,
-                            List<String> synonymPairs,
-                            List<String> stopWords,
-                            DictSearch.Mode mode,
-                            DictSearch.AnalyzType analyzType) {
-        super(dictionary, lang, synonymPairs, stopWords, mode, analyzType);
+                        QTDocument.Language lang,
+                        List<String> synonymPairs,
+                        List<String> stopWords,
+                        DictSearch.Mode mode,
+                        DictSearch.AnalyzType analyzType) {
+        super(dictionary, null, lang, synonymPairs, stopWords, mode, analyzType);
+        this.create();
     }
 
     @Override
