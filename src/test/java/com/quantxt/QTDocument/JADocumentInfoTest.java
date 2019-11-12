@@ -3,7 +3,6 @@ package com.quantxt.QTDocument;
 import com.quantxt.doc.JADocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.JADocumentHelper;
-import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import org.junit.Assert;
 import org.junit.Test;
@@ -13,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by matin on 2/6/18.
@@ -68,8 +68,7 @@ public class JADocumentInfoTest {
                 "優良だと錯覚する「キラキラ系ブラック企業」 Copyright (c) 2018 SANKEI DIGITAL INC. All rights reserved. ";
 
         JADocumentInfo doc = new JADocumentInfo(str, "");
-        List<QTDocument> sents = doc.getChilds(true);
-
-        logger.info("num " + sents.size());
+        List<QTDocument> sents = doc.getChunks(QTDocument.CHUNK.SENTENCE);
+        assertTrue(sents.size() == 18);
     }
 }

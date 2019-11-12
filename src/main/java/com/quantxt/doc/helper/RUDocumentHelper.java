@@ -12,7 +12,6 @@ import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.util.StringUtil;
 
 import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;

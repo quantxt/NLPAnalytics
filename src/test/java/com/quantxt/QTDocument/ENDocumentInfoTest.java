@@ -6,8 +6,9 @@ import java.util.regex.Pattern;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.entity.QTValueNumber;
-import com.quantxt.nlp.search.QTAdvancedSearch;
+import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
+import com.quantxt.types.Dictionary;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -15,7 +16,6 @@ import org.junit.Test;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.types.Entity;
 import com.quantxt.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +31,10 @@ public class ENDocumentInfoTest {
 
     private static Logger logger = LoggerFactory.getLogger(ENDocumentInfoTest.class);
 
-    private static QTAdvancedSearch qtAdvancedSearch;
+    private static QTSearchable qtSearchable;
     private static ENDocumentHelper helper;
     private static boolean setUpIsDone = false;
-    private static Map<String, List<DictItm>> global_dicts = new HashMap<>();
+    private static Dictionary global_dict;
 
     @BeforeClass
     public static void init() {
@@ -52,14 +52,14 @@ public class ENDocumentInfoTest {
 
             ArrayList<DictItm> d3_items = new ArrayList<>();
             d3_items.add(new DictItm("10 Year Exposure", "10 Year Exposure", "10 yr", "ten year"));
+            Map<String, List<DictItm>> vocab_map = new HashMap<>();
 
-
-            global_dicts.put("Company" , d1_items);
-            global_dicts.put("Title" , d2_items);
-            global_dicts.put("Exposure" , d3_items);
+            vocab_map.put("Company" , d1_items);
+            vocab_map.put("Title" , d2_items);
+            vocab_map.put("Exposure" , d3_items);
             helper = new ENDocumentHelper();
-            qtAdvancedSearch = new QTAdvancedSearch();
-            qtAdvancedSearch.init(global_dicts);
+            global_dict = new Dictionary(vocab_map);
+            qtSearchable = new QTSearchable(global_dict);
             setUpIsDone = true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -85,15 +85,11 @@ public class ENDocumentInfoTest {
 
             Pattern keyPaddingPattern = Pattern.compile("[\\s\\#]+");
 
-            QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-            qtAdvancedSearch.init(dicts);
-            qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-            qtAdvancedSearch.setSearch_distance(130);
-            qtAdvancedSearch.setValType(STRING);
-            qtAdvancedSearch.setPattern(Pattern.compile("(\\d+\\-\\d+)"));
-            qtAdvancedSearch.setGroups(new int []{1});
+            Dictionary dictionary = new Dictionary(dicts, "test", KEYWORD, 130,
+                    keyPaddingPattern, Pattern.compile("(\\d+\\-\\d+)"), new int []{1});
+            QTSearchable qtSearchable = new QTSearchable(dictionary);
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
-            doc.extractKeyValues(qtAdvancedSearch, "");
+            doc.extractKeyValues(qtSearchable, "");
 
             doc.convertValues2titleTable();
             // THEN
@@ -112,53 +108,53 @@ public class ENDocumentInfoTest {
     public void testNounVerbPh1() {
         String str = "Gilead Sciences , Inc. told to reuters reporters.";
         QTDocument doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtAdvancedSearch, true, false, false);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Gilead Sciences, Inc.");
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Gilead Sciences, Inc.");
     }
 
     @Test
     public void testNounVerbPh2() {
         String str = "Amazon Inc. reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtAdvancedSearch, true, false, false);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
     public void testNounVerbPh3() {
         String str = "Amazon reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtAdvancedSearch, true, false, false);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
     public void testNounVerbPh4() {
         String str = "Amazon Corp reported a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtAdvancedSearch, true, false, false);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
     public void testNounVerbPh5() {
         String str = "Amazon LLC announced a gain on his earnings .";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtAdvancedSearch, true, false, false);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
-        Assert.assertEquals(entityMap.get("Company").iterator().next(), "Amazon Inc.");
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
+        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
     }
 
     @Test
     public void testNounVerbPh6() {
         String str = "He works as a high rank Senior Director in Amazon";
         ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
-        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtAdvancedSearch, true, false, false);
-        Map<String, LinkedHashSet<String>> entityMap = docs.get(0).getEntity();
+        ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
+        Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertTrue(entityMap.get("Title").contains("Senior Director"));
     }
 
@@ -206,7 +202,7 @@ public class ENDocumentInfoTest {
         doc.setLink("link");
 
         // WHEN
-        List<QTDocument> childs = doc.getChilds(false);
+        List<QTDocument> childs = doc.getChunks(QTDocument.CHUNK.SENTENCE);
 
         // THEN
         assertNotNull(childs);
@@ -222,13 +218,13 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6%";
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(global_dicts);
+
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),  "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, str);
+
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -241,16 +237,16 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6% 6.4% 9.8%";
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(global_dicts);
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),"test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, str);
+
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
+
         // THEN
-        assertFalse(doc.getValues() == null);
+        assertNotNull(doc.getValues());
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
 
     }
@@ -259,15 +255,14 @@ public class ENDocumentInfoTest {
     public void findExppsureTable2() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% 9.8%";
-
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(global_dicts);
+
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, "");
+
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -279,15 +274,14 @@ public class ENDocumentInfoTest {
     public void findExppsureTable3() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% 6.4% 9.8%";
+        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(global_dicts);
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, "");
+
+        doc.extractKeyValues(qtSearchable, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -302,13 +296,12 @@ public class ENDocumentInfoTest {
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(global_dicts);
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),"test",  DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, "");
+
+        doc.extractKeyValues(qtSearchable, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -323,13 +316,12 @@ public class ENDocumentInfoTest {
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.init(global_dicts);
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, "");
+
+        doc.extractKeyValues(qtSearchable, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -344,13 +336,12 @@ public class ENDocumentInfoTest {
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(global_dicts);
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, "");
+
+        doc.extractKeyValues(qtSearchable, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -371,13 +362,12 @@ public class ENDocumentInfoTest {
         entMap.put("Company" , dictItms);
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, "");
+
+        doc.extractKeyValues(qtSearchable, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -403,13 +393,12 @@ public class ENDocumentInfoTest {
         entMap.put("Company" , dictItms);
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, "");
+
+        doc.extractKeyValues(qtSearchable, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -427,15 +416,13 @@ public class ENDocumentInfoTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Net value" , dictItms);
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(15);
-        qtAdvancedSearch.setValType(DATETIME);
+
+        Dictionary dictionary = new Dictionary(entMap, "test", DATETIME, 15,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtAdvancedSearch, "");
-
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -451,40 +438,31 @@ public class ENDocumentInfoTest {
         dictItms_1.add(new DictItm("Returns" , "Returns", "returned"));
         Map<String, List<DictItm>> entMap1 = new HashMap<>();
         entMap1.put("Fund Performance" , dictItms_1);
-        QTAdvancedSearch qtAdvancedSearch_1 = new QTAdvancedSearch();
-        qtAdvancedSearch_1.init(entMap1);
+
+        Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
+        Dictionary dictionary_1 = new Dictionary(entMap1, "test", KEYWORD, 25,
+                keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+        QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
         ArrayList<DictItm> dictItms_2 = new ArrayList<>();
         dictItms_2.add(new DictItm("Net market value" , "Net market value", "Net market value, as of"));
         Map<String, List<DictItm>> entMap2 = new HashMap<>();
         entMap2.put("Net value" , dictItms_2);
-        QTAdvancedSearch qtAdvancedSearch_2 = new QTAdvancedSearch();
-        qtAdvancedSearch_2.init(entMap2);
+
+        Dictionary dictionary_2 = new Dictionary(entMap2, "test", DATETIME, 15,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable_2 = new QTSearchable(dictionary_2);
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        Pattern regex = Pattern.compile("returned ([\\-+]?[\\d\\.]+)%");
 
-        Pattern regexPad = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
+        doc.extractKeyValues(qtSearchable_1, "");
+        doc.extractKeyValues(qtSearchable_2, "");
 
-        qtAdvancedSearch_1.setPattern(regex);
-        qtAdvancedSearch_1.setGroups(new int[] {1});
-
-        qtAdvancedSearch_1.setValType(STRING);
-        qtAdvancedSearch_1.setKeyPadding(regexPad);
-        qtAdvancedSearch_1.setSearch_distance(25);
-
-        doc.extractKeyValues(qtAdvancedSearch_1, "");
-
-        qtAdvancedSearch_2.setKeyPadding(regexPad);
-        qtAdvancedSearch_2.setSearch_distance(15);
-        qtAdvancedSearch_2.setValType(DATETIME);
-        doc.extractKeyValues(qtAdvancedSearch_2, "");
         doc.convertValues2titleTable();
 
         // THEN
         assertFalse(doc.getValues() == null);
 
-        logger.error(doc.getTitle());
         assertEquals(doc.getTitle(),
                 "<table width=\"100%\"><tr><td>Net market value</td><td>10/31/18</td></tr><tr><td>Returns</td><td>-2.67</td></tr></table>");
 
@@ -497,21 +475,14 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Returns" , "Returns", "returned"));
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Fund Performance" , dictItms);
+        Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
+        Dictionary dictionary = new Dictionary(entMap, "test", KEYWORD, 25,
+                keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
-        qtAdvancedSearch.setValType(STRING);
+        doc.extractKeyValues(qtSearchable, "");
 
-        Pattern regex = Pattern.compile("returned ([\\-+]?[\\d\\.]+)%");
-        Pattern regexPad = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
-
-        qtAdvancedSearch.setPattern(regex);
-        qtAdvancedSearch.setGroups(new int[] {1});
-        qtAdvancedSearch.setKeyPadding(regexPad);
-        qtAdvancedSearch.setSearch_distance(25);
-
-        doc.extractKeyValues(qtAdvancedSearch, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -521,18 +492,45 @@ public class ENDocumentInfoTest {
     }
 
     @Test
+    public void STRING_mode() {
+        String str = "InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.";
+        ArrayList<DictItm> dictItms_1 = new ArrayList<>();
+        dictItms_1.add(new DictItm("Returns" , "Returns", "returned"));
+        Map<String, List<DictItm>> entMap1 = new HashMap<>();
+        entMap1.put("Fund Performance" , dictItms_1);
+
+        Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
+        Dictionary dictionary_1 = new Dictionary(entMap1, "test", STRING, 25,
+                keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+        QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
+
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+
+        doc.extractKeyValues(qtSearchable_1, "");
+
+        doc.convertValues2titleTable();
+
+        // THEN
+        assertFalse(doc.getValues() == null);
+
+        assertEquals(doc.getTitle(),
+                "<table width=\"100%\"><tr><td>Returns</td><td>InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.</td></tr></table>");
+
+    }
+
+
+    @Test
     public void stringUnitTest1() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6 million";
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(global_dicts);
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, "");
+
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -546,16 +544,12 @@ public class ENDocumentInfoTest {
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6\n" +
         "market";
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
-
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(global_dicts);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-
+        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
-        doc.extractKeyValues(qtAdvancedSearch, "");
 
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -601,15 +595,12 @@ public class ENDocumentInfoTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Company" , dictItms);
         Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;\\$]+)");
-
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtAdvancedSearch, "");
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
 
         // THEN
@@ -644,16 +635,13 @@ public class ENDocumentInfoTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Company" , dictItms);
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(entMap);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
-        qtAdvancedSearch.setKeyPadding(keyPaddingPattern);
 
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+                keyPaddingPattern, null, null);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtAdvancedSearch, "");
-
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
 
         // THEN
@@ -663,6 +651,7 @@ public class ENDocumentInfoTest {
         ;
     }
 
+    @Test
     public void numberParantesis() {
         // GIVEN
         String str = "Share-based compensation (benefit) expense (in thousands)\n" +
@@ -680,24 +669,42 @@ public class ENDocumentInfoTest {
                 ")% ";
 
 
-        ArrayList<Entity> entityArray1 = new ArrayList<>();
+        ArrayList<DictItm> dictItms = new ArrayList<>();
 
-        entityArray1.add(new Entity("Total selling, general and administrative expense" , new String[]{"Total selling, general and administrative expense"} , true));
+        dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Company" , dictItms);
 
-        Map<String, Entity[]> entMap = new HashMap<>();
-        entMap.put("Company" , entityArray1.toArray(new Entity[entityArray1.size()]));
-        QTAdvancedSearch qtAdvancedSearch = new QTAdvancedSearch();
-        qtAdvancedSearch.init(global_dicts);
-        qtAdvancedSearch.setSearch_distance(5);
-        qtAdvancedSearch.setValType(DOUBLE);
 
+        Dictionary dictionary = new Dictionary(entMap);
+        dictionary.setKeyPadding(Pattern.compile("\\([^\\)]+\\)\\s*"));
+        dictionary.setSearch_distance(5);
+        dictionary.setValType(DOUBLE);
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        doc.extractKeyValues(qtAdvancedSearch, str);
+
+        doc.extractKeyValues(qtSearchable, "");
         doc.convertValues2titleTable();
         // THEN
-        assertFalse(doc.getValues() == null);
+        assertNotNull(doc.getValues());
         assertEquals(doc.getTitle(),
                 "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177300.0</td><td>304000.0</td><td>41.7</td></tr></table>")
         ;
+    }
+
+    @Test
+    public void detectParagraph() {
+        String str = "2019 - 1, Critical: Damage to exterior wall on the south side of the building was noted. " +
+                "Penetrations in the exterior wall can allow water behind the moisture barrier where it " +
+                "can cause wood rot and mold. Damaged areas should be repaired in accordance with "+
+                "the manufacturer's specification.\n" +
+                "\n" +
+                "2019 - 2, Important: Sprinkler control valves located located in the rear riser room are not " +
+                "readily accessible. Access is obstructed by Cici's Pizza clutter and products. Obstruction " +
+                "should be removed to allow quick access to valves in the event of an emergency.";
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        List<QTDocument> docs = doc.getChunks(QTDocument.CHUNK.PARAGRAPH);
+        assertNotNull(docs);
+        assertTrue(docs.get(1).getTitle().startsWith("2019 - 2, Importa"));
     }
 }
