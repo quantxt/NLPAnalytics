@@ -22,7 +22,7 @@ public class QTValueNumber {
 
     final private static Logger logger = LoggerFactory.getLogger(QTValueNumber.class);
 
-    final private static String simple_number = "(([\\+\\-]?\\d[,\\.\\d]+\\d|\\d+)|\\(\\s*(\\d[,\\.\\d]+\\d|\\d+)\\s*\\))(\\s*%)?";
+    final private static String simple_number = "(?i)(([\\+\\-]?\\d[,\\.\\d]+\\d|\\d+)|\\(\\s*(\\d[,\\.\\d]+\\d|\\d+)\\s*\\)(\\s*%|percent)?)";
     final private static Pattern currencies = Pattern.compile("(\\p{Sc})\\s*$");
     final private static Pattern units = Pattern.compile("(hundred|thousand|million|billion|M|B|百万円|億)($|[\b\\s\\.,])");
     final private static Pattern PATTERN  = Pattern.compile(simple_number);
@@ -150,10 +150,11 @@ public class QTValueNumber {
             }
 
             try {
-                double parsed = Double.parseDouble(extractionStr);
                 QTField.QTFieldType t = QTField.QTFieldType.DOUBLE;
                 if (m.group(4) != null){
                     t = PERCENT;
+                    String percent_str = m.group(4);
+                    extractionStr = extractionStr.replace(percent_str, "");
                 } else {
                     // search for currency
                     String string_to_look_for_currencieis = str.substring(Math.max(0, start - 50), start);
@@ -179,6 +180,7 @@ public class QTValueNumber {
                         case "billion" : case "B" : mult *=1000000000; break;
                     }
                 }
+                double parsed = Double.parseDouble(extractionStr);
                 if (t != PERCENT) {
                     parsed *= mult;
                 }
@@ -186,9 +188,11 @@ public class QTValueNumber {
                 if (t == INT){
                     int int_value = (int) parsed;
                     ext.setIntValue(int_value);
+                    ext.setCustomData(String.valueOf(int_value));
+                } else {
+                    ext.setCustomData(String.valueOf(parsed));
+                    ext.setDoubleValue(parsed);
                 }
-                ext.setCustomData(String.valueOf(parsed));
-                ext.setDoubleValue(parsed);
                 valIntervals.add(ext);
             } catch (Exception e){
                 logger.error(e.getMessage() + " " + extractionStr);

@@ -209,7 +209,8 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
                         Document doc = new Document();
                         doc.add(new Field(DataField, item_key, DataFieldType));
                         for (DctSearhFld dctSearhFld : dctSearhFldList) {
-                            doc.add(new Field(dctSearhFld.getSearch_fld(), value, SearchFieldType));
+                            Field field = new Field(dctSearhFld.getSearch_fld(), value, SearchFieldType);
+                            doc.add(field);
                         }
                         writer.addDocument(doc);
                     }
@@ -254,7 +255,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         return stats;
     }
 
-    private void initDocSearchFldMap() {
+    public void initDocSearchFldMap() {
         try {
             for (Map.Entry<String, List<DictItm>> vocab : dictionary.getVocab_map().entrySet()) {
                 String vocab_name = vocab.getKey();
