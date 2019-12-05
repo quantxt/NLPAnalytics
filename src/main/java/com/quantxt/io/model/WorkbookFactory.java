@@ -47,8 +47,10 @@ public class WorkbookFactory {
                     String value = null;
                     switch (srcCell.getCellType()) {
                     case STRING:
-                    case BOOLEAN:
                         value = srcCell.getStringCellValue();
+                        break;
+                    case BOOLEAN:
+                        value = String.valueOf(srcCell.getBooleanCellValue());
                         break;
                     case NUMERIC:
                         value = new BigDecimal(srcCell.getNumericCellValue()).toString();
@@ -84,7 +86,7 @@ public class WorkbookFactory {
             }
             return value;
         } catch (RuntimeException re){
-            logger.debug("Error in formula evaluator " + re.getMessage());
+            logger.error("Error in formula evaluator " + re.getMessage());
         }
         return null;
     }

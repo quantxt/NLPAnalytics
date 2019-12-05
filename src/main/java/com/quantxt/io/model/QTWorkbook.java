@@ -52,7 +52,7 @@ public class QTWorkbook implements Workbook {
 
     private boolean containsSheet(String name) {
         return sheets.parallelStream()
-                .filter(s -> s.getSheetName().equals(name)).findAny()
+                .filter(s -> s.getSheetName().equalsIgnoreCase(name)).findAny()
                 .isPresent();
     }
 
@@ -62,7 +62,7 @@ public class QTWorkbook implements Workbook {
 
     public Sheet getSheet(String name) {
         return sheets.parallelStream()
-                .filter(s -> s.getSheetName().equals(name)).findFirst()
+                .filter(s -> s.getSheetName().equalsIgnoreCase(name)).findFirst()
                 .orElse(null);
     }
 

@@ -2,13 +2,13 @@ package com.quantxt.io.excel;
 
 import java.io.InputStream;
 
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.quantxt.io.Reader;
-import com.quantxt.io.model.Template;
 import com.quantxt.io.model.WorkbookFactory;
 
 public class ExcelXSSFStreamReader implements Reader<InputStream, WorkbookData> {
@@ -35,7 +35,7 @@ public class ExcelXSSFStreamReader implements Reader<InputStream, WorkbookData> 
     }
 
     public static WorkbookData getWorkbookData(InputStream inputStream) throws Exception {
-        // ZipSecureFile.setMinInflateRatio(0);
+        ZipSecureFile.setMinInflateRatio(0);
         Workbook workbook = getXSSFWorkbook(inputStream);
         WorkbookData data = new WorkbookData(WorkbookFactory.create(workbook), null);
         data.setTemplate(() -> {
