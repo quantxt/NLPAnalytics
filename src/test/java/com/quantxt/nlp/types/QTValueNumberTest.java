@@ -17,10 +17,9 @@ import static org.junit.Assert.assertTrue;
  * Created by matin on 11/24/18.
  */
 public class QTValueNumberTest {
-    private static Logger logger = LoggerFactory.getLogger(QTValueNumberTest.class);
 
     @Test
-    public void testNumber1() {
+    public void testNumber() {
         String str = "The rate are -5.13% and 4.32% with -4.39 4.35% are the rates";
         List<ExtIntervalSimple> list = new ArrayList<>();
         QTValueNumber.detect(str, str, list);
@@ -28,6 +27,16 @@ public class QTValueNumberTest {
         assertTrue(list.get(0).getDoubleValue() == -5.13);
         assertTrue(list.get(3).getDoubleValue() == 4.35);
         assertTrue(list.get(3).getType() == PERCENT);
+    }
+
+    @Test
+    public void testNumberPercent() {
+        String str = "The rate are -5.13 Percent and 4.32 percent with -4.39 4.35% are the rates";
+        List<ExtIntervalSimple> list = new ArrayList<>();
+        QTValueNumber.detect(str, str, list);
+        assertTrue(list.size() == 4);
+        assertTrue(list.get(0).getDoubleValue() == -5.13);
+        assertTrue(list.get(1).getType() == PERCENT);
     }
 
     @Test
