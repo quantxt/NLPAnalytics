@@ -402,7 +402,7 @@ public class ENDocumentInfoTest {
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>7.74E8</td></tr></table>");
+                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>774000000</td></tr></table>");
 
     }
 

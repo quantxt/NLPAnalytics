@@ -22,7 +22,9 @@ public class QTValueNumber {
 
     final private static Logger logger = LoggerFactory.getLogger(QTValueNumber.class);
 
-    final private static String simple_number = "(?i)(([\\+\\-]?\\d[,\\.\\d]+\\d|\\d+)|\\(\\s*(\\d[,\\.\\d]+\\d|\\d+)\\s*\\)(\\s*%|percent)?)";
+    final private static String simple_number = "(([\\+\\-]?\\d[,\\.\\d]+\\d|\\d+)|\\(\\s*(\\d[,\\.\\d]+\\d|\\d+)\\s*\\))((?i)\\s*%|\\s*percent)?";
+    final private static int simpleNumberGroup = 0;
+
     final private static Pattern currencies = Pattern.compile("(\\p{Sc})\\s*$");
     final private static Pattern units = Pattern.compile("(hundred|thousand|million|billion|M|B|百万円|億)($|[\b\\s\\.,])");
     final private static Pattern PATTERN  = Pattern.compile(simple_number);
@@ -123,13 +125,12 @@ public class QTValueNumber {
 
         m = PATTERN.matcher(str);
 
-        int numberGroups = 1;
         int thousands_offset = -1;
         int millions_offset = -1;
         int billions_offset = -1;
         while (m.find()){
-            int start = m.start(numberGroups);
-            int end   = m.end(numberGroups);
+            int start = m.start(simpleNumberGroup);
+            int end   = m.end(simpleNumberGroup);
             double mult = getMult(start, thousands_offset, millions_offset, billions_offset, thousands,
                     millions, billions);
 
@@ -150,7 +151,8 @@ public class QTValueNumber {
             }
 
             try {
-                QTField.QTFieldType t = QTField.QTFieldType.DOUBLE;
+                QTField.QTFieldType t = null;
+
                 if (m.group(4) != null){
                     t = PERCENT;
                     String percent_str = m.group(4);
@@ -161,8 +163,14 @@ public class QTValueNumber {
                     Matcher currency_matcher = currencies.matcher(string_to_look_for_currencieis);
                     if (currency_matcher.find()){
                         t = QTField.QTFieldType.MONEY;
-                    } else if (extractionStr.indexOf(".") < 0){
+                    }
+                }
+
+                if (t == null){
+                    if (extractionStr.indexOf(".") < 0){
                         t = INT;
+                    } else {
+                        t = QTField.QTFieldType.DOUBLE;
                     }
                 }
 
@@ -186,9 +194,9 @@ public class QTValueNumber {
                 }
 
                 if (t == INT){
-                    int int_value = (int) parsed;
-                    ext.setIntValue(int_value);
-                    ext.setCustomData(String.valueOf(int_value));
+                    long long_value = (long) parsed;
+                    ext.setIntValue(long_value);
+                    ext.setCustomData(String.valueOf(long_value));
                 } else {
                     ext.setCustomData(String.valueOf(parsed));
                     ext.setDoubleValue(parsed);
