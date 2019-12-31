@@ -10,6 +10,7 @@ import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -18,21 +19,18 @@ import org.junit.Test;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.util.StringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.quantxt.helper.types.QTField.QTFieldType.*;
 import static com.quantxt.types.DictSearch.AnalyzType.STEM;
+import static com.quantxt.util.NLPUtil.findSpan;
 import static org.junit.Assert.*;
 
 /**
  * Created by matin on 10/10/17.
  */
 
+@Slf4j
 public class ENDocumentInfoTest {
-
-    private static Logger logger = LoggerFactory.getLogger(ENDocumentInfoTest.class);
 
     private static QTSearchable qtSearchable;
     private static ENDocumentHelper helper;
@@ -170,7 +168,7 @@ public class ENDocumentInfoTest {
         List<String> tokens = new ArrayList<>();
         tokens.add("a");
         tokens.add("research");
-        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "a research");
     }
 
@@ -180,7 +178,7 @@ public class ENDocumentInfoTest {
         List<String> tokens = new ArrayList<>();
         tokens.add("Gilead");
         tokens.add("Sciences");
-        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Gilead Sciences");
     }
 
@@ -192,7 +190,7 @@ public class ENDocumentInfoTest {
         tokens.add("Бывший");
         tokens.add("мэр");
         tokens.add("Даугавпилса");
-        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Бывший мэр Даугавпилса");
     }
 

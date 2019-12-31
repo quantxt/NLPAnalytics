@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.entity.QTValueNumber;
 import org.apache.lucene.analysis.Analyzer;
@@ -18,17 +19,14 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.doc.QTDocument.DOCTYPE;
 import com.quantxt.doc.QTDocumentHelper;
-import com.quantxt.trie.Emit;
-import com.quantxt.trie.Trie;
-import com.quantxt.util.StringUtil;
-import com.quantxt.util.TrieUtil;
 
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
+
+import static com.quantxt.util.NLPUtil.isEmpty;
 
 /**
  * Created by dejani on 1/24/18.
@@ -73,30 +71,17 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private POSTaggerME posModel = null;
     private CharArraySet stopwords;
     private Set<String> pronouns;
-    private Trie verbTree;
 
-         Analyzer analyzer;
+    protected Analyzer analyzer;
     protected Analyzer tokenizer;
 
-    public CommonQTDocumentHelper(InputStream verbFilePath, String sentencesFilePath,
-                                  String posFilePath, String stoplistFilePath,
-                                  Set<String> pronouns, boolean isSimple) {
+    public CommonQTDocumentHelper(String sentencesFilePath,
+                                  String stoplistFilePath,
+                                  Set<String> pronouns) {
         try {
-            init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
-            initVerbTree(verbFilePath, isSimple);
+            init(sentencesFilePath, stoplistFilePath, pronouns);
         } catch (Exception e) {
             throw new RuntimeException("Unexpected error on init Document helper!", e);
-        }
-    }
-
-    public CommonQTDocumentHelper(String sentencesFilePath, String posFilePath,
-                                  String stoplistFilePath, String verbFilePath,
-                                  Set<String> pronouns, boolean isSimple) {
-        try {
-            init(sentencesFilePath, posFilePath, stoplistFilePath, pronouns);
-            initVerbTree(verbFilePath, isSimple);
-        } catch (Exception e) {
-            throw new RuntimeException("Unexpected error on init Common Document helper!", e);
         }
     }
 
@@ -106,9 +91,27 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     abstract void preInit();
+    abstract void loadNERModel();
 
-    private void init(String sentencesFilePath, String posFilePath,
-            String stoplistFilePath, Set<String> pronouns) throws Exception {
+    protected void loadPosModel(String posFilePath) throws Exception {
+        String modelBaseDir = getModelBaseDir();
+        if (modelBaseDir == null) {
+            String error = DEFAULT_NLP_MODEL_DIR + " is not set!";
+            logger.error(error);
+            throw new IllegalStateException(error);
+        }
+        // POS
+        if (!isEmpty(posFilePath)) {
+            try (FileInputStream fis = new FileInputStream(modelBaseDir + posFilePath)) {
+                POSModel model = new POSModel(fis);
+                posModel = new POSTaggerME(model);
+            }
+        }
+    }
+
+    private void init(String sentencesFilePath,
+                      String stoplistFilePath,
+                      Set<String> pronouns) throws Exception {
 
         preInit();
         this.pronouns = new HashSet<>(pronouns);
@@ -121,23 +124,15 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         // Sentences
-        if (!StringUtil.isEmpty(sentencesFilePath)) {
+        if (!isEmpty(sentencesFilePath)) {
             try (FileInputStream fis = new FileInputStream(modelBaseDir + sentencesFilePath)) {
                 SentenceModel sentenceModel = new SentenceModel(fis);
                 sentenceDetector = new SentenceDetectorME(sentenceModel);
             }
         }
 
-        // POS
-        if (!StringUtil.isEmpty(posFilePath)) {
-            try (FileInputStream fis = new FileInputStream(modelBaseDir + posFilePath)) {
-                POSModel model = new POSModel(fis);
-                posModel = new POSTaggerME(model);
-            }
-        }
-
         // Stoplist
-        if (!StringUtil.isEmpty(stoplistFilePath)) {
+        if (!isEmpty(stoplistFilePath)) {
             stopwords = new CharArraySet(800, true);
             try {
                 List<String> sl = Files.readAllLines(Paths.get(modelBaseDir + stoplistFilePath));
@@ -149,33 +144,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             }
         }
         logger.info("Models initiliazed");
-    }
-
-    private void initVerbTree(String verbFilePath, boolean isSimple) {
-        try {
-            byte[] verbArr = Files.readAllBytes(Paths.get(getModelBaseDir() + verbFilePath));
-            initVerbTree(verbArr, isSimple);
-        } catch (Exception e) {
-            logger.error("Error on initialize verbTree with for verbFilePath: {} with message: {}",
-                    verbFilePath, e.getMessage());
-        }
-    }
-
-    private void initVerbTree(InputStream contextFile, boolean isSimple) throws IOException {
-        byte[] verbArr = new byte[contextFile.available()];
-        contextFile.read(verbArr);
-        initVerbTree(verbArr, isSimple);
-    }
-
-    private void initVerbTree(byte[] verbArr, boolean isSimple) throws IOException {
-        this.verbTree = TrieUtil.buildVerbTree(verbArr, isSimple, (str) -> {
-            return tokenize(str);
-        });
-    }
-
-    @Override
-    public Trie getVerbTree() {
-        return verbTree;
     }
 
     @Override
@@ -292,19 +260,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         }
     }
 
-    public DOCTYPE getVerbType(String verbPhs) {
-        Collection<Emit> emits = getVerbTree().parseText(verbPhs);
-        for (Emit e : emits) {
-            DOCTYPE vType = (DOCTYPE) e.getCustomeData();
-            if (vType == DOCTYPE.Aux) {
-                if (emits.size() == 1) return null;
-                continue;
-            }
-            return vType;
-        }
-        return null;
-    }
-
     @Override
     public Set<String> getPronouns() {
         return pronouns;
@@ -367,6 +322,11 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     public String getPatternValues(String str, String context, Pattern regex, int [] groups, List<ExtIntervalSimple> valueInterval){
         String str_copy = str;
         return QTValueNumber.detectPattern(str_copy, context, regex, groups,valueInterval);
+    }
+
+    @Override
+    public QTDocument.DOCTYPE getVerbType(String verbPhs) {
+        return null;
     }
 
 }

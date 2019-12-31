@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -15,7 +16,14 @@ import java.util.List;
  */
 public class RUDocumentHelperTest {
 
-    private static RUDocumentHelper helper = new RUDocumentHelper();
+    private static RUDocumentHelper helper;
+
+    @BeforeClass
+    public static void setup() {
+        if (helper != null) return;
+        helper = new RUDocumentHelper();
+        helper.loadNERModel();
+    }
 
     @Test
     public void testEntityExtract1() {

@@ -1,14 +1,10 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.doc.helper.ESDocumentHelper;
-import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
@@ -17,7 +13,14 @@ import java.util.List;
  */
 public class ESDocumentHelperTest {
 
-    private static ESDocumentHelper helper = new ESDocumentHelper();
+    private static ESDocumentHelper helper;
+
+    @BeforeClass
+    public static void setup() {
+        if (helper != null) return;
+        helper = new ESDocumentHelper();
+        helper.loadNERModel();
+    }
 
     @Test
     public void testEntityExtract1() {

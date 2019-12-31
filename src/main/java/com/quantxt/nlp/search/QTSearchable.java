@@ -53,7 +53,6 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
             }
         }
         try {
-
             for (Map.Entry<String, List<DctSearhFld>> dctSearhFldEntry : docSearchFldMap.entrySet()) {
                 List<DctSearhFld> dctSearhFldList = dctSearhFldEntry.getValue();
                 String vocab_name = dctSearhFldEntry.getKey();
@@ -71,10 +70,7 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
                     }
                 }
             }
-
-
         } catch (Exception e ){
-            e.printStackTrace();
             logger.error("Error in name search {}: query_string '{}'", e.getMessage() , query_string);
         }
 

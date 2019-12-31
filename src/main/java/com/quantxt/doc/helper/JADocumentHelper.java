@@ -1,8 +1,6 @@
 package com.quantxt.doc.helper;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
-import com.quantxt.trie.Emit;
-import com.quantxt.util.StringUtil;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
@@ -12,7 +10,6 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.*;
@@ -21,7 +18,7 @@ import java.util.regex.Pattern;
 
 import static com.quantxt.doc.helper.CommonQTDocumentHelper.QTPosTags.*;
 import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
-import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
+import static com.quantxt.util.NLPUtil.findAllSpans;
 
 
 /**
@@ -35,7 +32,6 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
     private static final String POS_FILE_PATH = "";
     private static final String STOPLIST_FILE_PATH = "/ja/stoplist.txt";
-    private static final String VERB_FILE_PATH = "/ja/context.json";
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("此奴", "其奴", "彼", "彼女"));
     private static Map<String, QTPosTags> TAGS = new HashMap<>();
     private static final String SENTENCE_DELIMITER = "(?<=[。！])";
@@ -136,14 +132,12 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     private Tokenizer tokenizer;
 
     public JADocumentHelper() {
-        super(SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS, true);
+        super(SENTENCES_FILE_PATH,
+                STOPLIST_FILE_PATH, PRONOUNS);
     }
 
-    public JADocumentHelper(InputStream contextFile) {
-        super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, PRONOUNS, true);
-
+    public void loadNERModel(){
+        logger.warn("Japanese doesn't have a separate POS model");
     }
 
     public QTPosTags getQtPosTag(String t){
@@ -280,7 +274,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
         List<String> jaPosTags = getPosTagsJa(orig_str);
 
         StringBuilder allTags = new StringBuilder();
-        ExtIntervalSimple [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
+        ExtIntervalSimple [] tokenSpans = findAllSpans(orig_str, tokens);
 
 
         for (int i=0; i<jaPosTags.size(); i++){
@@ -314,6 +308,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
         // find verbs differently and by just regex search
 
+        /*
         Collection<Emit> detectedVerbs = getVerbTree().parseText(orig_str);
         if (detectedVerbs != null && detectedVerbs.size() > 0){
             for (Emit dv : detectedVerbs){
@@ -326,6 +321,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
                 intervals.add(eit);
             }
         }
+        */
 
         return intervals;
     }

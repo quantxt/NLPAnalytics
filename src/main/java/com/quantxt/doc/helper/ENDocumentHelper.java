@@ -13,10 +13,9 @@ import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.util.StringUtil;
-
 import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
 import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
+import static com.quantxt.util.NLPUtil.findAllSpans;
 
 /**
  * Created by dejani on 1/24/18.
@@ -30,7 +29,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     private static final String POS_FILE_PATH = "/en/en-pos-maxent.bin";
     private static final String STOPLIST_FILE_PATH = "/en/stoplist.txt";
     private static final String TOKENIZER_FILE_PATH = "/en/en-token.bin";
-    private static final String VERB_FILE_PATH = "/en/context.json";
+
     private static final Set<String> PRONOUNS = new HashSet<>(
             Arrays.asList("he", "she", "He", "She"));
 
@@ -40,16 +39,18 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     private Tokenizer tokenizer;
 
     public ENDocumentHelper() {
-        super(SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS, false);
-
+        super(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
+    //    loadNERModel();
     }
 
-    public ENDocumentHelper(InputStream contextFile) {
-        super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, PRONOUNS, false);
+    @Override
+    public void loadNERModel(){
+        try {
+            this.loadPosModel(POS_FILE_PATH);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error on loading Pos Model!", e);
+        }
     }
-
 
     protected boolean isTagDC(String tag) {
         return tag.equals("IN") || tag.equals("TO") || tag.equals("CC")
@@ -93,7 +94,7 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
                                                          String[] tokens) {
         String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
-        ExtIntervalSimple[] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
+        ExtIntervalSimple[] tokenSpans = findAllSpans(orig_str, tokens);
 
         for (String t : taags) {
             allTags.append(t.substring(0, 1));
