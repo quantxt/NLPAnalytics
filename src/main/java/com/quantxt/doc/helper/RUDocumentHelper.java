@@ -1,6 +1,5 @@
 package com.quantxt.doc.helper;
 
-import java.io.InputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -12,10 +11,9 @@ import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.quantxt.util.StringUtil;
-
 import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
 import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
+import static com.quantxt.util.NLPUtil.findAllSpans;
 
 /**
  * Created by dejani on 1/24/18.
@@ -38,13 +36,15 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     private static Pattern VerbPhrase = Pattern.compile("V+");
 
     public RUDocumentHelper() {
-        super(SENTENCES_FILE_PATH, POS_FILE_PATH, STOPLIST_FILE_PATH,
-                VERB_FILE_PATH, PRONOUNS, false);
+        super(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
     }
 
-    public RUDocumentHelper(InputStream contextFile) {
-        super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, PRONOUNS, false);
+    public void loadNERModel(){
+        try {
+            this.loadPosModel(POS_FILE_PATH);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error on loading Pos Model!", e);
+        }
     }
 
     @Override
@@ -78,7 +78,7 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
                                                          String[] tokens) {
         String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
-        ExtIntervalSimple [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
+        ExtIntervalSimple [] tokenSpans = findAllSpans(orig_str, tokens);
 
         for (String t : taags) {
             allTags.append(t.substring(0, 1));

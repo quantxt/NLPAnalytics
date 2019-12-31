@@ -14,7 +14,8 @@ import org.slf4j.LoggerFactory;
 
 import com.quantxt.io.model.HeaderAlign;
 import com.quantxt.io.model.HeaderAlignKey;
-import com.quantxt.util.StringUtil;
+
+import static com.quantxt.util.NLPUtil.isEmpty;
 
 public interface HeaderUtil {
 
@@ -23,7 +24,7 @@ public interface HeaderUtil {
     static void logHeaderAlign(String logHeaderAlignFile,
             final Map<String, Map<HeaderAlignKey, List<HeaderAlign>>> sheetSovAlingmentMap) {
 
-        if (!StringUtil.isEmpty(logHeaderAlignFile)) {
+        if (!isEmpty(logHeaderAlignFile)) {
             Workbook workbook = new XSSFWorkbook();
             for (String sheetName : sheetSovAlingmentMap.keySet()) {
                 Sheet sheet = workbook.createSheet(sheetName);

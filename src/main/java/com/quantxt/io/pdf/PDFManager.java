@@ -13,11 +13,11 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -169,7 +169,7 @@ public class PDFManager {
             doc = new ENDocumentInfo(body, title);
             Calendar d = pdDoc.getDocumentInformation().getCreationDate();
             if (d != null) {
-                doc.setDate(new DateTime(d.getTime()));
+                doc.setDate(LocalDateTime.from(d.toInstant()));
             }
             pdDoc.close();
             return doc;

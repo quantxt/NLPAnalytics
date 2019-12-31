@@ -6,7 +6,6 @@ import java.util.regex.Matcher;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.quantxt.util.Const;
 import com.quantxt.util.NLPUtil;
-import com.quantxt.util.StringUtil;
 
 public class ResultCell {
     private final Attribute attribute;
@@ -88,7 +87,7 @@ public class ResultCell {
     }
 
     public boolean isEmpty() {
-        return StringUtil.isEmpty(value);
+        return NLPUtil.isEmpty(value);
     }
 
     @Override
