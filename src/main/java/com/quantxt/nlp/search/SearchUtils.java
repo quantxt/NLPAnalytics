@@ -167,6 +167,7 @@ public class SearchUtils {
             if (spans == null) continue;
 
             int s = spans.nextDoc();
+            if (s >= 2147483647) continue;
             int spanstart = spans.nextStartPosition();
             String dataValue = matchedDoc.getField(DataField).stringValue();
             while (spanstart < 2147483647) {

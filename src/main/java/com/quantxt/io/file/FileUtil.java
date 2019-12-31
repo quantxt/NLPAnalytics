@@ -29,7 +29,7 @@ public class FileUtil {
      *
      * @return the lines from the file as a List of String
      *
-     * @throws IOException
+     * @throws IOException Throw IOException
      */
     public static List<String> readLines(String fileName)
             throws IOException {
@@ -44,7 +44,7 @@ public class FileUtil {
      *
      * @return the lines from the file as a List of String
      *
-     * @throws IOException
+     * @throws IOException Throw IOException
      */
     public static List<String> readLines(String fileName, Charset encoding)
             throws IOException {
@@ -60,7 +60,7 @@ public class FileUtil {
      *
      * @return text from the file as String
      *
-     * @throws IOException
+     * @throws IOException Throw IOException
      */
     public static String readText(String fileName) throws IOException {
         return readText(fileName, ENCODING);
@@ -74,7 +74,7 @@ public class FileUtil {
      *
      * @return text from the file as String
      *
-     * @throws IOException
+     * @throws IOException Throw IOException
      */
     public static String readText(String fileName, Charset encoding)
             throws IOException {
@@ -97,7 +97,7 @@ public class FileUtil {
      * @param fileName represents file location
      * @param lines to be written in file
      *
-     * @throws IOException
+     * @throws IOException Throw IOException
      */
     public static void writeLines(String fileName, List<String> lines)
             throws IOException {
@@ -111,7 +111,7 @@ public class FileUtil {
      * @param lines to be written in file
      * @param encoding represents Charset use for encoding
      *
-     * @throws IOException
+     * @throws IOException Throw IOException
      */
     public static void writeLines(String fileName, List<String> lines,
             Charset encoding)
@@ -132,7 +132,7 @@ public class FileUtil {
      * @param fileName represents file location
      * @param text to be written in file
      *
-     * @throws IOException
+     * @throws IOException Throw IOException
      */
     public static void writeText(String fileName, String text)
             throws IOException {
@@ -146,7 +146,7 @@ public class FileUtil {
      * @param text to be written in file
      * @param encoding represents Charset use for encoding
      *
-     * @throws IOException
+     * @throws IOException Throw IOException
      */
     public static void writeText(String fileName, String text, Charset encoding)
             throws IOException {

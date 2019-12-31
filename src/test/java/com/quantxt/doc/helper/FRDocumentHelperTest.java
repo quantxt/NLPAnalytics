@@ -1,8 +1,8 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.List;
@@ -12,7 +12,14 @@ import java.util.List;
  */
 public class FRDocumentHelperTest {
 
-    private static FRDocumentHelper helper = new FRDocumentHelper();
+    private static FRDocumentHelper helper;
+
+    @BeforeClass
+    public static void setup() {
+        if (helper != null) return;
+        helper = new FRDocumentHelper();
+        helper.loadNERModel();
+    }
 
     @Test
     public void testEntityExtract1() {

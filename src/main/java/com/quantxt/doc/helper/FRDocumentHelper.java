@@ -1,20 +1,19 @@
 package com.quantxt.doc.helper;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
-import com.quantxt.util.StringUtil;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
 import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
+import static com.quantxt.util.NLPUtil.findAllSpans;
 
 /**
  * Created by matin on 5/28/18.
@@ -31,19 +30,20 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
 
     private static final String POS_FILE_PATH = "/fr/fr-pos-maxent.bin";
     private static final String STOPLIST_FILE_PATH = "/fr/stoplist.txt";
-    private static final String VERB_FILE_PATH = "/fr/context.json";
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("il", "elle", "Elle", "Il"));
 
     public FRDocumentHelper() {
-        super(SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, VERB_FILE_PATH, PRONOUNS, false);
+        super(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
     }
 
-    public FRDocumentHelper(InputStream contextFile) {
-        super(contextFile, SENTENCES_FILE_PATH, POS_FILE_PATH,
-                STOPLIST_FILE_PATH, PRONOUNS, false);
-
+    public void loadNERModel(){
+        try {
+            this.loadPosModel(POS_FILE_PATH);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error on loading Pos Model!", e);
+        }
     }
+
 
     @Override
     public void preInit(){
@@ -79,7 +79,7 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
 
         String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
-        ExtIntervalSimple [] tokenSpans = StringUtil.findAllSpans(orig_str, tokens);
+        ExtIntervalSimple [] tokenSpans = findAllSpans(orig_str, tokens);
 
         for (String t : taags) {
             allTags.append(t.substring(0, 1));

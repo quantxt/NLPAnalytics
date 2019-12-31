@@ -13,6 +13,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;
@@ -22,10 +23,19 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by dejani on 1/25/18.
  */
+
 public class ENDocumentHelperTest {
 
-    private static ENDocumentHelper helper = new ENDocumentHelper();
+    private static ENDocumentHelper helper;
+
     private static Logger logger = LoggerFactory.getLogger(ENDocumentHelperTest.class);
+
+    @BeforeClass
+    public static void setup() {
+        if (helper != null) return;
+        helper = new ENDocumentHelper();
+        helper.loadNERModel();
+    }
 
     @Test
     public void testRawTestSentences() {
@@ -52,7 +62,7 @@ public class ENDocumentHelperTest {
     }
 
     @Test
-    public void testTokenize() throws IOException {
+    public void testTokenize() {
         // GIVEN
         String str = "Light behaves in some respects like particles and in "
                 + "other respects like waves. Matter—the \"stuff\" of the "
@@ -186,7 +196,6 @@ public class ENDocumentHelperTest {
         // GIVEN
         String str = "damage to physician and patient confidence in any of our MS products. •\n" +
                 "difficulty in penetrating this market if our therapies are not regarded as offering significant benefits over current treatments;";
-        ENDocumentHelper helper = new ENDocumentHelper();
 
         // WHEN
         String [] sentences = helper.getSentences(str);
@@ -201,7 +210,6 @@ public class ENDocumentHelperTest {
         // GIVEN
         String str = "Some light sources, such as neon lights, "
                 + "give off only certain frequencies of light.";
-        ENDocumentHelper helper = new ENDocumentHelper();
 
         // WHEN
         String normalized = helper.normalize(str);
@@ -219,7 +227,6 @@ public class ENDocumentHelperTest {
     public void testNormalize2() {
         // GIVEN
         String str = "AT&T and Johsnson & Johnson are biggest U.S. companaies";
-        ENDocumentHelper helper = new ENDocumentHelper();
 
         // WHEN
         String normalized = helper.normalize(str);

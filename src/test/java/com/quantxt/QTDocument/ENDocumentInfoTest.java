@@ -8,33 +8,37 @@ import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.entity.QTValueNumber;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
+import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.util.StringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.quantxt.helper.types.QTField.QTFieldType.*;
+import static com.quantxt.types.DictSearch.AnalyzType.STEM;
+import static com.quantxt.util.NLPUtil.findSpan;
 import static org.junit.Assert.*;
 
 /**
  * Created by matin on 10/10/17.
  */
 
+@Slf4j
 public class ENDocumentInfoTest {
-
-    private static Logger logger = LoggerFactory.getLogger(ENDocumentInfoTest.class);
 
     private static QTSearchable qtSearchable;
     private static ENDocumentHelper helper;
     private static boolean setUpIsDone = false;
     private static Dictionary global_dict;
+    private static Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
+    private static Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\-\\$\\(\\)\\d]+$");
+
 
     @BeforeClass
     public static void init() {
@@ -83,10 +87,10 @@ public class ENDocumentInfoTest {
             Map<String, List<DictItm>> dicts = new HashMap<>();
             dicts.put("FEIN" , items);
 
-            Pattern keyPaddingPattern = Pattern.compile("[\\s\\#]+");
+            Pattern keyPaddingPattern = Pattern.compile("^.{20,130}$");
 
             Dictionary dictionary = new Dictionary(dicts, "test", KEYWORD, 130,
-                    keyPaddingPattern, Pattern.compile("(\\d+\\-\\d+)"), new int []{1});
+                    keyPaddingPattern, null, Pattern.compile("(\\d+\\-\\d+)"), new int []{1});
             QTSearchable qtSearchable = new QTSearchable(dictionary);
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
             doc.extractKeyValues(qtSearchable, "");
@@ -164,7 +168,7 @@ public class ENDocumentInfoTest {
         List<String> tokens = new ArrayList<>();
         tokens.add("a");
         tokens.add("research");
-        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "a research");
     }
 
@@ -174,7 +178,7 @@ public class ENDocumentInfoTest {
         List<String> tokens = new ArrayList<>();
         tokens.add("Gilead");
         tokens.add("Sciences");
-        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Gilead Sciences");
     }
 
@@ -186,7 +190,7 @@ public class ENDocumentInfoTest {
         tokens.add("Бывший");
         tokens.add("мэр");
         tokens.add("Даугавпилса");
-        ExtIntervalSimple spans = StringUtil.findSpan(str, tokens);
+        ExtIntervalSimple spans = findSpan(str, tokens);
         Assert.assertEquals(str.substring(spans.getStart(), spans.getEnd()), "Бывший мэр Даугавпилса");
     }
 
@@ -220,7 +224,7 @@ public class ENDocumentInfoTest {
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
 
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),  "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -236,9 +240,8 @@ public class ENDocumentInfoTest {
     public void findExppsureTable1() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6% 6.4% 9.8%";
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),"test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -255,10 +258,8 @@ public class ENDocumentInfoTest {
     public void findExppsureTable2() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% 9.8%";
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
-
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -274,10 +275,9 @@ public class ENDocumentInfoTest {
     public void findExppsureTable3() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% 6.4% 9.8%";
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)|[\\:\\,;]+");
 
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -295,9 +295,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),"test",  DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                Pattern.compile("^[\\s\\(\\)\\d]+$"), padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -315,9 +314,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                Pattern.compile("^[\\s\\(\\)\\d]+$"), padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -335,9 +333,8 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -361,9 +358,8 @@ public class ENDocumentInfoTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Company" , dictItms);
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                null, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -394,7 +390,7 @@ public class ENDocumentInfoTest {
 
         Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
         Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -404,7 +400,7 @@ public class ENDocumentInfoTest {
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>7.74E8</td></tr></table>");
+                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>774000000</td></tr></table>");
 
     }
 
@@ -415,10 +411,9 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Net market value" , "Net market value", "Net market value, as of"));
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Net value" , dictItms);
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
 
         Dictionary dictionary = new Dictionary(entMap, "test", DATETIME, 15,
-                keyPaddingPattern, null, null);
+                null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -441,7 +436,7 @@ public class ENDocumentInfoTest {
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
         Dictionary dictionary_1 = new Dictionary(entMap1, "test", KEYWORD, 25,
-                keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+                null, null, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
         ArrayList<DictItm> dictItms_2 = new ArrayList<>();
@@ -450,7 +445,7 @@ public class ENDocumentInfoTest {
         entMap2.put("Net value" , dictItms_2);
 
         Dictionary dictionary_2 = new Dictionary(entMap2, "test", DATETIME, 15,
-                keyPaddingPattern, null, null);
+                null, null, null, null);
         QTSearchable qtSearchable_2 = new QTSearchable(dictionary_2);
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
@@ -477,7 +472,7 @@ public class ENDocumentInfoTest {
         entMap.put("Fund Performance" , dictItms);
         Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
         Dictionary dictionary = new Dictionary(entMap, "test", KEYWORD, 25,
-                keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+                null, null, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -501,7 +496,7 @@ public class ENDocumentInfoTest {
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
         Dictionary dictionary_1 = new Dictionary(entMap1, "test", STRING, 25,
-                keyPaddingPattern, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+                null, null, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
@@ -526,7 +521,7 @@ public class ENDocumentInfoTest {
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -545,7 +540,7 @@ public class ENDocumentInfoTest {
         "market";
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
         Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -594,9 +589,8 @@ public class ENDocumentInfoTest {
 
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Company" , dictItms);
-        Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;\\$]+)");
         Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -634,10 +628,9 @@ public class ENDocumentInfoTest {
 
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Company" , dictItms);
-        Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
 
         Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
-                keyPaddingPattern, null, null);
+                padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -676,10 +669,9 @@ public class ENDocumentInfoTest {
         entMap.put("Company" , dictItms);
 
 
-        Dictionary dictionary = new Dictionary(entMap);
-        dictionary.setKeyPadding(Pattern.compile("\\([^\\)]+\\)\\s*"));
-        dictionary.setSearch_distance(5);
-        dictionary.setValType(DOUBLE);
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+                padding_bet_key_value, padding_bet_values, null, null);
+
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
@@ -706,5 +698,28 @@ public class ENDocumentInfoTest {
         List<QTDocument> docs = doc.getChunks(QTDocument.CHUNK.PARAGRAPH);
         assertNotNull(docs);
         assertTrue(docs.get(1).getTitle().startsWith("2019 - 2, Importa"));
+    }
+
+    @Test
+    @Ignore
+    public void testSpan(){
+        String str = "The royalties, which vary by country and range from 7% to 13%, are included in Cost of sales.";
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+
+        dictItms.add(new DictItm("Royalty costs" , "royalty costs"));
+
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Royalty" , dictItms);
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+                padding_bet_key_value, padding_bet_values, null, null);
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary,
+                QTDocument.Language.ENGLISH,
+                null, null,
+                DictSearch.Mode.SPAN, STEM);
+
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+
+        doc.extractKeyValues(qtSearchable, "");
     }
 }

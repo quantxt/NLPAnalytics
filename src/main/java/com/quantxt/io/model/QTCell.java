@@ -2,7 +2,7 @@ package com.quantxt.io.model;
 
 import java.math.BigDecimal;
 
-import com.quantxt.util.StringUtil;
+import static com.quantxt.util.NLPUtil.isEmpty;
 
 public class QTCell implements Cell {
 
@@ -59,7 +59,7 @@ public class QTCell implements Cell {
     @Override
     public void setCellValue(String value) {
         this.value = value;
-        if (StringUtil.isEmpty(value)) {
+        if (isEmpty(value)) {
             this.cellType = CellType.BLANK;
         } else {
             this.cellType = CellType.STRING;
