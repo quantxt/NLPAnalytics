@@ -7,6 +7,7 @@ import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,7 +34,17 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("il", "elle", "Elle", "Il"));
 
     public FRDocumentHelper() {
-        super(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
+
+    }
+
+    @Override
+    public FRDocumentHelper init(){
+        try {
+            init(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return this;
     }
 
     public void loadNERModel(){

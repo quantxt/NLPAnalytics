@@ -83,15 +83,26 @@ public class QTValueNumber {
         java.util.regex.Matcher m = pattern.matcher(str);
 
         while (m.find()) {
-            for (int g : groups) {
-                int start = m.start(g);
-                int end = m.end(g);
-                String extractionStr = str.substring(start, end);
-                ExtIntervalSimple ext = new ExtIntervalSimple(start, end);
+            if ( groups == null){
+                ExtIntervalSimple ext = new ExtIntervalSimple(m.start(), m.end());
                 ext.setType(QTField.QTFieldType.KEYWORD);
+                int start = m.start();
+                int end = m.end();
+                String extractionStr = str.substring(start, end);
                 ext.setStringValue(extractionStr);
                 ext.setCustomData(extractionStr);
                 valIntervals.add(ext);
+            } else {
+                for (int g : groups) {
+                    ExtIntervalSimple ext = new ExtIntervalSimple(m.start(), m.end());
+                    ext.setType(QTField.QTFieldType.KEYWORD);
+                    int start = m.start(g);
+                    int end = m.end(g);
+                    String extractionStr = str.substring(start, end);
+                    ext.setStringValue(extractionStr);
+                    ext.setCustomData(extractionStr);
+                    valIntervals.add(ext);
+                }
             }
         }
 
@@ -130,6 +141,14 @@ public class QTValueNumber {
         while (m.find()){
             int start = m.start(simpleNumberGroup);
             int end   = m.end(simpleNumberGroup);
+            //we want to make sur ethe number is not attached or part of a word like DS123
+            if (start>0 ) {
+                char char_before = str.charAt(start -1);
+                if ((char_before >= 65 && char_before <=90) || (char_before >= 97 && char_before <=122) ) {
+                    continue;
+                }
+            }
+
             double mult = getMult(start, thousands_offset, millions_offset, billions_offset, thousands,
                     millions, billions);
 
@@ -158,16 +177,22 @@ public class QTValueNumber {
                     extractionStr = extractionStr.replace(percent_str, "");
                 } else {
                     // search for currency
-                    String string_to_look_for_currencieis = str.substring(Math.max(0, start - 50), start);
-                    Matcher currency_matcher = currencies.matcher(string_to_look_for_currencieis);
+                    String string_to_lookbehind_for_currencieis = str.substring(Math.max(0, start - 50), start);
+                    Matcher currency_matcher = currencies.matcher(string_to_lookbehind_for_currencieis);
                     if (currency_matcher.find()){
                         t = QTField.QTFieldType.MONEY;
+                        // and move the start to where the currency was found
+                        int start_currency = currency_matcher.start();
+                        int shift = string_to_lookbehind_for_currencieis.length() - start_currency;
+                        if (start > shift){
+                            start -= shift;
+                        }
                     }
                 }
 
                 if (t == null){
                     if (extractionStr.indexOf(".") < 0){
-                        t = INT;
+                        t = LONG;
                     } else {
                         t = QTField.QTFieldType.DOUBLE;
                     }
@@ -192,7 +217,7 @@ public class QTValueNumber {
                     parsed *= mult;
                 }
 
-                if (t == INT){
+                if (t == LONG){
                     long long_value = (long) parsed;
                     ext.setIntValue(long_value);
                     ext.setCustomData(String.valueOf(long_value));

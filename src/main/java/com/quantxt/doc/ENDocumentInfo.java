@@ -1,5 +1,6 @@
 package com.quantxt.doc;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.quantxt.doc.helper.ENDocumentHelper;
+
+import static com.quantxt.doc.helper.CommonQTDocumentHelper.objectMapper;
 
 /**
  * Created by matin on 1/20/18.
@@ -54,6 +57,12 @@ public class ENDocumentInfo extends QTDocument {
                 String [] paragraphs = body.split("[\\?\\.][\\n\\r]+");
                 chunks.addAll(Arrays.asList(paragraphs));
                 break;
+            case PAGE:
+            try {
+                chunks = objectMapper.readValue(body, List.class);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         for (String chk : chunks) {

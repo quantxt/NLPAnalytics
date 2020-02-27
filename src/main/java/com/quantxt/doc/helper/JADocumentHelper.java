@@ -10,6 +10,7 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.*;
@@ -132,8 +133,17 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     private Tokenizer tokenizer;
 
     public JADocumentHelper() {
-        super(SENTENCES_FILE_PATH,
-                STOPLIST_FILE_PATH, PRONOUNS);
+
+    }
+
+    @Override
+    public JADocumentHelper init(){
+        try {
+            init(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return this;
     }
 
     public void loadNERModel(){

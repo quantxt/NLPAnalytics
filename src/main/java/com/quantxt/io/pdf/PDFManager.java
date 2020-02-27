@@ -13,15 +13,13 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
+import org.apache.pdfbox.util.Matrix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by matin on 6/28/16.
@@ -30,6 +28,12 @@ import java.util.List;
 public class PDFManager {
 
     final private static Logger logger = LoggerFactory.getLogger(PDFManager.class);
+
+    final  boolean sortByPosition;
+
+    public PDFManager(boolean sortByPosition){
+        this.sortByPosition = sortByPosition;
+    }
 
     public static PDDocument write(ArrayList<String> strArr){
         PDDocument document = new PDDocument();
@@ -111,8 +115,101 @@ public class PDFManager {
         return document;
     }
 
+    private PDFTextStripper getPageLineStripper(Map<Integer, char[]> lines,
+                                                int line_length,
+                                                boolean sortByPosition) throws IOException {
+        PDFTextStripper stripper = new PDFTextStripper()
+        {
+            @Override
+            protected void writeString(String text, List<TextPosition> textPositions)
+            {
+                int line_number = (int)textPositions.get(0).getY();
+                char [] line_text = lines.get(line_number);
+                if (line_text == null){
+                    line_text = new char[line_length];
+                    //By default each line is filled with space character
+                    Arrays.fill(line_text, ' ');
+                    lines.put(line_number, line_text);
+                }
+                int firstX = (int)textPositions.get(0).getX();
+                for (int i=0; i<text.length();i ++){
+                    char c = text.charAt(i);
+                    if (Character.getType(c) == Character.CONTROL) continue;
+                    line_text[firstX+i] = c;
+                }
+            }
+
+            @Override
+            protected void processTextPosition(TextPosition text)
+            {
+                String character = text.getUnicode();
+                if (character != null && character.trim().length() != 0) {
+                    super.processTextPosition(text);
+                }
+            }
+        };
+
+        if (sortByPosition) {
+            stripper.setSortByPosition(true);
+        }
+
+        return stripper;
+    }
+    private PDFTextStripper getPageStripper() throws IOException {
+        PDFTextStripper stripper = new PDFTextStripper()
+        {
+            @Override
+            protected void processTextPosition(TextPosition text)
+            {
+                String character = text.getUnicode();
+                if (character != null && character.trim().length() != 0) {
+                    super.processTextPosition(text);
+                }
+            }
+        };
+
+        if (sortByPosition) {
+            stripper.setSortByPosition(true);
+        }
+
+        return stripper;
+    }
+
+    private ArrayList<String> read(PDDocument pdDoc,
+                                   boolean readLineByLine,
+                                   boolean removeNullCols) throws IOException {
+
+
+        if (readLineByLine) {
+            int line_length = (int) pdDoc.getPage(0).getMediaBox().getWidth();
+            ArrayList<TreeMap<Integer, char []>> pages = new ArrayList<>();
+            for (int page = 1; page <= pdDoc.getNumberOfPages(); page++) {
+                TreeMap<Integer, char []> pagelines = new TreeMap<>();
+                PDFTextStripper stripper = getPageLineStripper(pagelines, line_length, sortByPosition);
+                stripper.setStartPage(page);
+                stripper.setEndPage(page);
+                stripper.getText(pdDoc);
+                pages.add(pagelines);
+            }
+            return getNonNullPageLineContent(pages, removeNullCols);
+        } else {
+            ArrayList<String> content_arr = new ArrayList<>();
+            PDFTextStripper stripper = getPageStripper();
+            for (int page = 1; page <= pdDoc.getNumberOfPages(); page++){
+                stripper.setStartPage(page);
+                stripper.setEndPage(page);
+                String page_content = stripper.getText(pdDoc);
+                if (page_content == null) continue;
+                //Convert each page to one line (remove new lines)
+                page_content = page_content.replaceAll("[\\r\\n]+", " ");
+                content_arr.add(page_content);
+            }
+            return content_arr;
+        }
+    }
+
     private static String extractNoSpaces(PDDocument document,
-                                   StringBuilder sb) throws IOException
+                                          StringBuilder sb) throws IOException
     {
         PDFTextStripper stripper = new PDFTextStripper()
         {
@@ -278,8 +375,65 @@ public class PDFManager {
         return document;
     }
 
+    private Map<Integer, boolean[]> getPageNullColumns(ArrayList<TreeMap<Integer, char[]>> pageLines){
+        Map<Integer, boolean[]> nullPageColumns = new HashMap<>();
+        //find left padding
+        for (int pageNumber=0; pageNumber< pageLines.size(); pageNumber++) {
+            TreeMap<Integer, char[]> page = pageLines.get(pageNumber);
+            boolean [] blankCols = new boolean[page.entrySet().iterator().next().getValue().length];
+            Arrays.fill(blankCols, true);
+            for (Map.Entry<Integer, char[]> e : page.entrySet()) {
+                char[] line = e.getValue();
+                for (int i = 0; i< line.length-1; i++){
+                    if (line[i] == ' ' && line[i+1] == ' ') continue;
+                    blankCols[i] = false;
+                }
+            }
+            nullPageColumns.put(pageNumber, blankCols);
+        }
+        return nullPageColumns;
+    }
+
+    private ArrayList<String> getNonNullPageLineContent(ArrayList<TreeMap<Integer, char[]>> pageLines,
+                                                        boolean removeNullColumns){
+        Map<Integer, boolean[]> nullPageColumns = null;
+        if (removeNullColumns){
+            nullPageColumns = getPageNullColumns(pageLines);
+        }
+
+        ArrayList<String> page_contents = new ArrayList<>();
+        for (int pageNumber = 0; pageNumber< pageLines.size(); pageNumber++) {
+            TreeMap<Integer, char[]> page = pageLines.get(pageNumber);
+            StringBuilder pageStringBuilder = new StringBuilder();
+            if (removeNullColumns){
+                boolean [] blankCols = nullPageColumns.get(pageNumber);
+                for (char [] line : page.values()) {
+                    StringBuilder lineStringBuiler = new StringBuilder();
+                    for (int j = 0; j < line.length; j++) {
+                        if (blankCols[j]) continue;
+                        char c = line[j];
+                        lineStringBuiler.append(c);
+                    }
+                    String line_str = lineStringBuiler.toString();
+                    if (line_str.trim().isEmpty()) continue;
+                    line_str = line_str.replaceAll("\\s+$", "\n");
+                    pageStringBuilder.append(line_str);
+                }
+            } else {
+                for (char [] line : page.values()) {
+                    String line_str = new String(line);
+                    if (line_str.trim().isEmpty()) continue;
+                    line_str = line_str.replaceAll("\\s+$", "\n");
+                    pageStringBuilder.append(line_str);
+                }
+            }
+            page_contents.add(pageStringBuilder.toString());
+        }
+        return page_contents;
+    }
+
     public static void main(String[] args) throws Exception {
-        String file = "/Users/matin/Downloads/S100E4RL (1).pdf";
+        String file = "/Users/matin/Downloads/11-10 17-18 PROP QTAP ACORDS (INTERNATIONAL VILLAGE ASSOCIATION, INC.).pdf";
         InputStream is = new FileInputStream(new File(file));
 
         PDFParser parser = new PDFParser(new RandomAccessBuffer(new BufferedInputStream(is)));
@@ -287,12 +441,13 @@ public class PDFManager {
 
         COSDocument cosDoc = parser.getDocument();
         PDDocument pdDoc = new PDDocument(cosDoc);
+        PDFManager pdfManager = new PDFManager(true);
 
-        StringBuilder sb = new StringBuilder();
-        String body = extractNoSpaces(pdDoc, sb);
+        ArrayList<String> content = pdfManager.read(pdDoc, true, true);
 
-        logger.info(sb.toString());
-
+        String out = String.join("\n", content);
+        System.out.println(content.get(0));
+        System.out.println(out.length());
     }
 }
 

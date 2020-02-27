@@ -1,18 +1,23 @@
 package com.quantxt.doc.helper;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.helper.types.ExtIntervalSimple;
+import com.quantxt.helper.types.QTField;
+import com.quantxt.helper.types.QTMatch;
+import com.quantxt.interval.Interval;
+import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
-import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
+import static com.quantxt.helper.types.QTField.QTFieldType.*;
 import static com.quantxt.util.NLPUtil.findAllSpans;
 
 /**
@@ -32,7 +37,16 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
     private static Pattern VerbPhrase = Pattern.compile("RV+|V+");
 
     public ESDocumentHelper() {
-        super(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
+    }
+
+    @Override
+    public ESDocumentHelper init(){
+        try {
+            init(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return this;
     }
 
     @Override
@@ -118,5 +132,4 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
 
         return intervals;
     }
-
 }
