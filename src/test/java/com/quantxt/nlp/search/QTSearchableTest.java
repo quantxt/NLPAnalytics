@@ -5,6 +5,7 @@ import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;
@@ -131,4 +132,37 @@ public class QTSearchableTest {
             e.printStackTrace();
         }
     }
+
+    @Test
+    @Ignore
+    public void testStopWordList() {
+        try {
+            ArrayList<DictItm> dictItms_1 = new ArrayList<>();
+            dictItms_1.add(new DictItm("CONSTRUCTION TYPE Fire Resistive", "CONSTRUCTION TYPE Fire Resistive"));
+
+            Map<String, List<DictItm>> entMap = new HashMap<>();
+            entMap.put("Construction", dictItms_1);
+
+            String [] stopword = new String [] {"distance", "to", "hydrant", "district", "code", "stat",
+                    "number", "prot" ,"cl" , "#", "stories", "basm'ts", "yr", "built", "total", "area"};
+
+            Dictionary dictionary = new Dictionary(entMap);
+            QTSearchable qtSearchable = new QTSearchable(dictionary, null, null, Arrays.asList(stopword),
+                    DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
+            // GIVEN
+            String str = "CONSTRUCTION TYPE DISTANCE TO HYDRANT STAT DISTRICT CODE NUMBER PROT CL # STORIES # BASM'TS YR BUILT TOTAL AREA Fire Resistive";
+
+            // WHEN
+            List<QTMatch> result = qtSearchable.search(str);
+
+            // THEN
+            assertNotNull(result);
+            assertFalse(result.isEmpty());
+            assertTrue(result.size() == 1);
+            assertEquals(result.get(0).getGroup(), "Construction");
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
 }

@@ -34,6 +34,7 @@ public class ENDocumentHelperTest {
     public static void setup() {
         if (helper != null) return;
         helper = new ENDocumentHelper();
+        helper.init();
         helper.loadNERModel();
     }
 

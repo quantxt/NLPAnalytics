@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.nlp.entity.QTValueNumber;
 import com.quantxt.nlp.search.QTSearchable;
@@ -24,6 +25,7 @@ import static com.quantxt.helper.types.QTField.QTFieldType.*;
 import static com.quantxt.types.DictSearch.AnalyzType.STEM;
 import static com.quantxt.util.NLPUtil.findSpan;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Created by matin on 10/10/17.
@@ -34,10 +36,11 @@ public class ENDocumentInfoTest {
 
     private static QTSearchable qtSearchable;
     private static ENDocumentHelper helper;
+    private static ENDocumentHelper helperSentenceDetect;
     private static boolean setUpIsDone = false;
     private static Dictionary global_dict;
     private static Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
-    private static Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\-\\$\\(\\)\\d]+$");
+    private static Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
 
     @BeforeClass
@@ -62,6 +65,7 @@ public class ENDocumentInfoTest {
             vocab_map.put("Title" , d2_items);
             vocab_map.put("Exposure" , d3_items);
             helper = new ENDocumentHelper();
+            helperSentenceDetect = new ENDocumentHelper().init();
             global_dict = new Dictionary(vocab_map);
             qtSearchable = new QTSearchable(global_dict);
             setUpIsDone = true;
@@ -93,7 +97,7 @@ public class ENDocumentInfoTest {
                     keyPaddingPattern, null, Pattern.compile("(\\d+\\-\\d+)"), new int []{1});
             QTSearchable qtSearchable = new QTSearchable(dictionary);
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
-            doc.extractKeyValues(qtSearchable, "");
+            doc.extractKeyValues(qtSearchable,  false, "");
 
             doc.convertValues2titleTable();
             // THEN
@@ -107,11 +111,114 @@ public class ENDocumentInfoTest {
 
     }
 
+    @Test
+    public void largeFilePatternDetectionWithPAGE() {
+        try {
+            InputStream inputStream = getClass().getResourceAsStream("/sparse_text.txt");
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) != -1) {
+                result.write(buffer, 0, length);
+            }
+
+            ArrayList<DictItm> items = new ArrayList<>();
+            items.add(new DictItm("TOTAL AREA 1", "TOTAL AREA"));
+
+            Map<String, List<DictItm>> dicts = new HashMap<>();
+            dicts.put("AREA" , items);
+
+            Pattern keyPaddingPattern = Pattern.compile("(?s)^.{20,130}$");
+
+            Pattern keyVerticalPaddingPattern = Pattern.compile("^\\s*$");
+
+            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE, 130,
+                    keyPaddingPattern, null, null, null);
+
+            Dictionary dictionary_2 = new Dictionary(dicts, "test", DOUBLE, 130,
+                    keyVerticalPaddingPattern, null, null, null);
+
+            QTSearchable qtSearchable = new QTSearchable(dictionary_1);
+            QTSearchable qtSearchableVertical = new QTSearchable(dictionary_2);
+
+            QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
+            doc.extractKeyValues(qtSearchable,  false, "");
+            doc.convertValues2titleTable();
+            // THEN
+            assertFalse(doc.getValues() == null);
+            assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>TOTAL AREA 1</td><td>2</td><td>5</td><td>2000</td><td>1590</td></tr></table>");
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 13454);
+
+            //Check for vertical match: Total area and 1590
+
+            CommonQTDocumentHelper helper = new ENDocumentHelper();
+            doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
+            List<QTSearchable> searchableList = new ArrayList<>();
+            searchableList.add(qtSearchableVertical);
+            helper.extract(doc, searchableList, true, "");
+
+            doc.convertValues2titleTable();
+            // THEN
+            assertFalse(doc.getValues() == null);
+            assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>TOTAL AREA 1</td><td>1590</td></tr></table>");
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 13591);
+
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
+
+    @Test
+    public void largeFilePatternDetectionWithPAGE_2() {
+        try {
+            InputStream inputStream = getClass().getResourceAsStream("/sparse_text.txt");
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) != -1) {
+                result.write(buffer, 0, length);
+            }
+
+            ArrayList<DictItm> items = new ArrayList<>();
+            items.add(new DictItm("Area", "TOTAL AREA"));
+
+            Map<String, List<DictItm>> dicts = new HashMap<>();
+            dicts.put("Area" , items);
+
+
+            Pattern match = Pattern.compile("([\\d,]+)");
+
+            Dictionary dictionary_1 = new Dictionary(dicts, "test", KEYWORD, 130,
+                    null, null, match, new int[]{1});
+
+
+            QTSearchable qtSearchable = new QTSearchable(dictionary_1);
+
+            CommonQTDocumentHelper helper = new ENDocumentHelper();
+            List<QTSearchable> searchableList = new ArrayList<>();
+            searchableList.add(qtSearchable);
+
+            QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
+            helper.extract(doc, searchableList, true, "");
+
+            doc.convertValues2titleTable();
+            // THEN
+            assertFalse(doc.getValues() == null);
+            assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>Area</td><td>1,590</td></tr></table>");
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 13591);
+
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
     @Test
     public void testNounVerbPh1() {
         String str = "Gilead Sciences , Inc. told to reuters reporters.";
-        QTDocument doc = new ENDocumentInfo(str, "", helper);
+        QTDocument doc = new ENDocumentInfo(str, "", helperSentenceDetect);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
         Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").get(0), "Gilead Sciences, Inc.");
@@ -120,7 +227,7 @@ public class ENDocumentInfoTest {
     @Test
     public void testNounVerbPh2() {
         String str = "Amazon Inc. reported a gain on his earnings .";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
+        ENDocumentInfo doc = new ENDocumentInfo(str, "", helperSentenceDetect);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
         Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
@@ -129,7 +236,7 @@ public class ENDocumentInfoTest {
     @Test
     public void testNounVerbPh3() {
         String str = "Amazon reported a gain on his earnings .";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
+        ENDocumentInfo doc = new ENDocumentInfo(str, "", helperSentenceDetect);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
         Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
@@ -138,7 +245,7 @@ public class ENDocumentInfoTest {
     @Test
     public void testNounVerbPh4() {
         String str = "Amazon Corp reported a gain on his earnings .";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
+        ENDocumentInfo doc = new ENDocumentInfo(str, "", helperSentenceDetect);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
         Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
@@ -147,7 +254,7 @@ public class ENDocumentInfoTest {
     @Test
     public void testNounVerbPh5() {
         String str = "Amazon LLC announced a gain on his earnings .";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
+        ENDocumentInfo doc = new ENDocumentInfo(str, "", helperSentenceDetect);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
         Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
@@ -156,7 +263,7 @@ public class ENDocumentInfoTest {
     @Test
     public void testNounVerbPh6() {
         String str = "He works as a high rank Senior Director in Amazon";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
+        ENDocumentInfo doc = new ENDocumentInfo(str, "", helperSentenceDetect);
         ArrayList<QTDocument> docs = doc.extractEntityMentions(qtSearchable, true, false, QTDocument.CHUNK.NONE);
         Map<String, List<String>> entityMap = docs.get(0).getEntity();
         Assert.assertTrue(entityMap.get("Title").contains("Senior Director"));
@@ -202,7 +309,7 @@ public class ENDocumentInfoTest {
                 + "universe consisting of particles such as electrons and they "
                 + "wavelike behavior too. Some light sources, such as neon "
                 + "lights, give off only certain frequencies of light.";
-        ENDocumentInfo doc = new ENDocumentInfo(str, "", helper);
+        ENDocumentInfo doc = new ENDocumentInfo(str, "", helperSentenceDetect);
         doc.setLink("link");
 
         // WHEN
@@ -228,7 +335,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -245,7 +352,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable,  false, "");
         doc.convertValues2titleTable();
 
         // THEN
@@ -263,7 +370,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -281,7 +388,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -300,7 +407,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -319,7 +426,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -338,7 +445,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -363,7 +470,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -394,13 +501,16 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        qtSearchableList.add(qtSearchable);
+        helper.extract(doc, qtSearchableList, false, "");
 
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>774000000</td></tr></table>");
+                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>774000</td></tr></table>");
 
     }
 
@@ -417,7 +527,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -434,9 +544,8 @@ public class ENDocumentInfoTest {
         Map<String, List<DictItm>> entMap1 = new HashMap<>();
         entMap1.put("Fund Performance" , dictItms_1);
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
         Dictionary dictionary_1 = new Dictionary(entMap1, "test", KEYWORD, 25,
-                null, null, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+                null, null, Pattern.compile("([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
         ArrayList<DictItm> dictItms_2 = new ArrayList<>();
@@ -450,8 +559,8 @@ public class ENDocumentInfoTest {
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable_1, "");
-        doc.extractKeyValues(qtSearchable_2, "");
+        doc.extractKeyValues(qtSearchable_1, false, "");
+        doc.extractKeyValues(qtSearchable_2, false, "");
 
         doc.convertValues2titleTable();
 
@@ -470,13 +579,12 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Returns" , "Returns", "returned"));
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Fund Performance" , dictItms);
-        Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
         Dictionary dictionary = new Dictionary(entMap, "test", KEYWORD, 25,
-                null, null, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
+                null, null, Pattern.compile("([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
 
         doc.convertValues2titleTable();
         // THEN
@@ -501,7 +609,7 @@ public class ENDocumentInfoTest {
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable_1, "");
+        doc.extractKeyValues(qtSearchable_1, false, "");
 
         doc.convertValues2titleTable();
 
@@ -525,7 +633,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -544,7 +652,7 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
@@ -594,13 +702,16 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        qtSearchableList.add(qtSearchable);
+        helper.extract(doc, qtSearchableList, false, "");
         doc.convertValues2titleTable();
 
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Cash and cash equivalents</td><td>6.2458E7</td><td>7.3329E7</td></tr></table>");
+                "<table width=\"100%\"><tr><td>Cash and cash equivalents</td><td>62458.0</td><td>73329.0</td></tr></table>");
 
     }
 
@@ -634,13 +745,13 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
         doc.convertValues2titleTable();
 
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177300.0</td><td>304000.0</td><td>41.7</td></tr></table>")
+                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
     }
 
@@ -675,12 +786,12 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable, false, "");
         doc.convertValues2titleTable();
         // THEN
         assertNotNull(doc.getValues());
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177300.0</td><td>304000.0</td><td>41.7</td></tr></table>")
+                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
     }
 
@@ -720,6 +831,7 @@ public class ENDocumentInfoTest {
 
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, "");
+        doc.extractKeyValues(qtSearchable,  false, "");
     }
+
 }

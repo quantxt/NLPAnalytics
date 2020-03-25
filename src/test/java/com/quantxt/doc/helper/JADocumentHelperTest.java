@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class JADocumentHelperTest {
 
-    private static JADocumentHelper helper = new JADocumentHelper();
+    private static JADocumentHelper helper = new JADocumentHelper().init();
     private static Logger logger = LoggerFactory.getLogger(JADocumentHelperTest.class);
 
 

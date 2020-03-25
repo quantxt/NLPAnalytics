@@ -18,10 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by matin on 6/28/16.
@@ -30,6 +27,12 @@ import java.util.List;
 public class PDFManager {
 
     final private static Logger logger = LoggerFactory.getLogger(PDFManager.class);
+
+    final  boolean sortByPosition;
+
+    public PDFManager(boolean sortByPosition){
+        this.sortByPosition = sortByPosition;
+    }
 
     public static PDDocument write(ArrayList<String> strArr){
         PDDocument document = new PDDocument();
@@ -111,8 +114,64 @@ public class PDFManager {
         return document;
     }
 
+    private PDFTextStripper getPageStripper() throws IOException {
+        PDFTextStripper stripper = new PDFTextStripper()
+        {
+            @Override
+            protected void processTextPosition(TextPosition text)
+            {
+                String character = text.getUnicode();
+                if (character != null && character.length() != 0) {
+                    super.processTextPosition(text);
+                }
+            }
+        };
+        return stripper;
+    }
+
+    public ArrayList<String> read(PDDocument pdDoc,
+                                  boolean readLineByLine,
+                                  boolean removeNullCols) throws IOException {
+
+
+        if (readLineByLine) {
+            ArrayList<char [][]> pages = new ArrayList<>();
+            for (int page = 1; page <= pdDoc.getNumberOfPages(); page++) {
+                QTPDFTextStripper qtpdfTextStripperAvg = new QTPDFTextStripper();
+                qtpdfTextStripperAvg.setSortByPosition(sortByPosition);
+                qtpdfTextStripperAvg.setStartPage(page);
+                qtpdfTextStripperAvg.setEndPage(page);
+                qtpdfTextStripperAvg.getText(pdDoc);
+
+                QTPDFTextStripper qtpdfTextStripper = new QTPDFTextStripper(pdDoc.getPage(page-1),
+                        qtpdfTextStripperAvg.getHeightMap(),
+                        qtpdfTextStripperAvg.getWeidthMap());
+                qtpdfTextStripper.setSortByPosition(sortByPosition);
+                qtpdfTextStripper.setStartPage(page);
+                qtpdfTextStripper.setEndPage(page);
+                qtpdfTextStripper.getText(pdDoc);
+
+                pages.add(qtpdfTextStripper.getLines());
+            }
+            return getPageLineContent(pages);
+        } else {
+            ArrayList<String> content_arr = new ArrayList<>();
+
+            PDFTextStripper stripper = getPageStripper();
+            stripper.setSortByPosition(sortByPosition);
+            for (int page = 1; page <= pdDoc.getNumberOfPages(); page++){
+                stripper.setStartPage(page);
+                stripper.setEndPage(page);
+                String page_content = stripper.getText(pdDoc);
+                if (page_content == null) continue;
+                content_arr.add(page_content);
+            }
+            return content_arr;
+        }
+    }
+
     private static String extractNoSpaces(PDDocument document,
-                                   StringBuilder sb) throws IOException
+                                          StringBuilder sb) throws IOException
     {
         PDFTextStripper stripper = new PDFTextStripper()
         {
@@ -140,7 +199,6 @@ public class PDFManager {
                     allPagesContent.append(t);
                 }
             } catch (Exception e) {
-           //     e.printStackTrace();
                 logger.error(e.getMessage());
             }
             sb.append("\n");
@@ -156,17 +214,15 @@ public class PDFManager {
             COSDocument cosDoc = parser.getDocument();
             PDFTextStripper pdfStripper = new PDFTextStripper();
             PDDocument pdDoc = new PDDocument(cosDoc);
-            QTDocument doc = null;
-    //        int num = pdDoc.getNumberOfPages();
+
             pdfStripper.setStartPage(1);
-            //    pdfStripper.setEndPage(10);
             pdfStripper.setEndPage(pdDoc.getNumberOfPages());
 
             StringBuilder sb = new StringBuilder();
             String body = extractNoSpaces(pdDoc, sb);
             logger.info(body);
             String title = pdDoc.getDocumentInformation().getTitle();
-            doc = new ENDocumentInfo(body, title);
+            QTDocument doc = new ENDocumentInfo(body, title);
             Calendar d = pdDoc.getDocumentInformation().getCreationDate();
             if (d != null) {
                 doc.setDate(LocalDateTime.from(d.toInstant()));
@@ -278,20 +334,32 @@ public class PDFManager {
         return document;
     }
 
-    public static void main(String[] args) throws Exception {
-        String file = "/Users/matin/Downloads/S100E4RL (1).pdf";
-        InputStream is = new FileInputStream(new File(file));
+    private ArrayList<String> getPageLineContent(ArrayList<char[][]> pageLines){
 
-        PDFParser parser = new PDFParser(new RandomAccessBuffer(new BufferedInputStream(is)));
-        parser.parse();
+        ArrayList<String> page_contents = new ArrayList<>();
+        for (int pageNumber = 0; pageNumber< pageLines.size(); pageNumber++) {
+            char[][] page = pageLines.get(pageNumber);
+            StringBuilder pageStringBuilder = new StringBuilder();
+            for (char [] line : page) {
+                if (line == null || line.length == 0){
+                    pageStringBuilder.append("\n");
+                }  else {
+                    StringBuilder sb = new StringBuilder();
+                    for (char c: line){
+                        if ( c == '\u0000') {
+                            c = ' ';
+                        }
+                        sb.append(c);
+                    }
+                    pageStringBuilder.append(sb.toString().replaceAll("\\s+$", "\n"));
+                }
+            }
+            page_contents.add(pageStringBuilder.toString());
+        }
+        return page_contents;
+    }
 
-        COSDocument cosDoc = parser.getDocument();
-        PDDocument pdDoc = new PDDocument(cosDoc);
-
-        StringBuilder sb = new StringBuilder();
-        String body = extractNoSpaces(pdDoc, sb);
-
-        logger.info(sb.toString());
+    public static void main(String[] args) {
 
     }
 }

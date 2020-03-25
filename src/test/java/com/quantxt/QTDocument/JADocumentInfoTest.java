@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 public class JADocumentInfoTest {
 
     private static final Logger logger = LoggerFactory.getLogger(JADocumentInfoTest.class);
-    private static JADocumentHelper helper = new JADocumentHelper();
+    private static JADocumentHelper helper = new JADocumentHelper().init();
 
     @Test
     public void tag1() {
@@ -29,7 +29,8 @@ public class JADocumentInfoTest {
         List<ExtIntervalSimple> intervals = helper.getNounAndVerbPhrases(str, tokens.toArray(new String[tokens.size()]));
 
         Assert.assertEquals(intervals.get(2).getType(), NOUN);
-        Assert.assertEquals(intervals.get(2).toString(), "28:42");
+        Assert.assertEquals(intervals.get(2).getStart(), 28);
+        Assert.assertEquals(intervals.get(2).getEnd(), 42);
     }
 
     @Test
@@ -40,7 +41,8 @@ public class JADocumentInfoTest {
 
         Assert.assertEquals(intervals.get(0).getType(), NOUN);
         Assert.assertEquals(intervals.get(0).toString(str), "マイクロソフトが主導");
-        Assert.assertEquals(intervals.get(0).toString(), "25:35");
+        Assert.assertEquals(intervals.get(0).getStart(), 25);
+        Assert.assertEquals(intervals.get(0).getEnd(), 35);
     }
 
     @Test
@@ -67,7 +69,7 @@ public class JADocumentInfoTest {
                 "日馬富士問題で分かった無能ぶり 銀座のクラブママが教える　「一流の男」と「ダメになる男」の見分け方 入社直後は大手並みだったのに…　" +
                 "優良だと錯覚する「キラキラ系ブラック企業」 Copyright (c) 2018 SANKEI DIGITAL INC. All rights reserved. ";
 
-        JADocumentInfo doc = new JADocumentInfo(str, "");
+        JADocumentInfo doc = new JADocumentInfo(str, "", helper);
         List<QTDocument> sents = doc.getChunks(QTDocument.CHUNK.SENTENCE);
         assertTrue(sents.size() == 18);
     }
