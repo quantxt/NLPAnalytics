@@ -22,6 +22,7 @@ public class QTValueNumber {
 
     final private static String simple_number = "(([\\+\\-]?\\d[,\\.\\d]+\\d|\\d+)|\\(\\s*(\\d[,\\.\\d]+\\d|\\d+)\\s*\\))((?i)\\s*%|\\s*percent)?";
     final private static int simpleNumberGroup = 0;
+    final private static int dist_bet_money_and_unit = 5;
 
     final private static Pattern currencies = Pattern.compile("(\\p{Sc})\\s*$");
     final private static Pattern units = Pattern.compile("(hundred|thousand|million|billion|M|B|百万円|億)($|[\b\\s\\.,])");
@@ -34,29 +35,28 @@ public class QTValueNumber {
     private static double getMult(int start, int t_lastseen, int m_lastseen, int b_lastseen,
                                   ArrayList<Integer> thousands, ArrayList<Integer> millions, ArrayList<Integer> billions){
         if (thousands.size() == 0 && millions.size() == 0) return 1;
-        int dist = 200;
-        if (t_lastseen > 0 && (start - t_lastseen) < dist && (start - t_lastseen) >0) {
+        if (t_lastseen > 0 && (start - t_lastseen) < dist_bet_money_and_unit && (start - t_lastseen) >0) {
             return 1000;
         }
-        if (m_lastseen > 0 && (start - m_lastseen) < dist && (start - m_lastseen) > 0) {
+        if (m_lastseen > 0 && (start - m_lastseen) < dist_bet_money_and_unit && (start - m_lastseen) > 0) {
             return 1000000;
         }
-        if (b_lastseen > 0 && (start - b_lastseen) < dist && (start - b_lastseen) > 0) {
+        if (b_lastseen > 0 && (start - b_lastseen) < dist_bet_money_and_unit && (start - b_lastseen) > 0) {
             return 1000000000;
         }
 
         for (int t : thousands){
-            if ((start - t) < dist && (start - t) > 0){
+            if ((start - t) < dist_bet_money_and_unit && (start - t) > 0){
                 return 1000;
             }
         }
         for (int m : millions){
-            if ((start - m) < dist && (start - m) > 0){
+            if ((start - m) < dist_bet_money_and_unit && (start - m) > 0){
                 return 1000000;
             }
         }
         for (int m : billions){
-            if ((start - m) < dist && (start - m) > 0){
+            if ((start - m) < dist_bet_money_and_unit && (start - m) > 0){
                 return 1000000000;
             }
         }
@@ -80,7 +80,7 @@ public class QTValueNumber {
                                        List<ExtIntervalSimple> valIntervals)
     {
 
-        java.util.regex.Matcher m = pattern.matcher(str);
+        Matcher m = pattern.matcher(str);
 
         while (m.find()) {
             if ( groups == null){
@@ -107,6 +107,29 @@ public class QTValueNumber {
         }
 
         return str;
+    }
+
+    public static List<ExtIntervalSimple> detectFirstPattern(String str,
+                                                             String context_orig,
+                                                             Pattern matchPattern,
+                                                             boolean hasGroup)
+    {
+
+        Matcher m = matchPattern.matcher(str);
+
+        List<ExtIntervalSimple> valIntervals = new ArrayList<>();
+        int group = hasGroup ? 1 : 0;
+        while (m.find()) {
+            int start = m.start(group);
+            int end = m.end(group);
+            ExtIntervalSimple ext = new ExtIntervalSimple(start, end);
+            ext.setType(QTField.QTFieldType.KEYWORD);
+            String extractionStr = str.substring(ext.getStart(), ext.getEnd());
+            ext.setStringValue(extractionStr);
+            ext.setCustomData(extractionStr);
+            valIntervals.add(ext);
+        }
+        return valIntervals;
     }
 
     public static String detect(String str,
@@ -141,6 +164,8 @@ public class QTValueNumber {
         while (m.find()){
             int start = m.start(simpleNumberGroup);
             int end   = m.end(simpleNumberGroup);
+
+            String mmmm = m.group();
             //we want to make sur ethe number is not attached or part of a word like DS123
             if (start>0 ) {
                 char char_before = str.charAt(start -1);
@@ -201,9 +226,9 @@ public class QTValueNumber {
                 ExtIntervalSimple ext = new ExtIntervalSimple(start, end);
                 ext.setType(t);
 
-                String subStr = str.substring(end).trim();
+                String subStr = str.substring(end);
                 Matcher unitMatch = units.matcher(subStr);
-                if (unitMatch.find() && unitMatch.start() < 3){
+                if (unitMatch.find() && unitMatch.start() < 4){
                     String unitMatched = unitMatch.group(1);
                     switch (unitMatched) {
                         case "hundred" : mult *= 100; break;

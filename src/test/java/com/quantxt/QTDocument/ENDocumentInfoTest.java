@@ -40,7 +40,7 @@ public class ENDocumentInfoTest {
     private static boolean setUpIsDone = false;
     private static Dictionary global_dict;
     private static Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
-    private static Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\-\\$\\(\\)\\d]+$");
+    private static Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
 
     @BeforeClass
@@ -501,13 +501,16 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, false, "");
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        qtSearchableList.add(qtSearchable);
+        helper.extract(doc, qtSearchableList, false, "");
 
         doc.convertValues2titleTable();
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>774000000</td></tr></table>");
+                "<table width=\"100%\"><tr><td>Branded postpaid phone net customer additions</td><td>774000</td></tr></table>");
 
     }
 
@@ -699,13 +702,16 @@ public class ENDocumentInfoTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
 
-        doc.extractKeyValues(qtSearchable, false, "");
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        qtSearchableList.add(qtSearchable);
+        helper.extract(doc, qtSearchableList, false, "");
         doc.convertValues2titleTable();
 
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Cash and cash equivalents</td><td>6.2458E7</td><td>7.3329E7</td></tr></table>");
+                "<table width=\"100%\"><tr><td>Cash and cash equivalents</td><td>62458.0</td><td>73329.0</td></tr></table>");
 
     }
 
@@ -745,7 +751,7 @@ public class ENDocumentInfoTest {
         // THEN
         assertFalse(doc.getValues() == null);
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177300.0</td><td>304000.0</td><td>41.7</td></tr></table>")
+                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
     }
 
@@ -785,7 +791,7 @@ public class ENDocumentInfoTest {
         // THEN
         assertNotNull(doc.getValues());
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177300.0</td><td>304000.0</td><td>41.7</td></tr></table>")
+                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
     }
 
@@ -827,4 +833,5 @@ public class ENDocumentInfoTest {
 
         doc.extractKeyValues(qtSearchable,  false, "");
     }
+
 }
