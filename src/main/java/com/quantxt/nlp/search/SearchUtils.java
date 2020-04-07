@@ -161,6 +161,7 @@ public class SearchUtils {
             }
             if (query == null) continue;
 
+
             SpanWeight span_weights = query.createWeight(searcher, ScoreMode.COMPLETE_NO_SCORES, 1f);
             if (span_weights == null) continue;
             Spans spans = span_weights.getSpans(searcher.getIndexReader().leaves().get(0), SpanWeight.Postings.POSITIONS);
@@ -483,7 +484,7 @@ public class SearchUtils {
         if (queryList.size() == 1) {
             return queryList.iterator().next();
         } else {
-            SpanNearQuery.Builder spanNearBuilder = new SpanNearQuery.Builder(search_fld, true);
+            SpanNearQuery.Builder spanNearBuilder = new SpanNearQuery.Builder(search_fld, ordered);
             spanNearBuilder.setSlop(slop);
             for (SpanQuery spanQuery : queryList) {
                 spanNearBuilder.addClause(spanQuery);

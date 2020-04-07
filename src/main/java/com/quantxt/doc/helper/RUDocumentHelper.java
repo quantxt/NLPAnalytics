@@ -1,5 +1,6 @@
 package com.quantxt.doc.helper;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,7 +37,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     private static Pattern VerbPhrase = Pattern.compile("V+");
 
     public RUDocumentHelper() {
-        super(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
     }
 
     public void loadNERModel(){
@@ -45,6 +45,16 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
         } catch (Exception e) {
             throw new RuntimeException("Unexpected error on loading Pos Model!", e);
         }
+    }
+
+    @Override
+    public RUDocumentHelper init(){
+        try {
+            init(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return this;
     }
 
     @Override

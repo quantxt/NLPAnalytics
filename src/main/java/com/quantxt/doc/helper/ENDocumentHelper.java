@@ -39,8 +39,17 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     private Tokenizer tokenizer;
 
     public ENDocumentHelper() {
-        super(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
-    //    loadNERModel();
+
+    }
+
+    @Override
+    public ENDocumentHelper init(){
+        try {
+            init(SENTENCES_FILE_PATH, STOPLIST_FILE_PATH, PRONOUNS);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return this;
     }
 
     @Override
