@@ -53,8 +53,11 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
     //Text normalization rules
 
-    private static Pattern CELL_PATTERN  = Pattern.compile("(( \\S+)+)($| {3,})");
     private static String alnum = "0-9A-Za-zŠŽšžŸÀ-ÖØ-öø-ž" + "Ѐ-ӿԀ-ԧꙀ-ꙮ꙾-ꚗᴀ-ᵿ";
+
+    private static Pattern WORD_PTR = Pattern.compile("\\S+");
+    private static Pattern TOKEN = Pattern.compile("[A-Za-z0-9]+[^ ]*");
+    private static Pattern SPC_BET_WORDS_PTR = Pattern.compile("\\S(?= \\S)");
 
     // Single quotes to normalize
     protected static Pattern r_quote_norm = Pattern.compile("([`‘’])");
@@ -332,8 +335,11 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             for (QTMatch qtMatch : qtMatches) {
                 //Matching ignore whitespace but in input string whitespace is used to maintain position of the text when needed
                 // be concious of the span of the matches and avoid cases when there is large gap between tokens of a match
-                int index_of_line_start = getStartLine(content, qtMatch.getStart());
+                int index_of_line_start = getFirstNewLineBefore(content, qtMatch.getStart());
                 int index_of_line_end = content.indexOf('\n', qtMatch.getEnd());
+                if (index_of_line_end < 0) { // there is no end of line
+                    index_of_line_end = content.length();
+                }
                 int lineLength = index_of_line_end - index_of_line_start;
                 long length_of_white_space_in_match = content.substring(qtMatch.getStart(), qtMatch.getEnd()).chars().filter(ch -> ch == ' ').count();
                 // a keyword's padding should not cover more than 20% of the line
@@ -430,7 +436,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
             Pattern padding_between_values = dictionary.getSkip_between_values();
             Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
-            String header = null;
 
             List<ExtInterval> dictLabelList = labelEntry.getValue();
             int lookAhead = Math.max(100, (int) (content.length()  * .1));
@@ -470,7 +475,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (dictValueList.size() == 0) continue;
 
                 boolean lastLookUpwasHorizental = false;
-
+                VerticalGapDetails verticalGapDetails = new VerticalGapDetails();
                 for (ExtIntervalSimple valueInterval : dictValueList) {
 
                     String horizental_gap = getHorizentalGap(keyInterval, valueInterval, content);
@@ -481,7 +486,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                     Pattern pattern_to_run_on_gap = numValuesFound == 0 ? padding_between_key_value : padding_between_values;
 
                     Matcher matcher = pattern_to_run_on_gap.matcher(horizental_gap);
-
+                    valueInterval.setLine(getLineNumber(content, valueInterval.getStart()));
                     if (matcher.find() && allowHorizentalLookup(rowValues, lastLookUpwasHorizental)) {
                         // so if it is horizental and we are finding mutiple vlaues, then key and values should be more or less in same distance apart
                         //    second_last <---D1---> last <----D2----> current     GOOD
@@ -505,30 +510,11 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                         lastLookUpwasHorizental = true;
 
                     } else if (vertical_overlap &&  allowVerticalLookup(rowValues, lastLookUpwasHorizental)) {
-                        String [] vertical_overlap_array = getVerticalGep(keyInterval, valueInterval, content);
+                        String [] vertical_overlap_array = getVerticalGep(keyInterval, valueInterval, content, verticalGapDetails);
                         if (vertical_overlap_array != null) {
-         //                   if (numValuesFound == 0) { //first value
-         //                       if (vertical_gap_array.length > 5) { //this is too far it can't be valid
-         //                           break;
-         //                       }
-         //                   }
+
                             String vertical_gap = String.join("", vertical_overlap_array);
                             if (vertical_gap.isEmpty() || pattern_to_run_on_gap.matcher(vertical_gap).find()) {
-
-                                /*
-                                if (numValuesFound == 0){
-                                    int st = getStartLine(content, keyInterval.getStart());
-                                    int ed = content.indexOf('\n', st);
-                                    header = content.substring(st, ed);
-                                }
-
-                                //check if header and row are compatible
-                                int st = getStartLine(content, valueInterval.getStart());
-                                int ed = content.indexOf('\n', st);
-                                String row = content.substring(st, ed);
-                                boolean rowIsATableRow = isTableRow(header, row);
-                                if (!rowIsATableRow) continue;
-                                */
 
                                 rowValues.add(valueInterval);
                                 keyInterval = valueInterval;
@@ -551,6 +537,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 extInterval.setKey(labelInterval.getKey());
                 extInterval.setStart(labelInterval.getStart());
                 extInterval.setEnd(labelInterval.getEnd());
+                extInterval.setLine(getLineNumber(content,labelInterval.getStart()));
                 if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
                 qtDocument.getValues().add(extInterval);
                 qtDocument.addEntity(labelInterval.getKeyGroup(), labelInterval.getKey());
@@ -558,145 +545,73 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         }
     }
 
+    private int getLineNumber(String str, int startInterval){
+        String [] linesBetween = str.substring(0, startInterval).split("\n");
+        // return 0-based line number
+        return linesBetween.length;
+    }
+
     protected String getHorizentalGap(Interval interval1, Interval interval2, String str) {
         if (interval1.getEnd() > interval2.getStart()) return null;
         return str.substring(interval1.getEnd(), interval2.getStart());
     }
 
-    private int startNextToken(String str, int start){
-        int startNextToken = start;
-        while (startNextToken < str.length()){
-            char c = str.charAt(startNextToken++);
-            if (c == ' ') continue;
-            break;
+    protected int startNextToken(String str, int start){
+        Matcher m = TOKEN.matcher(str.substring(start));
+        if (m.find()){
+            return start + m.start();
         }
-        return startNextToken -1;
+        return start;
     }
 
-    private int startPrevToken(String str, int start){
-        int startNextToken = start;
-        while (startNextToken >= 0){
-            char c = str.charAt(startNextToken--);
-            if (c == ' ') continue;
-            break;
+    protected int endPrevToken(String str, int start){
+        // there is no way to search backward
+        // so we create a substring just before the start and find the last match
+        // 70 is long enough to look, back??
+        int charBeforeStart = start - 1;
+        int startString = Math.max(0, charBeforeStart - 70);
+        String substringBeforeStart = str.substring(startString, charBeforeStart);
+        Matcher m = TOKEN.matcher(substringBeforeStart);
+        int endPreviousToken = startString;
+        while (m.find()){
+            endPreviousToken = m.end() + startString;
         }
-        return startNextToken + 1;
+        return endPreviousToken;
     }
 
+    // This is a very loose logic for assesing if the row is a header
     protected boolean lineIsTableRow(String lineStr){
         //logic to determine if a line of text is a table row
-        long num_spaces = lineStr.chars().filter(ch -> ch == ' ').count();
-        // obvious condition 1: word1 word2 word3 .. pattern should not even be analyzed. It is not a table header or row
-   //     String [] spaces = lineStr.split("\\s");
-   //     String [] spaceBetweenTokens = lineStr.split("\\S\\s\\S");
-        String noSpaceStr = lineStr.replace(" ", "");
-        if ((float) noSpaceStr.length() > .7 * lineStr.trim().length()) return false;
+        //   xx xxxX[         ]yyyY[          ]     zzZ
+        String trimmed_str = lineStr.trim();
+        String[] number_large_gaps = trimmed_str.split("\\S {4,}");
+        if (number_large_gaps.length - 1 > 0) return true;
+
+        Matcher m1 = WORD_PTR.matcher(trimmed_str);
+        int num_words = 0;
+        while (m1.find()){
+            num_words++;
+        }
+        if (num_words < 4) return true;
+        Matcher m2 = SPC_BET_WORDS_PTR.matcher(trimmed_str);
+
+        int num_space = 0;
+        while (m2.find()){
+            num_space++;
+        }
+
+        // dsds dsds dsds dsdsd dsdsd
+        // aaa ffd a       hdj orii eof rere    --> not a tabke
+        // fdfdfd       ffdfdfd fdfd fdfd      fdd ffd   --> could be a table
+        if ( (num_words -1 ) ==  num_space ) return false;
 
         return true;
     }
 
-    protected boolean isTableRow(String header, String row){
-
-    //    if (header.length() < row.length()) return false;
-        ArrayList<Interval> headers = new ArrayList<>();
-        Matcher m = CELL_PATTERN.matcher(header);
-        while (m.find()){
-            headers.add(new Interval(m.start(2), m.end(2)));
-        }
-
-        ArrayList<Interval> values = new ArrayList<>();
-        m = CELL_PATTERN.matcher(row);
-        while (m.find()){
-            values.add(new Interval(m.start(2), m.end(2)));
-        }
-
-        int badIntervals = 0;
-        for (int i=0; i<values.size(); i++ ) {
-            Interval interval1 = headers.get(i);
-            if (interval1.getEnd() > header.length()) break;
-            int first_index_after_interval1 = i==(headers.size()-1) ? header.length() : headers.get(i+1).getStart();
-            int last_index_before_interval1 = i==(0) ? 0 : headers.get(i-1).getEnd();
-            int padding_right_interval1 = (first_index_after_interval1 - interval1.getEnd()) / 2;
-            int padding_left_interval1 = (interval1.getStart() - last_index_before_interval1) / 2;
-            int offsetStartInterval1 = interval1.getStart() - padding_left_interval1;
-            int offsetEndInterval1 = interval1.getEnd() + padding_right_interval1;
-
-            boolean found = false;
-            for (Interval interval2 : headers) {
-                int offsetStartInterval2 = interval2.getStart();
-                int offsetEndInterval2 = interval2.getEnd();
-
-                //find indices of the vertical column for the gap
-
-                int startOverlapIndex = Math.max(offsetStartInterval1, offsetStartInterval2);
-                int endOverlapIndex = Math.min(offsetEndInterval1, offsetEndInterval2);
-
-                // Find white paddings before and after the key and value in order to find vertical overlap
-                //   more_text       |          key1      |        more_text
-                //  text_here      |      val1          |        even_more
-
-                // if there is no overlap then return null
-                // allow vetically stacked blocks not to be exactly aligned
-                int overlap_length = endOverlapIndex - startOverlapIndex;
-                if (overlap_length > 0 && offsetStartInterval2 < offsetEndInterval1 && offsetEndInterval2 > offsetStartInterval1) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found){
-                badIntervals++;
-            }
-        }
-    //    logger.info("Valids {} , {} ,{}", headers.size(), values.size(), validIntervals);
-        return badIntervals == 0;
-
-    }
-
-    protected double alignmentRatio(String headerStr, String rowStr){
-        double numCharsIn1 = 0;
-        double numCharsIn2 = 0;
-        double numCharsOverlap = 0;
-
-        //find header cells
-        ArrayList<Interval> headers = new ArrayList<>();
-        Matcher m = CELL_PATTERN.matcher(headerStr);
-        while (m.find()){
-            headers.add(new Interval(m.start(), m.end()));
-        }
-        char [] header = headerStr.toCharArray();
-        char [] row = rowStr.toCharArray();
-        if (header.length < row.length) return 0;
-        for (int i=0; i<row.length-1; i++){
-            char h1 = header[i];
-            char h2 = header[i+1];
-            char r1 = row[i];
-            char r2 = row[i+1];
-
-            boolean c1IsValid = false;
-            boolean c2IsValid = false;
-            if (h1 != ' ' || (h1 == ' ' && h2 != ' ')){
-                numCharsIn1 +=1;
-                c1IsValid = true;
-            }
-            if (r1 != ' ' || (r1 == ' ' && r2 != ' ')){
-                numCharsIn2 +=1;
-                c2IsValid = true;
-            }
-            if (c1IsValid && c2IsValid){
-                numCharsOverlap +=1;
-            }
-        }
-        if (numCharsOverlap == 0) return 0;
-        if (numCharsIn2 < 6 || numCharsIn1 < 6) return 0;
-        return numCharsOverlap / Math.max(numCharsIn1, numCharsIn2);
-
-    }
-
- //   protected String getOverlapBetweenVerticalIntervals(Interval interval1, Interval interval2){
-
- //   }
-
-    protected String[] getVerticalGep(Interval interval1, Interval interval2, String str) {
+    protected String [] getVerticalGep(Interval interval1,
+                                       Interval interval2,
+                                       String str,
+                                       VerticalGapDetails verticalGapDetails) {
 
         String linesBetweenStr = str.substring(interval1.getStart(), interval2.getEnd());
         if (linesBetweenStr.indexOf("\n") < 0) {// values are not vertical,  return null
@@ -706,25 +621,36 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         String[] linesBetween = linesBetweenStr.split("\n");
         // so, if the first line is regular text don't bother
         if (linesBetween.length == 0) return null;
-        if (!lineIsTableRow(linesBetween[0])) return null;
+        int beginningOfHeaderRow = str.lastIndexOf("\n", interval1.getStart());
+        if (beginningOfHeaderRow == -1){
+            beginningOfHeaderRow = 0;
+        }
+        int endOfHeaderRow = str.indexOf("\n", interval1.getEnd());
+        String headerRow = str.substring(beginningOfHeaderRow, endOfHeaderRow);
+        if (!lineIsTableRow(headerRow)) return null;
 
-        int startLineInterval1 = getStartLine(str, interval1.getStart());
-        int startLineInterval2 = getStartLine(str, interval2.getStart());
+        if (verticalGapDetails.offsetStartOverlap == null || verticalGapDetails.offsetEndOverlap == null ) {
+            int startLineInterval1 = getFirstNewLineBefore(str, interval1.getStart());
+            int first_index_after_interval1 = startNextToken(str, interval1.getEnd());
+            int last_index_before_interval1 = endPrevToken(str, interval1.getStart());
+            int padding_left_interval1 = (interval1.getStart() - last_index_before_interval1) / 2;
+            int padding_right_interval1 = (first_index_after_interval1 - interval1.getEnd()) / 2;
+            verticalGapDetails.offsetStartOverlap = interval1.getStart() - startLineInterval1 - padding_left_interval1;
+            verticalGapDetails.offsetEndOverlap = interval1.getEnd() - startLineInterval1 + padding_right_interval1;
+        }
 
-        int first_index_after_interval1 = startNextToken(str, interval1.getEnd());
-        int last_index_before_interval1 = startPrevToken(str, interval1.getStart()-1);
+        int offsetStartInterval1 = verticalGapDetails.offsetStartOverlap;
+        int offsetEndInterval1 = verticalGapDetails.offsetEndOverlap;
 
-        int padding_right_interval1 = (first_index_after_interval1 - interval1.getEnd())/2;
-        int padding_left_interval1 =  (interval1.getStart() - last_index_before_interval1)/2;
-
-        int offsetStartInterval1 = interval1.getStart() - startLineInterval1 - padding_left_interval1;
+        int startLineInterval2 = getFirstNewLineBefore(str, interval2.getStart());
         int offsetStartInterval2 = interval2.getStart() - startLineInterval2;
-
-        int offsetEndInterval1 = interval1.getEnd() - startLineInterval1  + padding_right_interval1;
         int offsetEndInterval2 = interval2.getEnd() - startLineInterval2;
 
-        //find indices of the vertical column for the gap
+        //check if the value is within the range set by boundarties of its key (verticalGapDetails)
+        boolean overlapValid = offsetEndInterval2 <= offsetEndInterval1 && offsetStartInterval2 >= offsetStartInterval1;
+        if (!overlapValid) return null;
 
+        //find indices of the vertical column for the gap
         int startOverlapIndex = Math.max(offsetStartInterval1, offsetStartInterval2);
         int endOverlapIndex = Math.min(offsetEndInterval1, offsetEndInterval2);
 
@@ -755,8 +681,25 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return verticalOverlapArray;
     }
 
-    protected int getStartLine(String str, int index) {
-        return str.substring(0, index).lastIndexOf('\n') + 1;
+    protected int getFirstNewLineBefore(String str, int index) {
+        int index_start_line = str.substring(0, index).lastIndexOf('\n');
+        if (index_start_line < 0) return 0;
+        return index_start_line;
+    }
+
+
+    private class VerticalGapDetails {
+        public Integer offsetStartOverlap;
+        public Integer offsetEndOverlap;
+
+        public VerticalGapDetails(){
+
+        }
+
+        public void reset(){
+            offsetStartOverlap = null;
+            offsetEndOverlap = null;
+        }
     }
 
 }

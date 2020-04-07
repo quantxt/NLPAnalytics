@@ -185,10 +185,11 @@ public class PDFManagerTest {
             helper.extract(doc, dictionaries, true, "");
 
             doc.convertValues2titleTable();
+
             // THEN
             assertFalse(doc.getValues() == null);
             assertTrue(doc.getTitle().startsWith(
-                    "<table width=\"100%\"><tr><td>Q1</td><td>2018</td><td>2199.0</td><td>2102.0</td><td>97.0</td><td>20.0</td><td>251.0</td><td>1291.0</td><td>908.0</td><td>41.3</td><td>297.0</td><td>632.0</td></tr>"));
+                    "<table width=\"100%\"><tr><td>Q1</td><td>2018</td><td>2199.0</td><td>2102.0</td><td>97.0</td><td>20.0</td><td>251.0</td><td>1291.0</td><td>908.0</td><td>41.3</td><td>297.0</td><td>632.0</td>"));
         } catch (Exception e) {
             e.printStackTrace();
         }
