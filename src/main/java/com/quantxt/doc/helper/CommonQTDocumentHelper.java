@@ -37,6 +37,7 @@ import opennlp.tools.sentdetect.SentenceModel;
 import static com.quantxt.helper.types.QTField.*;
 
 import static com.quantxt.helper.types.QTField.QTFieldType.*;
+import static com.quantxt.doc.helper.CommonQTDocumentHelper.ValueSearchMode.*;
 import static com.quantxt.util.NLPUtil.isEmpty;
 
 /**
@@ -51,6 +52,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     public enum QTPosTags {NOUNN, VERBB, INTJ, X, ADV, AUX, ADP, ADJ, CCONJ, PROPN, PRON, SYM, NUM, PUNCT}
 
     protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
+
+    public enum ValueSearchMode {HORIZENTAL, VERTICAL};
     //Text normalization rules
 
     private static String alnum = "0-9A-Za-zŠŽšžŸÀ-ÖØ-öø-ž" + "Ѐ-ӿԀ-ԧꙀ-ꙮ꙾-ꚗᴀ-ᵿ";
@@ -311,7 +314,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     @Override
     public String getDatetimeValues(String str, String context, List<ExtIntervalSimple> valueInterval) {
-        return QTValueNumber.detectDates(str, context, valueInterval);
+        List<ExtIntervalSimple> list =  QTValueNumber.detectDates(str);
+        valueInterval.addAll(list);
+        return str;
     }
 
     @Override
@@ -352,6 +357,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 extInterval.setStart(qtMatch.getStart());
                 extInterval.setEnd(qtMatch.getEnd());
                 extInterval.setType(valueType);
+                extInterval.setLine(getLineNumber(content,qtMatch.getStart()));
                 dicLabels.add(extInterval);
             }
             labels.put(dictname, dicLabels);
@@ -359,32 +365,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return labels;
     }
 
-    private boolean key_value_type_matched(QTFieldType type1, QTFieldType type2) {
-        if (type1 == KEYWORD && type2 == KEYWORD) return true;
-        if (type1 == NONE && type2 == NONE) return true;
-        if (type1 == DATETIME && type2 == DATETIME) return true;
-        if ((type1 == DOUBLE || type1 == PERCENT || type1 == MONEY || type1 == LONG) &&
-                (type2 == DOUBLE || type2 == PERCENT || type2 == MONEY || type2 == LONG)) return true;
-        return false;
-    }
-
-    private boolean allowVerticalLookup(ArrayList<ExtIntervalSimple> values,
-                                        boolean lastLookUpWasHorizental){
-        if (values.size() == 0) return true;
-        if (lastLookUpWasHorizental) return false;
-        return true;
-    }
-
-    private boolean allowHorizentalLookup(ArrayList<ExtIntervalSimple> values,
-                                          boolean lastLookUpWasHorizental){
-        if (values.size() == 0) return true;
-        if (lastLookUpWasHorizental) return true;
-        return false;
-    }
-
     public void extract(QTDocument qtDocument,
                         List<QTSearchable> extractDictionaries,
-                        boolean vertical_overlap,
+                        boolean canSearchVertical,
                         String context) {
         long start = System.currentTimeMillis();
         final String content = qtDocument.getTitle();
@@ -392,7 +375,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         long took = System.currentTimeMillis() - start;
         logger.debug("Found all labels in {}ms", took);
 
-        Map<String, Dictionary> name2Dictionary = new HashMap<>();
+        Map<String, Dictionary> valueNeededDictionaryMap = new HashMap<>();
 
         List<ExtIntervalSimple> numbers = new ArrayList<>();
         for (DictSearch<QTMatch> dictSearch : extractDictionaries) {
@@ -401,134 +384,119 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             switch (valueType) {
                 case DATETIME:
                 case KEYWORD:
-                    name2Dictionary.put(dicName, dictSearch.getDictionary());
+                    valueNeededDictionaryMap.put(dicName, dictSearch.getDictionary());
                     break;
                 //search for numbers only once
                 case DOUBLE:
-                    QTValueNumber.detect(content, context, numbers);
-                    name2Dictionary.put(dicName, dictSearch.getDictionary());
+                    if (numbers.isEmpty()) {
+                        QTValueNumber.detect(content, context, numbers);
+                    }
+                    valueNeededDictionaryMap.put(dicName, dictSearch.getDictionary());
                     break;
                 default: //This account for STRING, NONE Null
                     if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
-                    List<ExtInterval> lbl = labels.get(dicName);
-                    if (lbl == null || lbl.isEmpty()) continue;
-                    qtDocument.getValues().addAll(lbl);
-                    for (ExtInterval label : lbl) {
-                        qtDocument.addEntity(label.getKeyGroup(), label.getKey());
+                    List<ExtInterval> labelExtIntervalList = labels.get(dicName);
+                    if (labelExtIntervalList == null || labelExtIntervalList.isEmpty()) continue;
+                    qtDocument.getValues().addAll(labelExtIntervalList);
+                    // These labels don't need a value,
+                    for (ExtInterval labelExtInterval : labelExtIntervalList){
+                        qtDocument.addEntity(labelExtInterval.getKeyGroup(), labelExtInterval.getKey());
                     }
             }
         }
 
-        long took1 = System.currentTimeMillis() - start;
-        logger.debug("Found all labels in {}ms", took1);
+        if (valueNeededDictionaryMap.isEmpty()) return;
 
-        if (name2Dictionary.isEmpty()) return;
-
+        //Searching for values that are associated with a label
+        //This should cover only DATE, DOUBLE and KEYWORD type labels
         for (Map.Entry<String, List<ExtInterval>> labelEntry : labels.entrySet()){
             String dicname = labelEntry.getKey();
 
             //get the dictionary
-            Dictionary dictionary = name2Dictionary.get(dicname);
-            if (dictionary == null) {
-                logger.error("Dictionary not found {}", dicname);
-                continue;
-            }
+            Dictionary dictionary = valueNeededDictionaryMap.get(dicname);
+            if (dictionary == null) continue; // Label is not associated with a dictionary that extracts values
 
-            Pattern padding_between_values = dictionary.getSkip_between_values();
-            Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
+            QTFieldType dictionaryType = dictionary.getValType();
+            boolean canHaveValue =  (dictionaryType == DOUBLE || dictionaryType == KEYWORD || dictionaryType == DATETIME);
+            if (!canHaveValue) continue;
+
 
             List<ExtInterval> dictLabelList = labelEntry.getValue();
             int lookAhead = Math.max(100, (int) (content.length()  * .1));
 
             for (ExtInterval labelInterval : dictLabelList) {
-                ArrayList<ExtIntervalSimple> rowValues = new ArrayList<>();
-                Interval keyInterval = labelInterval;
                 QTFieldType labelIntervalType = labelInterval.getType();
+
+                // we only look for values that are *after* a label
+                int startSearchForValues = labelInterval.getEnd();
                 //find an optimum string for look up
-                int endSearch =  Math.min(lookAhead + keyInterval.getEnd(), content.length());
-                List<ExtIntervalSimple> dictValueList = new ArrayList<>();
+                int endSearch =  Math.min(lookAhead + startSearchForValues, content.length());
+                Queue<ExtIntervalSimple> dictValueQueue = new LinkedList<>();
                 switch (labelIntervalType){
                     case KEYWORD:
-                        dictValueList = QTValueNumber.detectFirstPattern(content.substring(keyInterval.getEnd(), endSearch),
-                                context, dictionary.getPattern(), dictionary.getGroups() != null);
-                        for (ExtIntervalSimple extIntervalSimple : dictValueList){
-                            int s = extIntervalSimple.getStart();
-                            int e = extIntervalSimple.getEnd();
-                            extIntervalSimple.setStart(s + keyInterval.getEnd());
-                            extIntervalSimple.setEnd(e + keyInterval.getEnd());
-                        }
+                        int stopSearch = startSearchForValues + (int) (content.length()  * .1);
+                        List<ExtIntervalSimple> regexExtIntervalSimples = QTValueNumber.detectFirstPattern(content, startSearchForValues, stopSearch, dictionary);
+                        dictValueQueue.addAll(regexExtIntervalSimples);
                     break;
                     case DOUBLE:
-                        dictValueList = numbers;
+                        for (ExtIntervalSimple numberInterval : numbers){
+                            if (numberInterval.getStart() > startSearchForValues){
+                                dictValueQueue.add(numberInterval);
+                            }
+                        }
                         break;
                     case DATETIME:
-                        getDatetimeValues(content.substring(keyInterval.getEnd(), endSearch), context, dictValueList);
-                        for (ExtIntervalSimple extIntervalSimple : dictValueList){
-                            int s = extIntervalSimple.getStart();
-                            int e = extIntervalSimple.getEnd();
-                            extIntervalSimple.setStart(s + keyInterval.getEnd());
-                            extIntervalSimple.setEnd(e + keyInterval.getEnd());
+                        List<ExtIntervalSimple> dateExtIntervalSimples = QTValueNumber.detectDates(content.substring(startSearchForValues, endSearch));
+                        for (ExtIntervalSimple eis : dateExtIntervalSimples){
+                            int s = eis.getStart();
+                            int e = eis.getEnd();
+                            eis.setStart(s + startSearchForValues);
+                            eis.setEnd(e + startSearchForValues);
+                            dictValueQueue.add(eis);
                         }
                         break;
                 }
 
-                if (dictValueList.size() == 0) continue;
+                if (dictValueQueue.isEmpty()) continue;
 
-                boolean lastLookUpwasHorizental = false;
-                VerticalGapDetails verticalGapDetails = new VerticalGapDetails();
-                for (ExtIntervalSimple valueInterval : dictValueList) {
+                // we always try horizental matches first. this might change in future
+                ValueSearchMode valueSearchMode = HORIZENTAL;
 
-                    String horizental_gap = getHorizentalGap(keyInterval, valueInterval, content);
-                    if (horizental_gap == null) continue;
-                    final int numValuesFound = rowValues.size();
-                    horizental_gap = horizental_gap.replaceAll(" +", " ");
+                HeaderCellBoundary headerCellBoundary = new HeaderCellBoundary();
+                boolean continueSearch = true;
 
-                    Pattern pattern_to_run_on_gap = numValuesFound == 0 ? padding_between_key_value : padding_between_values;
+                ArrayList<ExtIntervalSimple> rowValues = new ArrayList<>();
+                while (!dictValueQueue.isEmpty() && continueSearch) {
+                    ExtIntervalSimple valueInterval = dictValueQueue.poll();
 
-                    Matcher matcher = pattern_to_run_on_gap.matcher(horizental_gap);
-                    valueInterval.setLine(getLineNumber(content, valueInterval.getStart()));
-                    if (matcher.find() && allowHorizentalLookup(rowValues, lastLookUpwasHorizental)) {
-                        // so if it is horizental and we are finding mutiple vlaues, then key and values should be more or less in same distance apart
-                        //    second_last <---D1---> last <----D2----> current     GOOD
-                        //    second_last <-----------------D1----------------> last <----D2----> current     GOOD
-                        //    second_last <---D1---> last <------------------D2------------------> current     BAD!
-                        if (numValuesFound > 0){
-                            int lastIndexOfSecondLastInt = numValuesFound == 1? labelInterval.getEnd() : rowValues.get(numValuesFound-2).getEnd();
-                            int firstIndexOfLastInt = rowValues.get(numValuesFound-1).getStart();
-                            int lastIndexOfLastInt  = rowValues.get(numValuesFound-1).getEnd();
-                            int firstIndexOfCurrentInt = valueInterval.getStart();
-                            int d1 = firstIndexOfLastInt - lastIndexOfSecondLastInt;
-                            int d2 = firstIndexOfCurrentInt - lastIndexOfLastInt;
-                            //we only apply this when we have too much space
-                            if (d2 > d1) {
-                                float r = (float) d2 / d1;  // let's keep it between .4 to 2.5 .. so the gap can not become more than 2.5 times larger
-                                if (r > 2.5) continue;
+                    switch (valueSearchMode){
+
+                        case HORIZENTAL :
+                            continueSearch = validateAndAddHorizentalMatches(content, dictionary, labelInterval, valueInterval, rowValues);
+                            if (!continueSearch && canSearchVertical && rowValues.size() == 0){
+                                continueSearch = validateAndAddVerticalMatches(content, dictionary, labelInterval, valueInterval, headerCellBoundary, rowValues);
+                                if (continueSearch) {
+                                    valueSearchMode = VERTICAL;
+                                }
                             }
-                        }
-                        rowValues.add(valueInterval);
-                        keyInterval = valueInterval;
-                        lastLookUpwasHorizental = true;
-
-                    } else if (vertical_overlap &&  allowVerticalLookup(rowValues, lastLookUpwasHorizental)) {
-                        String [] vertical_overlap_array = getVerticalGep(keyInterval, valueInterval, content, verticalGapDetails);
-                        if (vertical_overlap_array != null) {
-
-                            String vertical_gap = String.join("", vertical_overlap_array);
-                            if (vertical_gap.isEmpty() || pattern_to_run_on_gap.matcher(vertical_gap).find()) {
-
-                                rowValues.add(valueInterval);
-                                keyInterval = valueInterval;
-                                lastLookUpwasHorizental = false;
-                            } else if (numValuesFound > 0) {
-                                // so we found a valid vertical gap but it is not a valid value
-                                break;
+                            break;
+                        case VERTICAL:
+                            if (canSearchVertical) {
+                                continueSearch = validateAndAddVerticalMatches(content, dictionary, labelInterval, valueInterval, headerCellBoundary, rowValues);
                             }
+                            break;
+                    }
+
+                    // lazy search for Regex(Keyword) type value
+                    if (dictValueQueue.isEmpty() && valueInterval.getType() == KEYWORD && continueSearch) {
+                        int stopSearch = valueInterval.getEnd() + (int) (content.length()  * .1);
+                        if (stopSearch > content.length()){
+                            stopSearch = content.length();
                         }
-                    } else if (rowValues.size() > 0) {
-                        break;
+                        List<ExtIntervalSimple> extIntervalSimples = QTValueNumber.detectFirstPattern(content, valueInterval.getEnd(), stopSearch, dictionary);
+                        dictValueQueue.addAll(extIntervalSimples);
                     }
                 }
-
                 if (rowValues.size() == 0) continue;
 
                 ExtInterval extInterval = new ExtInterval();
@@ -537,12 +505,96 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 extInterval.setKey(labelInterval.getKey());
                 extInterval.setStart(labelInterval.getStart());
                 extInterval.setEnd(labelInterval.getEnd());
-                extInterval.setLine(getLineNumber(content,labelInterval.getStart()));
                 if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
                 qtDocument.getValues().add(extInterval);
                 qtDocument.addEntity(labelInterval.getKeyGroup(), labelInterval.getKey());
             }
+
         }
+    }
+
+    private boolean validateAndAddHorizentalMatches(String content,
+                                                    Dictionary dictionary,
+                                                    Interval labelInterval,
+                                                    ExtIntervalSimple candidateValue,
+                                                    ArrayList<ExtIntervalSimple> results)
+    {
+        int num_results = results.size();
+
+        Pattern padding_between_values = dictionary.getSkip_between_values();
+        Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
+
+        int start_gap = num_results == 0 ? labelInterval.getEnd() : results.get(num_results-1).getEnd();
+        int end_gap = candidateValue.getStart();
+        String horizental_gap = getHorizentalGap(start_gap, end_gap, content);
+
+        Pattern pattern_to_run_on_gap = num_results == 0 ? padding_between_key_value : padding_between_values;
+
+        Matcher matcher = pattern_to_run_on_gap.matcher(horizental_gap);
+        if ( matcher.find() ){
+            // so if it is horizental and we are finding mutiple vlaues, then key and values should be more or less in same distance apart
+            //    second_last <---D1---> last <----D2----> current     GOOD
+            //    second_last <-----------------D1----------------> last <----D2----> current     GOOD
+            //    second_last <---D1---> last <------------------D2------------------> current     BAD!
+            if (num_results > 0){
+                int lastIndexOfSecondLastInt = num_results == 1? labelInterval.getEnd() : results.get(num_results-2).getEnd();
+                int firstIndexOfLastInt = results.get(num_results-1).getStart();
+                int lastIndexOfLastInt  = results.get(num_results-1).getEnd();
+                int firstIndexOfCurrentInt = candidateValue.getStart();
+                int d1 = firstIndexOfLastInt - lastIndexOfSecondLastInt;
+                int d2 = firstIndexOfCurrentInt - lastIndexOfLastInt;
+                //we only apply this when we have too much space
+                if (d2 > d1) {
+                    float r = (float) d2 / d1;  // let's keep it between .4 to 2.5 .. so the gap can not become more than 2.5 times larger
+                    if (r > 2.5) return false;
+                }
+            }
+            candidateValue.setLine(getLineNumber(content,candidateValue.getStart()));
+            results.add(candidateValue);
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean validateAndAddVerticalMatches(String content,
+                                                  Dictionary dictionary,
+                                                  Interval labelInterval,
+                                                  ExtIntervalSimple candidateValue,
+                                                  HeaderCellBoundary headerCellBoundary,
+                                                  ArrayList<ExtIntervalSimple> results)
+    {
+        int num_results = results.size();
+
+        Pattern padding_between_values = dictionary.getSkip_between_values();
+        Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
+        int startPreviousInterval = labelInterval.getStart();
+        int endPreviousInterval = labelInterval.getEnd();
+        if (num_results > 0) {
+            ExtIntervalSimple lastFoundInterval = results.get(num_results-1);
+            startPreviousInterval = lastFoundInterval.getStart();
+            endPreviousInterval = lastFoundInterval.getEnd();
+        }
+
+        String [] vertical_overlap_array = getVerticalGep(startPreviousInterval, endPreviousInterval,
+                candidateValue.getStart(), candidateValue.getEnd(),
+                content, headerCellBoundary);
+
+        if (vertical_overlap_array != null) {
+
+            Pattern pattern_to_run_on_gap = num_results == 0 ? padding_between_key_value : padding_between_values;
+
+            String vertical_gap = String.join("", vertical_overlap_array);
+            if (vertical_gap.isEmpty() || pattern_to_run_on_gap.matcher(vertical_gap).find()) {
+                candidateValue.setLine(getLineNumber(content,candidateValue.getStart()));
+                results.add(candidateValue);
+                return true;
+            } else {
+                // we found a valid gap but the value is not meeting the match critria
+                return false;
+            }
+        }
+        return true;
     }
 
     private int getLineNumber(String str, int startInterval){
@@ -551,9 +603,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return linesBetween.length;
     }
 
-    protected String getHorizentalGap(Interval interval1, Interval interval2, String str) {
-        if (interval1.getEnd() > interval2.getStart()) return null;
-        return str.substring(interval1.getEnd(), interval2.getStart());
+    protected String getHorizentalGap(int start, int end, String str) {
+        if (start > end) return null;
+        return str.substring(start, end);
     }
 
     protected int startNextToken(String str, int start){
@@ -608,12 +660,14 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return true;
     }
 
-    protected String [] getVerticalGep(Interval interval1,
-                                       Interval interval2,
+    protected String [] getVerticalGep(int startHeaderInterval,
+                                       int endHeaderInterval,
+                                       int startCellInterval,
+                                       int endCellInterval,
                                        String str,
-                                       VerticalGapDetails verticalGapDetails) {
+                                       HeaderCellBoundary headerCellBoundary) {
 
-        String linesBetweenStr = str.substring(interval1.getStart(), interval2.getEnd());
+        String linesBetweenStr = str.substring(startHeaderInterval, endCellInterval);
         if (linesBetweenStr.indexOf("\n") < 0) {// values are not vertical,  return null
             return null;
         }
@@ -621,30 +675,33 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         String[] linesBetween = linesBetweenStr.split("\n");
         // so, if the first line is regular text don't bother
         if (linesBetween.length == 0) return null;
-        int beginningOfHeaderRow = str.lastIndexOf("\n", interval1.getStart());
+        int beginningOfHeaderRow = str.lastIndexOf("\n", startHeaderInterval);
         if (beginningOfHeaderRow == -1){
             beginningOfHeaderRow = 0;
         }
-        int endOfHeaderRow = str.indexOf("\n", interval1.getEnd());
+
+        int endOfHeaderRow = str.indexOf("\n", endHeaderInterval);
         String headerRow = str.substring(beginningOfHeaderRow, endOfHeaderRow);
         if (!lineIsTableRow(headerRow)) return null;
 
-        if (verticalGapDetails.offsetStartOverlap == null || verticalGapDetails.offsetEndOverlap == null ) {
-            int startLineInterval1 = getFirstNewLineBefore(str, interval1.getStart());
-            int first_index_after_interval1 = startNextToken(str, interval1.getEnd());
-            int last_index_before_interval1 = endPrevToken(str, interval1.getStart());
-            int padding_left_interval1 = (interval1.getStart() - last_index_before_interval1) / 2;
-            int padding_right_interval1 = (first_index_after_interval1 - interval1.getEnd()) / 2;
-            verticalGapDetails.offsetStartOverlap = interval1.getStart() - startLineInterval1 - padding_left_interval1;
-            verticalGapDetails.offsetEndOverlap = interval1.getEnd() - startLineInterval1 + padding_right_interval1;
+        if (!headerCellBoundary.initialized ) {
+            int startLineInterval1 = getFirstNewLineBefore(str, startHeaderInterval);
+            int first_index_after_interval1 = startNextToken(str, endHeaderInterval);
+            int last_index_before_interval1 = endPrevToken(str, startHeaderInterval);
+            int padding_left_interval1 = (startHeaderInterval - last_index_before_interval1) / 2;
+            int padding_right_interval1 = (first_index_after_interval1 - endHeaderInterval) / 2;
+
+            int offsetStartOverlap = startHeaderInterval - startLineInterval1 - padding_left_interval1;
+            int offsetEndOverlap = endHeaderInterval - startLineInterval1 + padding_right_interval1;
+            headerCellBoundary.init(offsetStartOverlap, offsetEndOverlap);
         }
 
-        int offsetStartInterval1 = verticalGapDetails.offsetStartOverlap;
-        int offsetEndInterval1 = verticalGapDetails.offsetEndOverlap;
+        int offsetStartInterval1 = headerCellBoundary.getOffsetStartOverlap();
+        int offsetEndInterval1 = headerCellBoundary.getOffsetEndOverlap();
 
-        int startLineInterval2 = getFirstNewLineBefore(str, interval2.getStart());
-        int offsetStartInterval2 = interval2.getStart() - startLineInterval2;
-        int offsetEndInterval2 = interval2.getEnd() - startLineInterval2;
+        int startLineInterval2 = getFirstNewLineBefore(str, startCellInterval);
+        int offsetStartInterval2 = startCellInterval - startLineInterval2;
+        int offsetEndInterval2 = endCellInterval - startLineInterval2;
 
         //check if the value is within the range set by boundarties of its key (verticalGapDetails)
         boolean overlapValid = offsetEndInterval2 <= offsetEndInterval1 && offsetStartInterval2 >= offsetStartInterval1;
@@ -672,10 +729,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             if (endidx > startOverlapIndex) {
                 String gap = line.substring(startOverlapIndex, endidx);
                 verticalOverlapArray[i-1] = gap;
-     //           double r = alignmentRatio(linesBetween[0], line);
-     //           logger.info(linesBetween[0]);
-     //           logger.info(line);
-     //           logger.info("=======> r " + r);
             }
         }
         return verticalOverlapArray;
@@ -688,18 +741,27 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
 
-    private class VerticalGapDetails {
-        public Integer offsetStartOverlap;
-        public Integer offsetEndOverlap;
+    private class HeaderCellBoundary {
+        private int offsetStartOverlap;
+        private int offsetEndOverlap;
+        boolean initialized;
 
-        public VerticalGapDetails(){
-
+        public HeaderCellBoundary(){
+            initialized = false;
         }
 
-        public void reset(){
-            offsetStartOverlap = null;
-            offsetEndOverlap = null;
+        public void init(int s, int e) {
+            offsetStartOverlap = s;
+            offsetEndOverlap = e;
+            initialized = true;
+        }
+
+        public int getOffsetStartOverlap() {
+            return offsetStartOverlap;
+        }
+
+        public int getOffsetEndOverlap() {
+            return offsetEndOverlap;
         }
     }
-
 }

@@ -3,6 +3,7 @@ package com.quantxt.nlp.entity;
 import com.quantxt.helper.DateResolver;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.helper.types.QTField;
+import com.quantxt.types.Dictionary;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -64,18 +65,15 @@ public class QTValueNumber {
     }
 
 
-    public static String detectDates(String str,
-                                     String context_orig,
-                                     List<ExtIntervalSimple> valIntervals) {
+    public static List<ExtIntervalSimple> detectDates(String str) {
 
-        ArrayList<ExtIntervalSimple> dates = DateResolver.resolveDate(str);
-        valIntervals.addAll(dates);
-        return str;
+        List<ExtIntervalSimple> dates = DateResolver.resolveDate(str);
+        return dates;
     }
 
     public static String detectPattern(String str,
                                        String context_orig,
-                                       java.util.regex.Pattern pattern,
+                                       Pattern pattern,
                                        int [] groups,
                                        List<ExtIntervalSimple> valIntervals)
     {
@@ -109,27 +107,38 @@ public class QTValueNumber {
         return str;
     }
 
-    public static List<ExtIntervalSimple> detectFirstPattern(String str,
-                                                             String context_orig,
-                                                             Pattern matchPattern,
-                                                             boolean hasGroup)
-    {
+    public static List<ExtIntervalSimple> detectFirstPattern(String content,
+                                                             int shift,
+                                                             int stop,
+                                                             Dictionary dictionary) {
+        long start_p = System.currentTimeMillis();
+        Pattern matchPattern = dictionary.getPattern();
+        String str = content.substring(shift);
 
+        List<ExtIntervalSimple> matches = new ArrayList<>();
         Matcher m = matchPattern.matcher(str);
+        int group = dictionary.getGroups() != null ? 1 : 0;
+        while (m.find()){
+            //TODO??? this is bad
 
-        List<ExtIntervalSimple> valIntervals = new ArrayList<>();
-        int group = hasGroup ? 1 : 0;
-        while (m.find()) {
             int start = m.start(group);
             int end = m.end(group);
-            ExtIntervalSimple ext = new ExtIntervalSimple(start, end);
+            String extractionStr = str.substring(start, end);
+
+            // start and end should be shifted to match with the position of the match in
+            // content
+            ExtIntervalSimple ext = new ExtIntervalSimple(start + shift, end + shift);
             ext.setType(QTField.QTFieldType.KEYWORD);
-            String extractionStr = str.substring(ext.getStart(), ext.getEnd());
             ext.setStringValue(extractionStr);
             ext.setCustomData(extractionStr);
-            valIntervals.add(ext);
+            matches.add(ext);
+            if (ext.getEnd() > stop) break;
         }
-        return valIntervals;
+        long took_p = System.currentTimeMillis() - start_p;
+        if (took_p > 1000) {
+            log.warn("Consider improving: Found {} ptr of pattern {} in {}ms", matches.size(), matchPattern.pattern(), took_p);
+        }
+        return matches;
     }
 
     public static String detect(String str,
