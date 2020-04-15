@@ -130,22 +130,20 @@ public class PDFManager {
     }
 
     public ArrayList<String> read(PDDocument pdDoc,
-                                  boolean readLineByLine,
-                                  boolean removeNullCols) throws IOException {
+                                  boolean readLineByLine) throws IOException {
 
 
         if (readLineByLine) {
             ArrayList<char [][]> pages = new ArrayList<>();
             for (int page = 1; page <= pdDoc.getNumberOfPages(); page++) {
-                QTPDFTextStripper qtpdfTextStripperAvg = new QTPDFTextStripper();
+                QTPDFTextStripper qtpdfTextStripperAvg = new QTPDFTextStripper(pdDoc.getPage(page-1));
                 qtpdfTextStripperAvg.setSortByPosition(sortByPosition);
                 qtpdfTextStripperAvg.setStartPage(page);
                 qtpdfTextStripperAvg.setEndPage(page);
                 qtpdfTextStripperAvg.getText(pdDoc);
 
                 QTPDFTextStripper qtpdfTextStripper = new QTPDFTextStripper(pdDoc.getPage(page-1),
-                        qtpdfTextStripperAvg.getHeightMap(),
-                        qtpdfTextStripperAvg.getWeidthMap());
+                        qtpdfTextStripperAvg.getYPixelDistr());
                 qtpdfTextStripper.setSortByPosition(sortByPosition);
                 qtpdfTextStripper.setStartPage(page);
                 qtpdfTextStripper.setEndPage(page);
@@ -357,10 +355,6 @@ public class PDFManager {
             page_contents.add(pageStringBuilder.toString());
         }
         return page_contents;
-    }
-
-    public static void main(String[] args) {
-
     }
 }
 

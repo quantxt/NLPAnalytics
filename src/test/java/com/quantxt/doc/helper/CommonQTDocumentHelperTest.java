@@ -72,7 +72,8 @@ public class CommonQTDocumentHelperTest {
 
     @Test
     public void largeHorizentalSpace() {
-        String str = "Total selling, general and administrative expense(1) \n" +
+        String str =
+                "Total selling, general and administrative expense(1) \n" +
                 "$ \n" +
                 "177.3 \n" +
                 "                           $ \n" +
@@ -100,13 +101,14 @@ public class CommonQTDocumentHelperTest {
         // THEN
         assertNotNull(doc.getValues());
         assertEquals(doc.getTitle(),
-                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td></tr></table>")
+                "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
     }
 
     @Test
     public void largeHorizentalSpaceValid() {
-        String str = "Total selling, general and administrative expense(1) \n" +
+        String str =
+                "Total selling, general and administrative expense(1) \n" +
                 "                                   $ \n" +
                 "177.3 \n" +
                 "   $ \n" +
@@ -183,7 +185,7 @@ public class CommonQTDocumentHelperTest {
         InputStream is = getClass().getClassLoader().getResourceAsStream("acord_27pages.pdf");
         PDDocument pdDocument = getPDFDocument(is);
         PDFManager pdfManager = new PDFManager(true);
-        ArrayList<String> content = pdfManager.read(pdDocument, true, true);
+        ArrayList<String> content = pdfManager.read(pdDocument, true);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
@@ -192,7 +194,7 @@ public class CommonQTDocumentHelperTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("SPK", dictItms);
 
-        Pattern skipBetweenValues = Pattern.compile("^([ ,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]*\n?){0,10}$");
+        Pattern skipBetweenValues = Pattern.compile("^(?:[ ,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]*\n){0,10}$");
         Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
                 skipBetweenValues, skipBetweenValues, null, null);
 
