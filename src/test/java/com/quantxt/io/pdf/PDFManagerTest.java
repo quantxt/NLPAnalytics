@@ -40,15 +40,15 @@ public class PDFManagerTest {
         InputStream is = getClass().getClassLoader().getResourceAsStream("803673_p1-compressed.pdf");
         PDDocument pdDocument = getPDFDocument(is);
         PDFManager pdfManager = new PDFManager(false);
-        ArrayList<String> content = pdfManager.read(pdDocument, true, true);
+        ArrayList<String> content = pdfManager.read(pdDocument, true);
         pdDocument.close();
         assertFalse(content == null);
         assertFalse(content.isEmpty());
         String page = String.join("\n", content);
 
-        assertThat(page.indexOf("Years in Business:")).isEqualTo(2088);
-        assertThat(page.indexOf("9/12/2019")).isEqualTo(994);
-        assertThat(page.indexOf("Sq Ft of Entire Bldg")).isEqualTo(9951);
+        assertThat(page.indexOf("Years in Business:")).isEqualTo(3133);
+        assertThat(page.indexOf("9/12/2019")).isEqualTo(1377);
+        assertThat(page.indexOf("Sq Ft of Entire Bldg")).isEqualTo(16962);
     }
 
     @Test
@@ -56,7 +56,7 @@ public class PDFManagerTest {
         InputStream is = getClass().getClassLoader().getResourceAsStream("803673_p1-compressed.pdf");
         PDDocument pdDocument = getPDFDocument(is);
         PDFManager pdfManager = new PDFManager(true);
-        ArrayList<String> content = pdfManager.read(pdDocument, true, true);
+        ArrayList<String> content = pdfManager.read(pdDocument, true);
         pdDocument.close();
         assertFalse(content == null);
         assertFalse(content.isEmpty());
@@ -68,9 +68,9 @@ public class PDFManagerTest {
 
          */
 
-        assertThat(page.indexOf("Years in Business:")).isEqualTo(2088);
-        assertThat(page.indexOf("9/12/2019")).isEqualTo(994);
-        assertThat(page.indexOf("Sq Ft of Entire Bldg")).isEqualTo(9951);
+        assertThat(page.indexOf("Years in Business:")).isEqualTo(3133);
+        assertThat(page.indexOf("9/12/2019")).isEqualTo(1377);
+        assertThat(page.indexOf("Sq Ft of Entire Bldg")).isEqualTo(16962);
     }
 
     @Test
@@ -78,16 +78,16 @@ public class PDFManagerTest {
         InputStream is = getClass().getClassLoader().getResourceAsStream("acord_p8.pdf");
         PDDocument pdDocument = getPDFDocument(is);
         PDFManager pdfManager = new PDFManager(true);
-        ArrayList<String> content = pdfManager.read(pdDocument, true, true);
+        ArrayList<String> content = pdfManager.read(pdDocument, true);
         pdDocument.close();
         assertFalse(content == null);
         assertFalse(content.isEmpty());
         String page = String.join("\n", content);
 
-        assertThat(page.indexOf("BUS PERS PROP")).isEqualTo(2207);
-        assertThat(page.indexOf("10,196")).isEqualTo(2505);
-        assertThat(page.indexOf("CONSTRUCTION")).isEqualTo(4258);
-        assertThat(page.indexOf("TOTAL AREA")).isEqualTo(4621);
+        assertThat(page.indexOf("BUS PERS PROP")).isEqualTo(2224);
+        assertThat(page.indexOf("10,196")).isEqualTo(2646);
+        assertThat(page.indexOf("CONSTRUCTION")).isEqualTo(5048);
+        assertThat(page.indexOf("TOTAL AREA")).isEqualTo(5556);
     //    assertThat(page.indexOf("YR BUILT")).isEqualTo(4096);
     }
 
@@ -96,16 +96,16 @@ public class PDFManagerTest {
         InputStream is = getClass().getClassLoader().getResourceAsStream("FT_ir_2019Q3.pdf");
         PDDocument pdDocument = getPDFDocument(is);
         PDFManager pdfManager = new PDFManager(true);
-        ArrayList<String> content = pdfManager.read(pdDocument, true, true);
+        ArrayList<String> content = pdfManager.read(pdDocument, true);
         pdDocument.close();
         assertFalse(content == null);
         assertFalse(content.isEmpty());
 
         Assert.assertEquals(content.size(), 17);
 
-        assertThat(content.get(6).indexOf("Adjusted EBITDA Margin")).isEqualTo(7715);
-        assertThat(content.get(6).indexOf("Adjusted EBITDA*")).isEqualTo(6920);
-        assertThat(content.get(6).indexOf("CapEx")).isEqualTo(8517);
+        assertThat(content.get(6).indexOf("Adjusted EBITDA Margin")).isEqualTo(10386);
+        assertThat(content.get(6).indexOf("Adjusted EBITDA*")).isEqualTo(8832);
+        assertThat(content.get(6).indexOf("CapEx")).isEqualTo(11829);
     }
 
     @Test
@@ -114,7 +114,7 @@ public class PDFManagerTest {
             InputStream is = getClass().getClassLoader().getResourceAsStream("FT_ir_2019Q3.pdf");
             PDDocument pdDocument = getPDFDocument(is);
             PDFManager pdfManager = new PDFManager(true);
-            ArrayList<String> content = pdfManager.read(pdDocument, true, true);
+            ArrayList<String> content = pdfManager.read(pdDocument, true);
             pdDocument.close();
             assertFalse(content == null);
 
@@ -156,7 +156,7 @@ public class PDFManagerTest {
             InputStream is = getClass().getClassLoader().getResourceAsStream("FT_ir_2019Q3.pdf");
             PDDocument pdDocument = getPDFDocument(is);
             PDFManager pdfManager = new PDFManager(false);
-            ArrayList<String> content = pdfManager.read(pdDocument, true, true);
+            ArrayList<String> content = pdfManager.read(pdDocument, true);
             pdDocument.close();
             assertFalse(content == null);
 
@@ -201,7 +201,7 @@ public class PDFManagerTest {
             InputStream is = getClass().getClassLoader().getResourceAsStream("ft_p7.pdf");
             PDDocument pdDocument = getPDFDocument(is);
             PDFManager pdfManager = new PDFManager(true);
-            ArrayList<String> content = pdfManager.read(pdDocument, true, true);
+            ArrayList<String> content = pdfManager.read(pdDocument, true);
             pdDocument.close();
             assertFalse(content == null);
 
