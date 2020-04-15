@@ -10,83 +10,90 @@ import java.util.*;
 public class QTPDFTextStripper extends PDFTextStripper {
 
     private char [][] lines;
-    private float minHeigh;
-    private float minWidth;
+    private float[] yPixelDistr;
 
-    private Map<Float, Integer> heightDist;
-    private Map<Float, Integer> weidthDist;
-    private boolean avgIsSet = false;
-
-    public QTPDFTextStripper() throws IOException {
+    public QTPDFTextStripper(PDPage pdPage) throws IOException {
         super();
-        heightDist = new TreeMap<>();
-        weidthDist = new TreeMap<>();
+        yPixelDistr = new float[(int)pdPage.getMediaBox().getHeight()];
     }
 
     public QTPDFTextStripper(PDPage pdPage,
-                             Map<Float, Integer> heightDist,
-                             Map<Float, Integer> weidthDist) throws IOException {
-        avgIsSet = true;
-        ArrayList<Float> allWdiths = new ArrayList<>(weidthDist.keySet());
-        this.minWidth = allWdiths.get(0);
+                             float[] yPixelDistr) throws IOException {
+        lines = new char[ (int)pdPage.getMediaBox().getHeight()][(int)pdPage.getMediaBox().getWidth()];
+        this.yPixelDistr = yPixelDistr;
 
-        ArrayList<Float> allHeight = new ArrayList<>(heightDist.keySet());
-        this.minHeigh = allHeight.get(0);
-
-        float page_height = pdPage.getMediaBox().getHeight();
-        float page_width = pdPage.getMediaBox().getWidth();
-        lines = new char[ (int)(page_height/ this.minHeigh)][(int)(page_width/ this.minWidth)];
-  //      System.out.println(" ====== " + this.avgWidth + " / " + this.avgHeigh);
+        float pageLineWdith = pdPage.getMediaBox().getWidth();
+        for (int i=0; i < yPixelDistr.length; i++){
+            char [] line_text = new char[(int)pageLineWdith];
+            //By default each line is filled with space character
+            Arrays.fill(line_text, ' ');
+            lines[i] = line_text;
+        }
     }
 
-    public Map<Float, Integer> getHeightMap(){
-        return heightDist;
-    }
-
-    public Map<Float, Integer> getWeidthMap(){
-        return weidthDist;
+    public float[] getYPixelDistr(){
+        return yPixelDistr;
     }
 
     @Override
     protected void writeString(String text, List<TextPosition> textPositions)
     {
-        if (!avgIsSet){
-            for (TextPosition textPosition : textPositions){
-                float w = Math.round(textPosition.getWidth()  * 100f) / 100f ;
-                float h = Math.round(textPosition.getHeightDir() * 100f) / 100f;
-                Integer hc = heightDist.get(h);
-                Integer wc = weidthDist.get(w);
-                if (hc == null){
-                    hc = 0;
+        TextPosition firstTp = textPositions.get(0);
+        if (lines == null){
+            int start_line_top = (int) firstTp.getYDirAdj();
+            int start_line_bot = (int) (firstTp.getYDirAdj() + firstTp.getHeight());
+
+            for (TextPosition tp : textPositions){
+                int start_line_top_next = (int) tp.getYDirAdj();
+                if (start_line_top_next != start_line_top){
+                    int start_line_bot_next = (int) (tp.getYDirAdj() + tp.getHeight());
+                    start_line_top =  start_line_top_next;
+                    start_line_bot = start_line_bot_next;
                 }
-                if (wc == null){
-                    wc = 0;
+
+                for (int i = start_line_top; i < start_line_bot; i++){
+                    yPixelDistr[i] += 1;
                 }
-                heightDist.put(h, hc+1);
-                weidthDist.put(w,  wc+1);
             }
             return;
         }
 
-        TextPosition firstTextPosition = textPositions.get(0);
-        int center = (int) (firstTextPosition.getYDirAdj() - .5 * firstTextPosition.getHeightDir());
+        int start_line_top = (int)  firstTp.getYDirAdj();
+        int start_line_bot = (int) (firstTp.getYDirAdj() + firstTp.getHeight());
+        int line_number = start_line_top;
 
-        Integer line_number = (int) (center / minHeigh) ;
-        char [] line_text = lines[line_number];
-
-        if (line_text == null){
-            float pageLineWdith = firstTextPosition.getPageWidth() / minWidth ;
-            line_text = new char[(int)pageLineWdith];
-            //By default each line is filled with space character
-            Arrays.fill(line_text, ' ');
-            lines[line_number] = line_text;
+        int start_search_range = start_line_top > 4 ? start_line_top - 4 : start_line_top;
+        int end_search_range = start_line_bot < lines.length - 4 ? start_line_bot + 4: start_line_bot;
+        float intensity =  yPixelDistr[start_search_range];
+        for (int i=start_search_range; i <= end_search_range; i++){
+            if (yPixelDistr[i] > intensity){
+                line_number= i;
+                intensity = yPixelDistr[i];
+            }
         }
 
-        int index = (int) ( firstTextPosition.getXDirAdj()  / minWidth);
+        char [] line_text = lines[line_number];
+        int index = (int) ( firstTp.getXDirAdj());
 
-   //     logger.info(" ==> " + text + " / " + firstTextPosition.getX() + " / " + firstTextPosition.getXDirAdj() + " / " + index);
-        for (int i=0; i<text.length();i++){
-            char c = text.charAt(i);
+        for (TextPosition tp : textPositions){
+            int start_line_top_next = (int) tp.getYDirAdj();
+            if (start_line_top_next != start_line_top){
+                start_search_range = start_line_top > 4 ? start_line_top - 4 : start_line_top;
+                end_search_range = start_line_bot < lines.length - 4 ? start_line_bot + 4: start_line_bot;
+                intensity =  yPixelDistr[start_search_range];
+                for (int i=start_search_range; i <= end_search_range; i++){
+                    if (yPixelDistr[i] > intensity){
+                        line_number= i;
+                        intensity = yPixelDistr[i];
+                    }
+                }
+
+                start_line_top =  start_line_top_next;
+                line_text = lines[line_number];
+                index = (int) ( tp.getXDirAdj());
+            }
+
+            char c = tp.getUnicode().charAt(0);
             line_text[index++] = c;
         }
     }

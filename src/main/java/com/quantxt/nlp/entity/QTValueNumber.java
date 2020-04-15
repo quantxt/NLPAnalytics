@@ -141,6 +141,119 @@ public class QTValueNumber {
         return matches;
     }
 
+    public static ExtIntervalSimple findFirstNumeric(String str,
+                                                     int shift_from_origin)
+    {
+        ArrayList<Integer> thousands = new ArrayList<>();
+        ArrayList<Integer> millions = new ArrayList<>();
+        ArrayList<Integer> billions = new ArrayList<>();
+
+        Matcher m = units_prefix_thousands.matcher(str);
+        while (m.find()){
+            thousands.add(m.start() - str.length() + str.length() + 1);
+        }
+        m = units_prefix_million.matcher(str);
+        while (m.find()){
+            millions.add(m.start() -  str.length() + str.length() + 1);
+        }
+        m = units_prefix_billion.matcher(str);
+        while (m.find()){
+            billions.add(m.start() -  str.length() + str.length() + 1);
+        }
+
+        m = PATTERN.matcher(str);
+
+        int thousands_offset = -1;
+        int millions_offset = -1;
+        int billions_offset = -1;
+        if (!m.find()) return null;
+        int start = m.start(simpleNumberGroup);
+        int end   = m.end(simpleNumberGroup);
+
+        //we want to make sure the number is not attached or part of a word like DS123
+        if (start>0 ) {
+            char char_before = str.charAt(start -1);
+            if ((char_before >= 65 && char_before <=90) || (char_before >= 97 && char_before <=122) ) {
+                return null;
+            }
+        }
+
+        double mult = getMult(start, thousands_offset, millions_offset, billions_offset, thousands,
+                millions, billions);
+
+        String extractionStr = str.substring(start, end);
+
+        extractionStr = extractionStr.replace(",", "").trim();
+        if (extractionStr.contains("(") && extractionStr.contains(")")){
+            mult *= -1;
+            extractionStr = m.group(3).replace(",", "").trim();
+        }
+
+        try {
+            QTField.QTFieldType t = null;
+
+            if (m.group(4) != null){
+                t = PERCENT;
+                String percent_str = m.group(4);
+                extractionStr = extractionStr.replace(percent_str, "");
+            } else {
+                // search for currency
+                String string_to_lookbehind_for_currencieis = str.substring(Math.max(0, start - 50), start);
+                Matcher currency_matcher = currencies.matcher(string_to_lookbehind_for_currencieis);
+                if (currency_matcher.find()){
+                    t = QTField.QTFieldType.MONEY;
+                    // and move the start to where the currency was found
+                    int start_currency = currency_matcher.start();
+                    int shift = string_to_lookbehind_for_currencieis.length() - start_currency;
+                    if (start > shift){
+                        start -= shift;
+                    }
+                }
+            }
+
+            if (t == null){
+                if (extractionStr.indexOf(".") < 0){
+                    t = LONG;
+                } else {
+                    t = QTField.QTFieldType.DOUBLE;
+                }
+            }
+
+            ExtIntervalSimple ext = new ExtIntervalSimple(start + shift_from_origin, end + shift_from_origin);
+            ext.setType(t);
+
+            String subStr = str.substring(end);
+            Matcher unitMatch = units.matcher(subStr);
+            if (unitMatch.find() && unitMatch.start() < 4){
+                String unitMatched = unitMatch.group(1);
+                switch (unitMatched) {
+                    case "hundred" : mult *= 100; break;
+                    case "thousand" : mult *= 1000; break;
+                    case "million" : case "M" : mult *=1000000; break;
+                    case "billion" : case "B" : mult *=1000000000; break;
+                }
+            }
+            double parsed = Double.parseDouble(extractionStr);
+            if (t != PERCENT) {
+                parsed *= mult;
+            }
+
+            if (t == LONG){
+                long long_value = (long) parsed;
+                ext.setIntValue(long_value);
+                ext.setCustomData(String.valueOf(long_value));
+            } else {
+                ext.setCustomData(String.valueOf(parsed));
+                ext.setDoubleValue(parsed);
+            }
+            return ext;
+        } catch (Exception e){
+            log.error(e.getMessage() + " " + extractionStr);
+        }
+
+        return null;
+    }
+
     public static String detect(String str,
                                 String context_orig,
                                 List<ExtIntervalSimple> valIntervals)
@@ -174,7 +287,6 @@ public class QTValueNumber {
             int start = m.start(simpleNumberGroup);
             int end   = m.end(simpleNumberGroup);
 
-            String mmmm = m.group();
             //we want to make sur ethe number is not attached or part of a word like DS123
             if (start>0 ) {
                 char char_before = str.charAt(start -1);

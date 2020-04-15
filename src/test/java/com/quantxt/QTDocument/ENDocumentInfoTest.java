@@ -144,6 +144,7 @@ public class ENDocumentInfoTest {
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
             doc.extractKeyValues(qtSearchable,  false, "");
             doc.convertValues2titleTable();
+
             // THEN
             assertFalse(doc.getValues() == null);
             assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>TOTAL AREA 1</td><td>2</td><td>5</td><td>2000</td><td>1590</td></tr></table>");
@@ -204,6 +205,7 @@ public class ENDocumentInfoTest {
             helper.extract(doc, searchableList, true, "");
 
             doc.convertValues2titleTable();
+
             // THEN
             assertFalse(doc.getValues() == null);
             assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>Area</td><td>1,590</td></tr></table>");
