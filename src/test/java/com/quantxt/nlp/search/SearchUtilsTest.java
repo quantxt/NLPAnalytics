@@ -45,7 +45,7 @@ public class SearchUtilsTest {
             ArrayList<String> synonym_pairs = new ArrayList<>();
             synonym_pairs.add("ert\tearning");
             synonym_pairs.add("gain\tprofit");
-            Dictionary dictionary = new Dictionary(entMap);
+            Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
             qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STEM);
             qtSearchable_exact = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,

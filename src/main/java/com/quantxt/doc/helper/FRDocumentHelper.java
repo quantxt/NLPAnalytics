@@ -84,7 +84,6 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
     }
 
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
-    @Override
     public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
                                                    String[] tokens) {
 

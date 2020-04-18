@@ -5,8 +5,6 @@ import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import com.quantxt.types.MapSort;
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
@@ -38,8 +36,6 @@ import static com.quantxt.nlp.search.SearchUtils.*;
 import static com.quantxt.types.DictSearch.AnalyzType.STANDARD;
 import static com.quantxt.types.DictSearch.Mode.ORDERED_SPAN;
 
-@Getter
-@Setter
 public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
     private static final long serialVersionUID = -2557457339416308514L;
@@ -174,6 +170,32 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         return this;
     }
 
+    public void purge() throws IOException {
+        Map<String, Analyzer> analyzerMap = new HashMap<>();
+
+        for (Map.Entry<String, List<DctSearhFld>> e : docSearchFldMap.entrySet()) {
+            for (DctSearhFld dctSearhFld : e.getValue()) {
+                analyzerMap.put(dctSearhFld.getSearch_fld(), dctSearhFld.getIndex_analyzer());
+            }
+        }
+
+        PerFieldAnalyzerWrapper pfaw = new PerFieldAnalyzerWrapper(new KeywordAnalyzer(), analyzerMap);
+        Directory mMapDirectory = null;
+
+        IndexWriterConfig config = new IndexWriterConfig(pfaw);
+        try {
+            mMapDirectory = index_path == null ? new ByteBuffersDirectory() :
+                    new MMapDirectory(Paths.get(index_path));
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+        IndexWriter writer = new IndexWriter(mMapDirectory, config);
+        writer.deleteAll();
+        writer.close();
+    }
+
+
     public QTSearchableBase create() {
         Map<String, Analyzer> analyzerMap = new HashMap<>();
 
@@ -279,5 +301,69 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
     @Override
     public List<T> search(final String query_string) {
         return null;
+    }
+
+    public IndexSearcher getIndexSearcher() {
+        return indexSearcher;
+    }
+
+    public int getMinFuzzyTermLength() {
+        return minFuzzyTermLength;
+    }
+
+    public int getTopN() {
+        return topN;
+    }
+
+    public void setTopN(int topN) {
+        this.topN = topN;
+    }
+
+    public QTDocument.Language getLang() {
+        return lang;
+    }
+
+    public void setIndexSearcher(IndexSearcher indexSearcher) {
+        this.indexSearcher = indexSearcher;
+    }
+
+    public void setMinFuzzyTermLength(int minFuzzyTermLength) {
+        this.minFuzzyTermLength = minFuzzyTermLength;
+    }
+
+    public Map<String, List<DctSearhFld>> getDocSearchFldMap() {
+        return docSearchFldMap;
+    }
+
+    public List<String> getStopWords() {
+        return stopWords;
+    }
+
+    public List<String> getSynonymPairs() {
+        return synonymPairs;
+    }
+
+    public String getIndex_path() {
+        return index_path;
+    }
+
+    public void setDocSearchFldMap(Map<String, List<DctSearhFld>> docSearchFldMap) {
+        this.docSearchFldMap = docSearchFldMap;
+    }
+
+    public void setIndex_path(String index_path) {
+        this.index_path = index_path;
+    }
+
+    public void setLang(QTDocument.Language lang) {
+        this.lang = lang;
+    }
+
+    public void setStopWords(List<String> stopWords) {
+        this.stopWords = stopWords;
+    }
+
+    public void setSynonymPairs(List<String> synonymPairs) {
+        this.synonymPairs = synonymPairs;
     }
 }

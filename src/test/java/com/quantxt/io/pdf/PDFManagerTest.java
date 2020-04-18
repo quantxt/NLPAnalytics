@@ -130,7 +130,7 @@ public class PDFManagerTest {
             Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
             Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE, 130,
+            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE,
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
@@ -175,7 +175,7 @@ public class PDFManagerTest {
             Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
             Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE, 130,
+            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE,
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
@@ -216,7 +216,7 @@ public class PDFManagerTest {
             Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
             Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE, 130,
+            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE,
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);

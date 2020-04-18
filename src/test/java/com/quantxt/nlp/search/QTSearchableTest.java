@@ -42,7 +42,7 @@ public class QTSearchableTest {
             ArrayList<String> synonym_pairs = new ArrayList<>();
             synonym_pairs.add("Inc\tinciobi");
             synonym_pairs.add("Inc\tcorporate");
-            Dictionary dictionary = new Dictionary(entMap);
+            Dictionary dictionary = new Dictionary("QTSearchableTest", entMap);
             qtSearchable = new QTSearchable(dictionary, null, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
             setUpIsDone = true;
@@ -114,7 +114,7 @@ public class QTSearchableTest {
             // synonyms;
             ArrayList<String> stopword = new ArrayList<>();
             stopword.add("inc");
-            Dictionary dictionary = new Dictionary(entMap);
+            Dictionary dictionary = new Dictionary("QTSearchableTest", entMap);
             QTSearchable qtSearchable = new QTSearchable(dictionary, null, null, stopword,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
             // GIVEN
@@ -146,7 +146,7 @@ public class QTSearchableTest {
             String [] stopword = new String [] {"distance", "to", "hydrant", "district", "code", "stat",
                     "number", "prot" ,"cl" , "#", "stories", "basm'ts", "yr", "built", "total", "area"};
 
-            Dictionary dictionary = new Dictionary(entMap);
+            Dictionary dictionary = new Dictionary("QTSearchableTest", entMap);
             QTSearchable qtSearchable = new QTSearchable(dictionary, null, null, Arrays.asList(stopword),
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
             // GIVEN

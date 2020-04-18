@@ -23,7 +23,6 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +45,6 @@ import static com.quantxt.util.NLPUtil.isEmpty;
 public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     final private static Logger logger = LoggerFactory.getLogger(CommonQTDocumentHelper.class);
-    final public static ObjectMapper objectMapper = new ObjectMapper();
 
     public enum QTPosTags {NOUNN, VERBB, INTJ, X, ADV, AUX, ADP, ADJ, CCONJ, PROPN, PRON, SYM, NUM, PUNCT}
 
@@ -272,11 +270,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public Set<String> getPronouns() {
-        return pronouns;
-    }
-
-    @Override
     public boolean isSentence(String str, List<String> tokens) {
         int numTokens = tokens.size();
         //TODO: this is too high.. pass a parameter
@@ -306,23 +299,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     @Override
     public String getValues(String str, String context, List<ExtIntervalSimple> valueInterval) {
         return QTValueNumber.detect(str, context, valueInterval);
-    }
-
-    @Override
-    public String getDatetimeValues(String str, String context, List<ExtIntervalSimple> valueInterval) {
-        List<ExtIntervalSimple> list =  QTValueNumber.detectDates(str);
-        valueInterval.addAll(list);
-        return str;
-    }
-
-    @Override
-    public String getPatternValues(String str, String context, Pattern regex, int[] groups, List<ExtIntervalSimple> valueInterval) {
-        return QTValueNumber.detectPattern(str, context, regex, groups, valueInterval);
-    }
-
-    @Override
-    public QTDocument.DOCTYPE getVerbType(String verbPhs) {
-        return null;
     }
 
     private Map<String, List<ExtInterval>> findLabels(List<QTSearchable> extractDictionaries,

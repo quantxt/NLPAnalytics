@@ -52,7 +52,7 @@ public class CommonQTDocumentHelperTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Expense" , dictItms);
 
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
                 Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -87,7 +87,7 @@ public class CommonQTDocumentHelperTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Expense" , dictItms);
 
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
                 Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -122,7 +122,7 @@ public class CommonQTDocumentHelperTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Expense" , dictItms);
 
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
                 Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -195,7 +195,7 @@ public class CommonQTDocumentHelperTest {
         entMap.put("SPK", dictItms);
 
         Pattern skipBetweenValues = Pattern.compile("^(?:[ ,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]*\n){0,10}$");
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
                 skipBetweenValues, skipBetweenValues, null, null);
 
         //      logger.info(content.get(25));
@@ -221,7 +221,7 @@ public class CommonQTDocumentHelperTest {
         entMap.put("Orig Year Built", dictItms);
 
         Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,10}\n){0,3}$");
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
                 skipBetweenKeyValues, null, null, null);
 
 
@@ -251,7 +251,7 @@ public class CommonQTDocumentHelperTest {
         entMap.put("Year Built", dictItms);
 
         Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,10}\n){0,3}$");
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE, 5,
+        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
                 skipBetweenKeyValues, null, null, null);
 
 
