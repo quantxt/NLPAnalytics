@@ -3,7 +3,6 @@ package com.quantxt.types;
 import java.math.BigDecimal;
 import java.util.regex.Matcher;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.quantxt.util.Const;
 import com.quantxt.util.NLPUtil;
 
@@ -50,7 +49,6 @@ public class ResultCell {
         this.highlight = highlight;
     }
 
-    @JsonIgnore
     public Double getNumericCellValue() {
         if (isEmpty()) {
             return 0d;
@@ -60,7 +58,6 @@ public class ResultCell {
         return !m.find() ? null : new BigDecimal(Double.parseDouble(val)).doubleValue();
     }
 
-    @JsonIgnore
     public Integer getIntegerCellValue() {
         if (isEmpty()) {
             return 0;
@@ -70,7 +67,6 @@ public class ResultCell {
         return !m.find() ? null : (int) Double.parseDouble(val);
     }
 
-    @JsonIgnore
     public Long getLongCellValue() {
         if (isEmpty()) {
             return 0L;
@@ -80,7 +76,6 @@ public class ResultCell {
         return !m.find() ? null : (long) Double.parseDouble(val);
     }
 
-    @JsonIgnore
     public boolean isNumericType() {
         return attribute.getType() == AttrType.DOUBLE
                 || attribute.getType() == AttrType.PERCENT;

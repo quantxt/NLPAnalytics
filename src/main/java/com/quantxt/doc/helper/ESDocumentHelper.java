@@ -5,12 +5,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.quantxt.helper.types.ExtInterval;
 import com.quantxt.helper.types.ExtIntervalSimple;
-import com.quantxt.helper.types.QTField;
-import com.quantxt.helper.types.QTMatch;
-import com.quantxt.interval.Interval;
-import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
@@ -85,7 +80,6 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
     }
 
     //https://github.com/slavpetrov/universal-pos-tags/blob/master/es-eagles.map
-    @Override
     public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
                                                    String[] tokens) {
 

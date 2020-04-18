@@ -4,8 +4,6 @@ import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.Query;
@@ -16,8 +14,7 @@ import java.util.*;
 
 import static com.quantxt.nlp.search.SearchUtils.*;
 
-@Getter
-@Setter
+
 public class QTSearchable extends QTSearchableBase<QTMatch> {
 
     final private static Logger logger = LoggerFactory.getLogger(QTSearchable.class);
@@ -75,6 +72,13 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
         }
 
         return res;
+    }
+
+    public int getMinTermLength(){
+        return minTermLength;
+    }
+    public void setMinTermLength(int minTermLength){
+        this.minTermLength = minTermLength;
     }
 
 }
