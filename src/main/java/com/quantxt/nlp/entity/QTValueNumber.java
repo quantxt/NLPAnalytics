@@ -1,11 +1,13 @@
 package com.quantxt.nlp.entity;
 
+import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.helper.DateResolver;
 import com.quantxt.helper.types.ExtIntervalSimple;
 import com.quantxt.helper.types.QTField;
 import com.quantxt.types.Dictionary;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -18,8 +20,9 @@ import static com.quantxt.helper.types.QTField.QTFieldType.*;
  * Created by matin on 11/24/18.
  */
 
-@Slf4j
 public class QTValueNumber {
+
+    final private static Logger log = LoggerFactory.getLogger(QTValueNumber.class);
 
     final private static String simple_number = "(([\\+\\-]?\\d[,\\.\\d]+\\d|\\d+)|\\(\\s*(\\d[,\\.\\d]+\\d|\\d+)\\s*\\))((?i)\\s*%|\\s*percent)?";
     final private static int simpleNumberGroup = 0;

@@ -83,7 +83,6 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
         return tag.equals("C") || tag.equals("I") || tag.startsWith("S");
     }
 
-    @Override
     public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
                                                          String[] tokens) {
         String[] taags = getPosTags(tokens);

@@ -5,13 +5,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.quantxt.doc.helper.ENDocumentHelper;
-
-import static com.quantxt.doc.helper.CommonQTDocumentHelper.objectMapper;
 
 /**
  * Created by matin on 1/20/18.
@@ -19,6 +18,7 @@ import static com.quantxt.doc.helper.CommonQTDocumentHelper.objectMapper;
 public class ENDocumentInfo extends QTDocument {
 
     private static final Logger logger = LoggerFactory.getLogger(ENDocumentInfo.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public ENDocumentInfo(String body, String title, QTDocumentHelper helper) {
         super(body, title, helper);

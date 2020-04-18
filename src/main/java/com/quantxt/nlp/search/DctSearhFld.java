@@ -2,8 +2,6 @@ package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
 import com.quantxt.types.DictSearch;
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
@@ -24,8 +22,6 @@ import java.util.List;
 
 import static com.quantxt.nlp.search.SearchUtils.*;
 
-@Setter
-@Getter
 public class DctSearhFld implements Serializable {
 
     private static final long serialVersionUID = -1000275390599103497L;
@@ -150,5 +146,37 @@ public class DctSearhFld implements Serializable {
         } else {
             this.mirror_synonym_search_analyzer = this.search_analyzer;
         }
+    }
+
+    public Analyzer getIndex_analyzer() {
+        return index_analyzer;
+    }
+
+    public Analyzer getMirror_synonym_search_analyzer() {
+        return mirror_synonym_search_analyzer;
+    }
+
+    public Analyzer getSearch_analyzer() {
+        return search_analyzer;
+    }
+
+    public DictSearch.AnalyzType getAnalyzType() {
+        return analyzType;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public DictSearch.Mode getMode() {
+        return mode;
+    }
+
+    public String getSearch_fld() {
+        return search_fld;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 }

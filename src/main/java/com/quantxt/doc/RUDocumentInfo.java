@@ -83,8 +83,4 @@ public class RUDocumentInfo extends QTDocument {
         return false;
     }
 
-    //http://corpus.leeds.ac.uk/mocky/ru-table.tab
-    public List<ExtIntervalSimple> hack(QTDocument doc, String[] parts) {
-        return helper.getNounAndVerbPhrases(doc.getTitle(), parts);
-    }
 }
