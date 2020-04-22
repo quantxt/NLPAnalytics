@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,10 +25,6 @@ public class ESDocumentInfo extends QTDocument {
     public ESDocumentInfo(String body, String title) {
         super(body, title, new ESDocumentHelper());
         language = Language.SPANISH;
-    }
-
-    public ESDocumentInfo(Elements body, String title) {
-        super(body.html(), title, new ESDocumentHelper());
     }
 
     @Override

@@ -1,22 +1,16 @@
 package com.quantxt.doc.helper;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.List;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.quantxt.doc.ENDocumentInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,30 +30,6 @@ public class ENDocumentHelperTest {
         helper = new ENDocumentHelper();
         helper.init();
         helper.loadNERModel();
-    }
-
-    @Test
-    public void testRawTestSentences() {
-        // GIVEN
-        String html = "<p>Light behaves in some respects like particles and in "
-                + "other respects like waves. Matter—the \"stuff\" of the "
-                + "universe consisting of particles such as "
-                + "<a href=\"/wiki/Electron\" title=\"Electron\">electrons</a> and "
-                + "<a href=\"/wiki/Atom\" title=\"Atom\">atoms</a>—exhibits "
-                + "<a href=\"/wiki/Wave%E2%80%93particle_duality\" title=\"Wave–particle duality\">wavelike behavior</a> too. "
-                + "Some light sources, such as <a href=\"/wiki/Neon_lighting\" title=\"Neon lighting\">neon lights</a>, "
-                + "give off only certain frequencies of light."
-                + "</p>";
-        Document document = Jsoup.parseBodyFragment(html);
-        Elements elements = document.getElementsByTag("p");
-        ENDocumentInfo doc = new ENDocumentInfo(elements, "");
-
-        // WHEN
-        String[] sentences = helper.getSentences(doc.getBody());
-
-        // THEN
-        assertNotNull(sentences);
-        assertEquals(sentences.length, 3);
     }
 
     @Test

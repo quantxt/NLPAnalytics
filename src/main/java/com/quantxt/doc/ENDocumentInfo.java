@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,10 +27,6 @@ public class ENDocumentInfo extends QTDocument {
     public ENDocumentInfo(String body, String title) {
         super(body, title, new ENDocumentHelper());
         language = Language.ENGLISH;
-    }
-
-    public ENDocumentInfo(Elements body, String title) {
-        super(body.html(), title, new ENDocumentHelper());
     }
 
     @Override
