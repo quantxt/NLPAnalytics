@@ -4,12 +4,19 @@ import com.quantxt.doc.QTDocument;
 import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.LowerCaseFilter;
+import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
+import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
+import org.apache.lucene.analysis.miscellaneous.LengthFilter;
+import org.apache.lucene.analysis.pattern.PatternCaptureGroupTokenFilter;
+import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.FieldType;
@@ -19,6 +26,7 @@ import org.apache.lucene.search.BooleanQuery;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static com.quantxt.nlp.search.SearchUtils.*;
 
@@ -33,7 +41,7 @@ public class DctSearhFld implements Serializable {
 
     static {
 
-        BooleanQuery.setMaxClauseCount(15000);
+        BooleanQuery.setMaxClauseCount(500000);
 
         DataFieldType = new FieldType();
         DataFieldType.setStored(true);
@@ -96,18 +104,33 @@ public class DctSearhFld implements Serializable {
                 break;
             case SIMPLE:
                 this.search_fld = pfx + ".simple";
-        //        this.index_analyzer = new SimpleAnalyzer();
-                this.index_analyzer = getNgramAnalyzer(stopWords_charArray);
+                this.index_analyzer = new SimpleAnalyzer();
+        //        this.index_analyzer = getNgramAnalyzer(stopWords_charArray);
                 this.priority += 3;
+                break;
+            case LETTER:
+                this.search_fld = pfx + ".letter";
+                this.index_analyzer = new Analyzer() {
+                    @Override
+                    protected TokenStreamComponents createComponents(String s) {
+                        WhitespaceTokenizer whitespaceTokenizer = new WhitespaceTokenizer();
+                        TokenStream tokenStream = new LowerCaseFilter(whitespaceTokenizer); //
+                        tokenStream = new PatternReplaceFilter(tokenStream, Pattern.compile("[^a-z0-9]+"), "", true);
+                        tokenStream = new LengthFilter(tokenStream, 3, 40);
+                        tokenStream = new PatternCaptureGroupTokenFilter(tokenStream, false, Pattern.compile("(.)"));
+                        return new TokenStreamComponents(whitespaceTokenizer, tokenStream);
+                    }
+                };
+                this.priority += 4;
                 break;
             case STANDARD:
                 this.search_fld = pfx;
                 this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
-                this.priority += 4;
+                this.priority += 5;
                 break;
             case STEM: {
                 this.search_fld = pfx + ".stem";
-                this.priority += 5;
+                this.priority += 6;
                 switch (lang) {
                     case ENGLISH:
                         this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
@@ -132,7 +155,7 @@ public class DctSearhFld implements Serializable {
             default:
                 this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
                 this.search_fld = pfx;
-                this.priority += 4;
+                this.priority += 5;
         }
         this.search_analyzer = getSynonymAnalyzer(synonymPairs, stopwords, analyzType, index_analyzer);
         if (synonymPairs != null && synonymPairs.size() >0){
