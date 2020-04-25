@@ -4,10 +4,15 @@ import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
+import org.apache.lucene.analysis.core.LetterTokenizer;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
+import org.apache.lucene.analysis.miscellaneous.LengthFilter;
 import org.apache.lucene.analysis.ngram.NGramTokenFilter;
+import org.apache.lucene.analysis.pattern.PatternCaptureGroupTokenFilter;
+import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
+import org.apache.lucene.analysis.pattern.PatternTokenizer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.synonym.SynonymGraphFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
@@ -29,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 import static com.quantxt.nlp.search.DctSearhFld.DataField;
 import static com.quantxt.nlp.search.DctSearhFld.SearchFieldType;
@@ -305,13 +311,18 @@ public class SearchUtils {
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
                             tokenStreamComponents = new TokenStreamComponents(whitespaceTokenizer, sysfilter);
                             break;
+                        case LETTER:
+                            whitespaceTokenizer = new WhitespaceTokenizer();
+                            tokenStream = new LowerCaseFilter(whitespaceTokenizer); //
+                            tokenStream = new PatternReplaceFilter(tokenStream, Pattern.compile("[^a-z0-9]+"), "", true);
+                            tokenStream = new LengthFilter(tokenStream, 3, 40);
+                            tokenStream = new PatternCaptureGroupTokenFilter(tokenStream, false, Pattern.compile("(.)"));
+                            tokenStreamComponents =  new TokenStreamComponents(whitespaceTokenizer, tokenStream);
+                            break;
                         case SIMPLE:
-                            StandardTokenizer s_standardTokenizer = new StandardTokenizer();
-                            tokenStream = new LowerCaseFilter(s_standardTokenizer);
-                            tokenStream = new StopFilter(tokenStream, stopWords_charArray);
-                            tokenStream = new SynonymGraphFilter(tokenStream, map, true);
-                            tokenStream = new NGramTokenFilter(tokenStream, 4,4, true);
-                            tokenStreamComponents = new TokenStreamComponents(s_standardTokenizer, tokenStream);
+                            LetterTokenizer letterTokenizer_s = new LetterTokenizer();
+                            tokenStream = new LowerCaseFilter(letterTokenizer_s);
+                            tokenStreamComponents = new TokenStreamComponents(letterTokenizer_s, tokenStream);
                             break;
                         case STANDARD:
                             StandardTokenizer standardTokenizer = new StandardTokenizer();

@@ -31,7 +31,6 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
     private static final String SENTENCES_FILE_PATH = "";
 
-    private static final String POS_FILE_PATH = "";
     private static final String STOPLIST_FILE_PATH = "/ja/stoplist.txt";
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("此奴", "其奴", "彼", "彼女"));
     private static Map<String, QTPosTags> TAGS = new HashMap<>();
