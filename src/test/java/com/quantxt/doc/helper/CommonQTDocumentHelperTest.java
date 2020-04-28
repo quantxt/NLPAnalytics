@@ -1,10 +1,13 @@
 package com.quantxt.doc.helper;
 
 import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.QTDocument;
+import com.quantxt.helper.types.QTMatch;
 import com.quantxt.interval.Interval;
 import com.quantxt.io.pdf.PDFManager;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
+import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.apache.commons.io.IOUtils;
 import org.apache.pdfbox.cos.COSDocument;
@@ -220,7 +223,7 @@ public class CommonQTDocumentHelperTest {
         Map<String, List<DictItm>> entMap = new HashMap<>();
         entMap.put("Orig Year Built", dictItms);
 
-        Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,10}\n){0,3}$");
+        Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,13}\n){0,3}$");
         Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
                 skipBetweenKeyValues, null, null, null);
 
@@ -286,6 +289,29 @@ public class CommonQTDocumentHelperTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         boolean isTableRow = helper.lineIsTableRow(row);
         assertTrue(isTableRow);
+    }
+
+    @Test
+    public void apart_keywords_v1() {
+        // GIVEN
+        String content = "There is Item 1.                       Business here.";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Business", "Item 1. Business" ));
+
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Business", dictItms);
+
+        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+                DictSearch.Mode.SPAN, DictSearch.AnalyzType.STEM);
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
+        List<QTSearchable> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        helper.extract(doc, searchableList, true, "");
+
+        assertTrue(doc.getValues().size() == 0);
     }
 
     private PDDocument getPDFDocument(InputStream ins) throws IOException {

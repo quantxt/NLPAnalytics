@@ -53,6 +53,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private static String alnum = "0-9A-Za-zŠŽšžŸÀ-ÖØ-öø-ž" + "Ѐ-ӿԀ-ԧꙀ-ꙮ꙾-ꚗᴀ-ᵿ";
 
     private static Pattern WORD_PTR = Pattern.compile("\\S+");
+    private static Pattern LONG_SPACE = Pattern.compile("(?<=\\S)(\\s{2,})(?=\\S)");
     private static Pattern TOKEN = Pattern.compile("[A-Za-z0-9]+[^ ]*");
     private static Pattern SPC_BET_WORDS_PTR = Pattern.compile("\\S(?= \\S)");
 
@@ -312,16 +313,34 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             for (QTMatch qtMatch : qtMatches) {
                 //Matching ignore whitespace but in input string whitespace is used to maintain position of the text when needed
                 // be concious of the span of the matches and avoid cases when there is large gap between tokens of a match
-                int index_of_line_start = getFirstNewLineBefore(content, qtMatch.getStart());
-                int index_of_line_end = content.indexOf('\n', qtMatch.getEnd());
-                if (index_of_line_end < 0) { // there is no end of line
-                    index_of_line_end = content.length();
+                String qtMatch_str = content.substring(qtMatch.getStart(), qtMatch.getEnd());
+                if (qtMatch_str.length() > 10) {
+
+                    int index_of_line_start = getFirstNewLineBefore(content, qtMatch.getStart());
+                    int index_of_line_end = content.indexOf('\n', qtMatch.getEnd());
+                    if (index_of_line_end < 0) { // there is no end of line
+                        index_of_line_end = content.length();
+                    }
+                    int lineLength = index_of_line_end - index_of_line_start;
+                    long length_of_white_space_in_match = content.substring(qtMatch.getStart(), qtMatch.getEnd()).chars().filter(ch -> ch == ' ').count();
+                    // a keyword's padding should not cover more than 20% of the line
+                    float r = (float)length_of_white_space_in_match / lineLength;
+                    if ( r > .2) {
+
+                        Matcher spaces = LONG_SPACE.matcher(qtMatch_str);
+                        int longest_space = 0;
+                        while (spaces.find()) {
+                            int l = spaces.group(1).length();
+                            if (l > longest_space) {
+                                longest_space = l;
+                            }
+                        }
+                        // if longest space is longer than half of the match length then discard
+                        // keyword1          keyword2
+                        float rr = (float) longest_space / qtMatch_str.length();
+                        if (rr > .4) continue;
+                    }
                 }
-                int lineLength = index_of_line_end - index_of_line_start;
-                long length_of_white_space_in_match = content.substring(qtMatch.getStart(), qtMatch.getEnd()).chars().filter(ch -> ch == ' ').count();
-                // a keyword's padding should not cover more than 20% of the line
-                float r = (float)length_of_white_space_in_match / lineLength;
-                if ( r > .2) continue;
 
                 ExtInterval extInterval = new ExtInterval();
                 extInterval.setKeyGroup(qtMatch.getGroup());
@@ -543,40 +562,33 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
         QTFieldType search_type = dictionary.getValType();
 
-        //first find all lines remained in the content
-
-        List<Interval> searchableValueIntervals = new ArrayList<>();
-
+        //Best match has closest distance to center of label in X axis
 
         int startLineLabelInterval = getFirstNewLineBefore(content, labelInterval.getStart());
+
         int first_index_after_label = startNextToken(content, labelInterval.getEnd());
         int last_index_before_label = endPrevToken(content, labelInterval.getStart());
-        int padding_left_interval1 = (labelInterval.getStart() - last_index_before_label) / 2;
-        int padding_right_interval1 = (first_index_after_label - labelInterval.getEnd()) / 2;
 
-        int offsetStartLabel = labelInterval.getStart()  - startLineLabelInterval - padding_left_interval1;
-        int offsetEndLabel   = labelInterval.getEnd() - startLineLabelInterval + padding_right_interval1;
+        int offsetStartLabel = last_index_before_label  - startLineLabelInterval;
+        int offsetEndLabel   = first_index_after_label  - startLineLabelInterval;
 
         int end_interval = content.indexOf('\n', labelInterval.getEnd());
 
         String [] lines = content.substring(end_interval).split("\n");
         int position_in_lines_array = end_interval;
+        List<String> verticalGap = new ArrayList<>();
         for (String line : lines){
             int line_length = line.length();
-            if (line_length > offsetStartLabel){
-                int start_local_interval = position_in_lines_array+offsetStartLabel;
-                int end_local_interval = Math.min(offsetEndLabel, line_length) + position_in_lines_array;
-                searchableValueIntervals.add(new Interval(start_local_interval, end_local_interval));
+            if (line_length < offsetStartLabel) {
+                position_in_lines_array += line_length + 1;
+                continue;
             }
+            int start_local_interval = position_in_lines_array+offsetStartLabel;
+            int end_local_interval = Math.min(offsetEndLabel, line_length) + position_in_lines_array;
+
             position_in_lines_array += line_length + 1;  // 1 is the length for \n
-        }
 
-        //find first value
-        List<String> verticalGap = new ArrayList<>();
-        for (Interval interval : searchableValueIntervals){
-            int start_search_shift = interval.getStart();
-
-            String string2Search4Value = content.substring(interval.getStart(), interval.getEnd());
+            String string2Search4Value = content.substring(start_local_interval, end_local_interval);
 
             ExtIntervalSimple foundValue = null;
             switch (search_type) {
@@ -586,19 +598,19 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                         foundValue = dateExtIntervalSimples.get(0);
                         int s = foundValue.getStart();
                         int e = foundValue.getEnd();
-                        foundValue.setStart(s + start_search_shift);
-                        foundValue.setEnd(e + start_search_shift);
+                        foundValue.setStart(s + start_local_interval);
+                        foundValue.setEnd(e + start_local_interval);
                     }
                     break;
                 case KEYWORD:
                     int group = dictionary.getGroups() != null ? 1 : 0;
                     Pattern pattern = dictionary.getPattern();
-                    String string_to_search = content.substring(start_search_shift);
+                    String string_to_search = content.substring(start_local_interval);
                     Matcher m = pattern.matcher(string2Search4Value);
                     if (m.find()) {
                         int start = m.start(group);
                         int end = m.end(group);
-                        foundValue = new ExtIntervalSimple(start + start_search_shift, end + start_search_shift);
+                        foundValue = new ExtIntervalSimple(start + start_local_interval, end + start_local_interval);
                         foundValue.setType(QTField.QTFieldType.KEYWORD);
                         String extractionStr = string_to_search.substring(start, end);
                         foundValue.setStringValue(extractionStr);
@@ -606,7 +618,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                     }
                     break;
                 case DOUBLE:
-                    foundValue = QTValueNumber.findFirstNumeric(string2Search4Value, interval.getStart());
+                    foundValue = QTValueNumber.findFirstNumeric(string2Search4Value, start_local_interval);
                     break;
             }
 
