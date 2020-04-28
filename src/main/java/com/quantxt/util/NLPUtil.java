@@ -152,8 +152,8 @@ public class NLPUtil {
             String t = tokens[i];
             int pos = str.indexOf(t, cursor);
             if (pos < 0) {
-                logger.error("Token {} as not found in the string {}", t , str);
-                return null;
+                logger.warn("Token {} as not found in the string {}", t , str);
+                continue;
             }
             ExtIntervalSimple exi = new ExtIntervalSimple(pos, pos + t.length());
             allSpans[i] = exi;

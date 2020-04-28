@@ -22,6 +22,11 @@ public class ESDocumentInfo extends QTDocument {
         language = Language.SPANISH;
     }
 
+    public ESDocumentInfo(List<String> body, String title, QTDocumentHelper helper) {
+        super(body, title, helper);
+        language = Language.SPANISH;
+    }
+
     public ESDocumentInfo(String body, String title) {
         super(body, title, new ESDocumentHelper());
         language = Language.SPANISH;
@@ -36,20 +41,28 @@ public class ESDocumentInfo extends QTDocument {
         List<String> chunks = new ArrayList<>();
         switch (chunking){
             case NONE:
-                chunks.add(body);
+                chunks.addAll(body);
                 break;
             case LINE:
-                String [] lines = body.split("[\\n\\r]+");
-                chunks.addAll(Arrays.asList(lines));
+                for (String p : body) {
+                    String[] lines = p.split("[\\n\\r]+");
+                    chunks.addAll(Arrays.asList(lines));
+                }
                 break;
             case SENTENCE:
-                String [] sentences = helper.getSentences(body);;
-                chunks.addAll(Arrays.asList(sentences));
+                for (String p : body) {
+                    String[] sentences = helper.getSentences(p);
+                    chunks.addAll(Arrays.asList(sentences));
+                }
                 break;
             case PARAGRAPH:
-                String [] paragraphs = body.split("[\\?\\.][\\n\\r]+");
-                chunks.addAll(Arrays.asList(paragraphs));
+                for (String p : body) {
+                    String[] paragraphs = p.split("[\\?\\.][\\n\\r]+");
+                    chunks.addAll(Arrays.asList(paragraphs));
+                }
                 break;
+            case PAGE:
+                chunks.addAll(body);
         }
 
         for (String chk : chunks) {
