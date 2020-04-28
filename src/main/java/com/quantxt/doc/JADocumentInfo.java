@@ -2,7 +2,6 @@ package com.quantxt.doc;
 
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.JADocumentHelper;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,10 +27,6 @@ public class JADocumentInfo extends QTDocument {
     public JADocumentInfo (String body, String title) {
         super(body, title, new JADocumentHelper());
         language = Language.JAPANESE;
-    }
-
-    public JADocumentInfo (Elements body, String title) {
-        super(body.html(), title, new JADocumentHelper());
     }
 
     @Override

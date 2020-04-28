@@ -4,13 +4,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.quantxt.helper.types.ExtIntervalSimple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.jsoup.select.Elements;
 import com.quantxt.doc.helper.RUDocumentHelper;
-import com.quantxt.helper.types.ExtInterval;
 
 /**
  * Created by matin on 1/20/18.
@@ -27,10 +24,6 @@ public class RUDocumentInfo extends QTDocument {
     public RUDocumentInfo (String body, String title) {
         super(body, title, new RUDocumentHelper());
         language = Language.RUSSIAN;
-    }
-
-    public RUDocumentInfo (Elements body, String title) {
-        super(body.html(), title, new RUDocumentHelper());
     }
 
     @Override

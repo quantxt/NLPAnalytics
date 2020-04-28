@@ -1,7 +1,6 @@
 package com.quantxt.doc;
 
 import com.quantxt.doc.helper.FRDocumentHelper;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,10 +24,6 @@ public class FRDocumentInfo extends QTDocument {
     public FRDocumentInfo(String body, String title) {
         super(body, title, new FRDocumentHelper());
         language = Language.FRENCH;
-    }
-
-    public FRDocumentInfo(Elements body, String title) {
-        super(body.html(), title, new FRDocumentHelper());
     }
 
     @Override
