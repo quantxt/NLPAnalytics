@@ -4,12 +4,18 @@ import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.*;
 
 import static com.quantxt.nlp.search.SearchUtils.*;
@@ -55,14 +61,16 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
                 String vocab_name = dctSearhFldEntry.getKey();
                 for (DctSearhFld dctSearhFld : dctSearhFldList) {
                     String search_fld = dctSearhFld.getSearch_fld();
-                    Query query = useFuzzyMatching ? getFuzzyQuery(dctSearhFld.getSearch_analyzer(), search_fld, escaped_query, minTermLength) :
-                            getMultimatcheQuery(dctSearhFld.getSearch_analyzer(), search_fld, escaped_query);
+                    Analyzer searchAnalyzer = dctSearhFld.getSearch_analyzer();
+                    Analyzer indexAnalyzer = dctSearhFld.getIndex_analyzer();
+
+                    Query query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
+                            getMultimatcheQuery(searchAnalyzer, search_fld, escaped_query);
                     List<Document> matchedDocs = getMatchedDocs(query);
 
                     if (matchedDocs.size() == 0) continue;
                     for (Mode m : mode) {
-                        res.addAll(getFragments(matchedDocs, m, minFuzzyTermLength,
-                                dctSearhFld.getIndex_analyzer(), dctSearhFld.getSearch_analyzer(), dctSearhFld.getMirror_synonym_search_analyzer(),
+                        res.addAll(getFragments(matchedDocs, m, minFuzzyTermLength, indexAnalyzer, searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                                 search_fld, vocab_name, query_string));
                     }
                 }

@@ -4,13 +4,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.quantxt.helper.types.ExtIntervalSimple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.jsoup.select.Elements;
 import com.quantxt.doc.helper.RUDocumentHelper;
-import com.quantxt.helper.types.ExtInterval;
 
 /**
  * Created by matin on 1/20/18.
@@ -24,13 +21,14 @@ public class RUDocumentInfo extends QTDocument {
         language = Language.RUSSIAN;
     }
 
-    public RUDocumentInfo (String body, String title) {
-        super(body, title, new RUDocumentHelper());
+    public RUDocumentInfo(List<String> body, String title, QTDocumentHelper helper) {
+        super(body, title, helper);
         language = Language.RUSSIAN;
     }
 
-    public RUDocumentInfo (Elements body, String title) {
-        super(body.html(), title, new RUDocumentHelper());
+    public RUDocumentInfo (String body, String title) {
+        super(body, title, new RUDocumentHelper());
+        language = Language.RUSSIAN;
     }
 
     @Override
@@ -42,20 +40,28 @@ public class RUDocumentInfo extends QTDocument {
         List<String> chunks = new ArrayList<>();
         switch (chunking){
             case NONE:
-                chunks.add(body);
+                chunks.addAll(body);
                 break;
             case LINE:
-                String [] lines = body.split("[\\n\\r]+");
-                chunks.addAll(Arrays.asList(lines));
+                for (String p : body) {
+                    String[] lines = p.split("[\\n\\r]+");
+                    chunks.addAll(Arrays.asList(lines));
+                }
                 break;
             case SENTENCE:
-                String [] sentences = helper.getSentences(body);;
-                chunks.addAll(Arrays.asList(sentences));
+                for (String p : body) {
+                    String[] sentences = helper.getSentences(p);
+                    chunks.addAll(Arrays.asList(sentences));
+                }
                 break;
             case PARAGRAPH:
-                String [] paragraphs = body.split("[\\?\\.][\\n\\r]+");
-                chunks.addAll(Arrays.asList(paragraphs));
+                for (String p : body) {
+                    String[] paragraphs = p.split("[\\?\\.][\\n\\r]+");
+                    chunks.addAll(Arrays.asList(paragraphs));
+                }
                 break;
+            case PAGE:
+                chunks.addAll(body);
         }
 
         for (String chk : chunks) {

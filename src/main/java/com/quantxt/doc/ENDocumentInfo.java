@@ -1,12 +1,9 @@
 package com.quantxt.doc;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,9 +15,13 @@ import com.quantxt.doc.helper.ENDocumentHelper;
 public class ENDocumentInfo extends QTDocument {
 
     private static final Logger logger = LoggerFactory.getLogger(ENDocumentInfo.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public ENDocumentInfo(String body, String title, QTDocumentHelper helper) {
+        super(body, title, helper);
+        language = Language.ENGLISH;
+    }
+
+    public ENDocumentInfo(List<String> body, String title, QTDocumentHelper helper) {
         super(body, title, helper);
         language = Language.ENGLISH;
     }
@@ -28,10 +29,6 @@ public class ENDocumentInfo extends QTDocument {
     public ENDocumentInfo(String body, String title) {
         super(body, title, new ENDocumentHelper());
         language = Language.ENGLISH;
-    }
-
-    public ENDocumentInfo(Elements body, String title) {
-        super(body.html(), title, new ENDocumentHelper());
     }
 
     @Override
@@ -43,26 +40,28 @@ public class ENDocumentInfo extends QTDocument {
         List<String> chunks = new ArrayList<>();
         switch (chunking){
             case NONE:
-                chunks.add(body);
+                chunks.addAll(body);
                 break;
             case LINE:
-                String [] lines = body.split("[\\n\\r]+");
-                chunks.addAll(Arrays.asList(lines));
+                for (String p : body) {
+                    String[] lines = p.split("[\\n\\r]+");
+                    chunks.addAll(Arrays.asList(lines));
+                }
                 break;
             case SENTENCE:
-                String [] sentences = helper.getSentences(body);;
-                chunks.addAll(Arrays.asList(sentences));
+                for (String p : body) {
+                    String[] sentences = helper.getSentences(p);
+                    chunks.addAll(Arrays.asList(sentences));
+                }
                 break;
             case PARAGRAPH:
-                String [] paragraphs = body.split("[\\?\\.][\\n\\r]+");
-                chunks.addAll(Arrays.asList(paragraphs));
+                for (String p : body) {
+                    String[] paragraphs = p.split("[\\?\\.][\\n\\r]+");
+                    chunks.addAll(Arrays.asList(paragraphs));
+                }
                 break;
             case PAGE:
-            try {
-                chunks = objectMapper.readValue(body, List.class);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                chunks.addAll(body);
         }
 
         for (String chk : chunks) {
