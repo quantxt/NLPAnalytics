@@ -5,17 +5,12 @@ import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.StringReader;
 import java.util.*;
 
 import static com.quantxt.nlp.search.SearchUtils.*;
@@ -64,8 +59,14 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
                     Analyzer searchAnalyzer = dctSearhFld.getSearch_analyzer();
                     Analyzer indexAnalyzer = dctSearhFld.getIndex_analyzer();
 
-                    Query query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
+                    Query query;
+                    if (dctSearhFld.getAnalyzType() == AnalyzType.LETTER){
+                        query = getLetterTokenizedBooleanQuery(searchAnalyzer, search_fld, query_string);
+                    } else {
+                        query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
                             getMultimatcheQuery(searchAnalyzer, search_fld, escaped_query);
+                    }
+
                     List<Document> matchedDocs = getMatchedDocs(query);
 
                     if (matchedDocs.size() == 0) continue;
@@ -76,6 +77,7 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
                 }
             }
         } catch (Exception e ){
+            e.printStackTrace();
             logger.error("Error in name search {}: query_string '{}'", e.getMessage() , query_string);
         }
 

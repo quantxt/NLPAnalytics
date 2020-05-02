@@ -2,10 +2,7 @@ package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
 import com.quantxt.types.DictSearch;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.CharArraySet;
-import org.apache.lucene.analysis.LowerCaseFilter;
-import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
@@ -14,10 +11,9 @@ import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
-import org.apache.lucene.analysis.miscellaneous.LengthFilter;
-import org.apache.lucene.analysis.pattern.PatternCaptureGroupTokenFilter;
 import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
+import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
@@ -105,7 +101,6 @@ public class DctSearhFld implements Serializable {
             case SIMPLE:
                 this.search_fld = pfx + ".simple";
                 this.index_analyzer = new SimpleAnalyzer();
-        //        this.index_analyzer = getNgramAnalyzer(stopWords_charArray);
                 this.priority += 3;
                 break;
             case LETTER:
@@ -114,10 +109,12 @@ public class DctSearhFld implements Serializable {
                     @Override
                     protected TokenStreamComponents createComponents(String s) {
                         WhitespaceTokenizer whitespaceTokenizer = new WhitespaceTokenizer();
-                        TokenStream tokenStream = new LowerCaseFilter(whitespaceTokenizer); //
-                        tokenStream = new PatternReplaceFilter(tokenStream, Pattern.compile("[^a-z0-9]+"), "", true);
-                        tokenStream = new LengthFilter(tokenStream, 3, 40);
-                        tokenStream = new PatternCaptureGroupTokenFilter(tokenStream, false, Pattern.compile("(.)"));
+                        TokenStream tokenStream = new LowerCaseFilter(whitespaceTokenizer);
+                        tokenStream = new PatternReplaceFilter(tokenStream, Pattern.compile("[^a-z0-9]"), "", true);
+                        ShingleFilter shingleFilter = new ShingleFilter(tokenStream, 2,4);
+                        shingleFilter.setTokenSeparator("");
+                        shingleFilter.setFillerToken("");
+                        tokenStream = shingleFilter;
                         return new TokenStreamComponents(whitespaceTokenizer, tokenStream);
                     }
                 };
