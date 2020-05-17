@@ -50,8 +50,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
 
-    private static String alnum = "0-9A-Za-zŠŽšžŸÀ-ÖØ-öø-ž" + "Ѐ-ӿԀ-ԧꙀ-ꙮ꙾-ꚗᴀ-ᵿ";
-
     private static Pattern WORD_PTR = Pattern.compile("\\S+");
     private static Pattern LONG_SPACE = Pattern.compile("(?<=\\S)(\\s{2,})(?=\\S)");
     private static Pattern TOKEN = Pattern.compile("[A-Za-z0-9]+[^ ]*");
@@ -68,14 +66,10 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static String UTF8_BULLETS = "\\u2022|\\u2023|\\u25E6|\\u2043|\\u2219";
     protected static Pattern UTF8_TOKEN = Pattern.compile("^(?:[a-zA-Z]\\.){2,}|([\\p{L}\\p{N}]+[\\.\\&]{0,1}[\\p{L}\\p{N}])");
 
-
     // Dashes to normalize
     protected static String s_dash_norm = "–";
     protected static String s_dash_norm2 = "-";
     protected static String s_dash_norm3 = "--";
-
-    protected static Pattern r_punct_strip = Pattern.compile("([^" + alnum + "])|([" + alnum + "]+[\\&\\.]+[" + alnum + "]*)");
-    protected static String s_punct_strip = " ";
 
     //Unicode spaces
     protected static Pattern r_white = Pattern.compile("[               　 ]+");
@@ -84,7 +78,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private SentenceDetectorME sentenceDetector = null;
     private POSTaggerME posModel = null;
     private CharArraySet stopwords;
-    private Set<String> pronouns;
 
     protected Analyzer analyzer;
     protected Analyzer tokenizer;
@@ -125,7 +118,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
 
         preInit();
-        this.pronouns = new HashSet<>(pronouns);
 
         String modelBaseDir = getModelBaseDir();
         if (modelBaseDir == null) {
