@@ -6,15 +6,14 @@ import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
-import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
-import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
 import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.search.BooleanQuery;
@@ -22,7 +21,6 @@ import org.apache.lucene.search.BooleanQuery;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static com.quantxt.nlp.search.SearchUtils.*;
 
@@ -32,8 +30,8 @@ public class DctSearhFld implements Serializable {
 
     final public static FieldType SearchFieldType;
     final public static FieldType DataFieldType;
-    final public static String DataField    = "DataField";
-    final public static String searchFieldPfx  = "searchfield";
+    final public static String DataField        = "DataField";
+    final public static String searchFieldPfx   = "searchfield";
 
     static {
 
@@ -62,6 +60,14 @@ public class DctSearhFld implements Serializable {
     private int priority;
 
 
+    private void addModePriority(){
+        switch (mode) {
+            case ORDERED_SPAN: priority += 500; break;
+            case SPAN: priority += 200; break;
+            case FUZZY_ORDERED_SPAN: priority += 100; break;
+            case FUZZY_SPAN: priority += 50; break;
+        }
+    }
     public DctSearhFld(QTDocument.Language lang,
                        List<String> synonymPairs,
                        List<String> stopwords,
@@ -74,60 +80,56 @@ public class DctSearhFld implements Serializable {
         String pfx = customPfx == null ? searchFieldPfx : customPfx;
         this.analyzType = analyzType;
         this.mode = mode;
-        switch (mode) {
-            case ORDERED_SPAN: priority = 1000; break;
-            case SPAN: priority = 100; break;
-            case FUZZY_ORDERED_SPAN: priority = 10; break;
-            case FUZZY_SPAN: priority = 0; break;
-            default: priority = 0;
 
-        }
         switch (analyzType){
             case EXACT:
                 this.search_fld = pfx + ".exact";
                 this.index_analyzer = new KeywordAnalyzer();
-                this.priority += 0;
+                this.priority = 10000;
                 break;
             case EXACT_CI:
                 this.search_fld = pfx + ".exact_ci";
                 this.index_analyzer = getExactCaseInsensetiveAnalyzer();
-                this.priority += 1;
+                this.priority = 9000;
                 break;
             case WHITESPACE:
                 this.search_fld = pfx + ".whitespace";
                 this.index_analyzer = new WhitespaceAnalyzer();
-                this.priority += 2;
+                this.priority = 8000;
+                addModePriority();
                 break;
             case SIMPLE:
                 this.search_fld = pfx + ".simple";
                 this.index_analyzer = new SimpleAnalyzer();
-                this.priority += 3;
+                this.priority = 7000;
+                addModePriority();
                 break;
             case LETTER:
                 this.search_fld = pfx + ".letter";
                 this.index_analyzer = new Analyzer() {
                     @Override
                     protected TokenStreamComponents createComponents(String s) {
-                        WhitespaceTokenizer whitespaceTokenizer = new WhitespaceTokenizer();
-                        TokenStream tokenStream = new LowerCaseFilter(whitespaceTokenizer);
-                        tokenStream = new PatternReplaceFilter(tokenStream, Pattern.compile("[^a-z0-9]"), "", true);
-                        ShingleFilter shingleFilter = new ShingleFilter(tokenStream, 2,4);
+                        StandardTokenizer standardTokenizer = new StandardTokenizer();
+                        TokenStream tokenStream = new StopFilter(standardTokenizer, stopWords_charArray);
+                        ShingleFilter shingleFilter = new ShingleFilter(tokenStream, 2, 5);
                         shingleFilter.setTokenSeparator("");
-                        shingleFilter.setFillerToken("");
                         tokenStream = shingleFilter;
-                        return new TokenStreamComponents(whitespaceTokenizer, tokenStream);
+                        return new TokenStreamComponents(standardTokenizer, tokenStream);
                     }
                 };
-                this.priority += 4;
+                this.priority = 6000;
+                addModePriority();
                 break;
             case STANDARD:
                 this.search_fld = pfx;
                 this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
-                this.priority += 5;
+                this.priority = 5000;
+                addModePriority();
                 break;
             case STEM: {
                 this.search_fld = pfx + ".stem";
-                this.priority += 6;
+                this.priority = 4000;
+                addModePriority();
                 switch (lang) {
                     case ENGLISH:
                         this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
@@ -152,7 +154,8 @@ public class DctSearhFld implements Serializable {
             default:
                 this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
                 this.search_fld = pfx;
-                this.priority += 5;
+                this.priority = 5000;
+                addModePriority();
         }
         this.search_analyzer = getSynonymAnalyzer(synonymPairs, stopwords, analyzType, index_analyzer);
         if (synonymPairs != null && synonymPairs.size() >0){

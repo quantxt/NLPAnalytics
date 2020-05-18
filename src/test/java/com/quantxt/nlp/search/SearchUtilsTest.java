@@ -79,7 +79,7 @@ public class SearchUtilsTest {
 
         // WHEN
         SpanQuery result = SearchUtils.getSpanQuery(qtSearchable.docSearchFldMap.get("Dict_Test").get(0).getSearch_analyzer(),
-                "DUMMY_FIELD", "report gain", 1, 5, false, true);
+                "DUMMY_FIELD", "report gain", 1, false, true);
 
         assertEquals(result.toString(), "spanNear([DUMMY_FIELD:report, spanOr([DUMMY_FIELD:gain, DUMMY_FIELD:profit])], 1, true)");
         List<QTMatch> res = qtSearchable.search(str);
@@ -190,7 +190,7 @@ public class SearchUtilsTest {
     @Test
     public void SimpleTokenizer_Unordered_v1() {
         // GIVEN
-        String str = "Inc. Amazon reported a profit on his earnings.";
+        String str = "Inc. Amazon reported a profit on his earnings. Inc";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Amazon", "Amazon Inc." ));
@@ -210,10 +210,9 @@ public class SearchUtilsTest {
 
 
     @Test
-    @Ignore
     public void Letter_Tokenizer_v1() {
         // GIVEN
-        String str = "Amzaon Inc. reported a profit on his earnings.";
+        String str = "AmazonInc. reported a profit on his earnings.";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Amazon", "Amazon Inc." ));
@@ -223,7 +222,7 @@ public class SearchUtilsTest {
 
         Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
-                DictSearch.Mode.SPAN, DictSearch.AnalyzType.LETTER);
+                DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
 
         List<QTMatch> res = qtSearchable.search(str);
@@ -232,8 +231,7 @@ public class SearchUtilsTest {
     }
 
     @Test
-    @Ignore
-    public void Letter_Tokenizer_with_Typo() {
+    public void Letter_Tokenizer_v2() {
         // GIVEN
         String str = "AmzaonInc. reported a profit on his earnings.";
 
@@ -245,7 +243,7 @@ public class SearchUtilsTest {
 
         Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
-                DictSearch.Mode.SPAN, DictSearch.AnalyzType.LETTER);
+                DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
 
         List<QTMatch> res = qtSearchable.search(str);
