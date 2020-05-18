@@ -78,8 +78,6 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
                     Query query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
                             getMultimatcheQuery(searchAnalyzer, search_fld, escaped_query);
 
-            //        Query query = getMultimatcheQuery(searchAnalyzer, search_fld, escaped_query);
-
                     List<Document> matchedDocs = getMatchedDocs(query);
                     boolean found = false;
                     if (matchedDocs.size() != 0) {

@@ -93,7 +93,7 @@ public class SearchUtilsTest {
 
         // WHEN
         SpanQuery result = SearchUtils.getSpanQuery(qtSearchable.docSearchFldMap.get("Dict_Test").get(0).getSearch_analyzer(),
-                "DUMMY_FIELD", "report gain", 1, 5, false, true);
+                "DUMMY_FIELD", "report gain", 1, false, true);
 
         assertEquals(result.toString(), "spanNear([DUMMY_FIELD:report, spanOr([DUMMY_FIELD:gain, DUMMY_FIELD:profit])], 1, true)");
         List<QTMatch> res = qtSearchable.search(str);

@@ -69,7 +69,9 @@ public class SearchUtils {
         return q;
     }
 
-    public static Query getMultimatcheQuery(Analyzer analyzer, String fld, String query)  {
+    public static Query getMultimatcheQuery(Analyzer analyzer,
+                                            String fld,
+                                            String query)  {
         QueryParser qp = new QueryParser(fld, analyzer);
         BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
         Query q = qp.createBooleanQuery(fld, query, matching_mode);
@@ -142,18 +144,18 @@ public class SearchUtils {
             String query_string = QueryParser.escape(query_string_raw);
             switch (mode) {
                 case ORDERED_SPAN :
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, minFuzzyTermLength, false, true);
+                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, false, true);
                     break;
                 case PARTIAL_SPAN:
                 case SPAN :
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, minFuzzyTermLength, false, false);
+                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, false, false);
                     break;
                 case FUZZY_ORDERED_SPAN:
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, minFuzzyTermLength, true, true);
+                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, true, true);
                     break;
                 case PARTIAL_FUZZY_SPAN:
                 case FUZZY_SPAN:
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, minFuzzyTermLength, true, false);
+                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, true, false);
                     break;
             }
             if (query == null) continue;
@@ -298,7 +300,6 @@ public class SearchUtils {
                                          String fld,
                                          String query,
                                          int slop,
-                                         int minTermLength,
                                          boolean isFuzzy,
                                          boolean ordered)
     {
