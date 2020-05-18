@@ -218,7 +218,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
         try {
             IndexWriter writer = new IndexWriter(mMapDirectory, config);
-
+            int seq = 0;
             for (Map.Entry<String, List<DictItm>> e : dictionary.getVocab_map().entrySet()) {
                 String vocab_name = e.getKey();
                 List<DctSearhFld> dctSearhFldList = docSearchFldMap.get(vocab_name);
@@ -290,7 +290,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
                         dctSearhFlds.add(dctSearhFld);
                     }
                 }
-                dctSearhFlds.sort((DctSearhFld s1, DctSearhFld s2) -> s1.getPriority() - s2.getPriority());
+                dctSearhFlds.sort((DctSearhFld s1, DctSearhFld s2) -> s2.getPriority() - s1.getPriority());
                 docSearchFldMap.put(vocab_name, dctSearhFlds);
             }
         } catch (Exception e) {

@@ -3,7 +3,6 @@ package com.quantxt.doc.helper;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.helper.types.QTMatch;
-import com.quantxt.interval.Interval;
 import com.quantxt.io.pdf.PDFManager;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
@@ -14,6 +13,7 @@ import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -312,6 +312,29 @@ public class CommonQTDocumentHelperTest {
         helper.extract(doc, searchableList, true, "");
 
         assertTrue(doc.getValues().size() == 0);
+    }
+
+
+    @Test
+    @Ignore
+    public void multi_analyze_match() {
+        // GIVEN
+        String query = "gas and rockes";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Item1", "Search 1 has gas and rockes" ));
+        dictItms.add(new DictItm("Item2", "Search 2 has rock and ga" ));
+
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Test", dictItms);
+
+        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+                new DictSearch.Mode[] {DictSearch.Mode.PARTIAL_SPAN}, new DictSearch.AnalyzType[] {DictSearch.AnalyzType.STANDARD, DictSearch.AnalyzType.STEM});
+
+        List<QTMatch> matches = qtSearchable.search(query);
+
+        assertTrue(matches.size() == 1);
     }
 
     private PDDocument getPDFDocument(InputStream ins) throws IOException {
