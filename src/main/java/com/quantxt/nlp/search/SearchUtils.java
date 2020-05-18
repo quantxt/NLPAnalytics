@@ -5,6 +5,7 @@ import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
 import org.apache.lucene.analysis.core.LetterTokenizer;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
@@ -29,8 +30,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.quantxt.nlp.search.DctSearhFld.DataField;
-import static com.quantxt.nlp.search.DctSearhFld.SearchFieldType;
+import static com.quantxt.nlp.search.DctSearhFld.*;
 
 public class SearchUtils {
 
@@ -298,7 +298,7 @@ public class SearchUtils {
 
     public static SpanQuery getSpanQuery(Analyzer analyzer,
                                          String fld,
-                                         String query,
+                                         String query_string,
                                          int slop,
                                          boolean isFuzzy,
                                          boolean ordered)
@@ -341,6 +341,7 @@ public class SearchUtils {
         LinkedHashSet<SpanQuery> queryList = new LinkedHashSet<>();
         String fld = "";
         StringBuilder str = new StringBuilder();
+        boolean termsAreRequired = false;
 
         while (idx.get() < query.length()){
             int current_idx = idx.get();
@@ -348,6 +349,7 @@ public class SearchUtils {
             idx.incrementAndGet();
             switch (c) {
                 case '+':
+                    termsAreRequired = true;
                     break;
                 case ' ':
                     //check if this start of a field or continuation of token str

@@ -5,17 +5,6 @@ import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
-import org.apache.lucene.analysis.*;
-import org.apache.lucene.analysis.core.WhitespaceTokenizer;
-import org.apache.lucene.analysis.miscellaneous.LengthFilter;
-import org.apache.lucene.analysis.ngram.EdgeNGramTokenFilter;
-import org.apache.lucene.analysis.ngram.NGramTokenFilter;
-import org.apache.lucene.analysis.ngram.NGramTokenizer;
-import org.apache.lucene.analysis.pattern.PatternCaptureGroupTokenFilter;
-import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
-import org.apache.lucene.analysis.pattern.PatternTokenizer;
-import org.apache.lucene.analysis.pattern.SimplePatternSplitTokenizer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.search.spans.SpanQuery;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -24,16 +13,11 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 
 import static org.junit.Assert.*;
 
@@ -54,6 +38,7 @@ public class SearchUtilsTest {
             dictItms.add(new DictItm("Hot Drink", "coffee" ));
             dictItms.add(new DictItm("Hot Drink", "tea" ));
             dictItms.add(new DictItm("Cold Drink", "water" ));
+            dictItms.add(new DictItm("Amazon Inc", "Amazon Inc"));
 
             Map<String, List<DictItm>> entMap = new HashMap<>();
             entMap.put("Dict_Test", dictItms);
@@ -67,7 +52,8 @@ public class SearchUtilsTest {
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STEM);
 
             qtSearchable_fuzzy = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
-                    DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.LETTER);
+                    DictSearch.Mode.SPAN, DictSearch.AnalyzType.LETTER);
+
             setUpIsDone = true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -80,9 +66,9 @@ public class SearchUtilsTest {
         String str = "Amazon Inc. reported a profit on his earnings.";
 
         List<QTMatch> res = qtSearchable.search(str);
-        assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Profit"));
-        assertTrue(res.get(0).getKeyword().equals("profit"));
+        assertTrue(res.size() == 2);
+        assertTrue(res.get(1).getCustomData().equals("Profit"));
+        assertTrue(res.get(1).getKeyword().equals("profit"));
     }
 
 
@@ -97,21 +83,30 @@ public class SearchUtilsTest {
 
         assertEquals(result.toString(), "spanNear([DUMMY_FIELD:report, spanOr([DUMMY_FIELD:gain, DUMMY_FIELD:profit])], 1, true)");
         List<QTMatch> res = qtSearchable.search(str);
-        assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Profit"));
-        assertTrue(res.get(0).getKeyword().equals("gain"));
+        assertTrue(res.size() == 2);
+        assertTrue(res.get(1).getCustomData().equals("Profit"));
+        assertTrue(res.get(1).getKeyword().equals("gain"));
     }
 
     @Test
-    @Ignore
-    public void parseTermsFuzzy1EditQuery() throws IOException {
+    public void parseTermsFuzzy1EditQuery() {
         // GIVEN
-        String str = "Amazon Inc. reported a profti on his earnings.";
+        String str = "AmazonInc. reported a profit on his earnings.";
         List<QTMatch> res = qtSearchable_fuzzy.search(str);
-        System.out.println(res.size() + " ");
+        assertTrue(res.size() == 2);
+        assertTrue(res.get(0).getCustomData().equals("Amazon Inc"));
+        assertTrue(res.get(0).getKeyword().equals("AmazonInc."));
+    }
+
+    @Test
+    public void parseTermsFuzzyMiddlePharse() {
+        // GIVEN
+        // we should NOT match on profit that is in middle of `wordstartproftiwordend`
+        String str = "Amazon Inc. reported a wordstartproftiwordend on his earnings.";
+        List<QTMatch> res = qtSearchable_fuzzy.search(str);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Profit"));
-        assertTrue(res.get(0).getKeyword().equals("profti"));
+        assertTrue(res.get(0).getCustomData().equals("Amazon Inc"));
+        assertTrue(res.get(0).getKeyword().equals("Amazon Inc."));
     }
 
     @Ignore
