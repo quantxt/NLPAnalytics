@@ -52,7 +52,7 @@ public class SearchUtilsTest {
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STEM);
 
             qtSearchable_fuzzy = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
-                    DictSearch.Mode.SPAN, DictSearch.AnalyzType.LETTER);
+                    DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
             setUpIsDone = true;
         } catch (Exception e) {
@@ -95,7 +95,7 @@ public class SearchUtilsTest {
         List<QTMatch> res = qtSearchable_fuzzy.search(str);
         assertTrue(res.size() == 2);
         assertTrue(res.get(0).getCustomData().equals("Amazon Inc"));
-        assertTrue(res.get(0).getKeyword().equals("AmazonInc."));
+        assertTrue(res.get(0).getKeyword().equals("AmazonInc"));
     }
 
     @Test
@@ -106,7 +106,7 @@ public class SearchUtilsTest {
         List<QTMatch> res = qtSearchable_fuzzy.search(str);
         assertTrue(res.size() == 1);
         assertTrue(res.get(0).getCustomData().equals("Amazon Inc"));
-        assertTrue(res.get(0).getKeyword().equals("Amazon Inc."));
+        assertTrue(res.get(0).getKeyword().equals("Amazon Inc"));
     }
 
     @Ignore

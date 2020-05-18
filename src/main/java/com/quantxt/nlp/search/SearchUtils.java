@@ -303,7 +303,7 @@ public class SearchUtils {
                                          boolean isFuzzy,
                                          boolean ordered)
     {
-        Query q = getMultimatcheQuery(analyzer, fld, query);
+        Query q = getMultimatcheQuery(analyzer, fld, query_string);
         String query_dsl = q.toString();
         AtomicInteger parse_start = new AtomicInteger();
         SpanQuery spanQuery = parse(query_dsl, fld, slop, parse_start, !query_dsl.startsWith("("), isFuzzy, ordered);
