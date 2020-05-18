@@ -70,11 +70,7 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
                     String search_fld = dctSearhFld.getSearch_fld();
                     Analyzer searchAnalyzer = dctSearhFld.getSearch_analyzer();
 
-                    Query query;
-                    if (dctSearhFld.getAnalyzType() == AnalyzType.LETTER){
-                        query = getLetterTokenizedBooleanQuery(searchAnalyzer, search_fld, query_string);
-                    } else {
-                        query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
+                    Query query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
                             getMultimatcheQuery(searchAnalyzer, search_fld, escaped_query);
 
                     List<Document> matchedDocs = getMatchedDocs(query);
