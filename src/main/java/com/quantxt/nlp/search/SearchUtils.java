@@ -5,14 +5,13 @@ import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
 import org.apache.lucene.analysis.core.LetterTokenizer;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
-import org.apache.lucene.analysis.miscellaneous.LengthFilter;
 import org.apache.lucene.analysis.ngram.NGramTokenFilter;
-import org.apache.lucene.analysis.pattern.PatternCaptureGroupTokenFilter;
 import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
-import org.apache.lucene.analysis.pattern.PatternTokenizer;
+import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.synonym.SynonymGraphFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
@@ -36,8 +35,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import static com.quantxt.nlp.search.DctSearhFld.DataField;
-import static com.quantxt.nlp.search.DctSearhFld.SearchFieldType;
+import static com.quantxt.nlp.search.DctSearhFld.*;
 
 public class SearchUtils {
 
@@ -131,6 +129,15 @@ public class SearchUtils {
         return new IndexSearcher(dreader);
     }
 
+    public static Query getLetterTokenizedBooleanQuery(Analyzer searchAnalyzer,
+                                                       String field,
+                                                       String query_string){
+        String [] tokens = tokenize(searchAnalyzer, query_string);
+        QueryParser qp = new QueryParser("", new WhitespaceAnalyzer());
+        BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
+        return qp.createBooleanQuery(field, String.join(" ", tokens), matching_mode);
+    }
+
     public static Collection<QTMatch> getFragments(final Collection<Document> matchedDocs,
                                                    final DictSearch.Mode mode,
                                                    final int minFuzzyTermLength,
@@ -144,6 +151,9 @@ public class SearchUtils {
         List<QTMatch> matchs = new ArrayList<>();
         IndexSearcher searcher = getIndexSearcher(index_analyzer, searchField, str);
 
+        //In some cases one word expands to multiple tokens in the same positions
+        // Take the longest token in case multiple tokens match at the same positions
+
         //TODO: this is messy; re-factor it with proper multi-field index
         for (Document matchedDoc : matchedDocs) {
             SpanQuery query = null;
@@ -151,32 +161,37 @@ public class SearchUtils {
             String query_string = QueryParser.escape(query_string_raw);
             switch (mode) {
                 case ORDERED_SPAN :
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, minFuzzyTermLength, false, true);
+                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1,
+                            minFuzzyTermLength, false, true);
                     break;
                 case PARTIAL_SPAN:
                 case SPAN :
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, minFuzzyTermLength, false, false);
+                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1,
+                            minFuzzyTermLength, false, false);
                     break;
                 case FUZZY_ORDERED_SPAN:
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, minFuzzyTermLength, true, true);
+                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1,
+                            minFuzzyTermLength, true, true);
                     break;
                 case PARTIAL_FUZZY_SPAN:
                 case FUZZY_SPAN:
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, minFuzzyTermLength, true, false);
+                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1,
+                            minFuzzyTermLength, true, false);
                     break;
             }
-            if (query == null) continue;
 
+            if (query == null) continue;
 
             SpanWeight span_weights = query.createWeight(searcher, ScoreMode.COMPLETE_NO_SCORES, 1f);
             if (span_weights == null) continue;
+
             Spans spans = span_weights.getSpans(searcher.getIndexReader().leaves().get(0), SpanWeight.Postings.POSITIONS);
             if (spans == null) continue;
-
             int s = spans.nextDoc();
             if (s >= 2147483647) continue;
             int spanstart = spans.nextStartPosition();
             String dataValue = matchedDoc.getField(DataField).stringValue();
+
             while (spanstart < 2147483647) {
                 int spanend = spans.endPosition() -1;
                 TokenStream ts = search_analyzer.tokenStream(searchField, str);
@@ -184,19 +199,19 @@ public class SearchUtils {
                 OffsetAttribute offsetAttribute = ts.getAttribute(OffsetAttribute.class);
                 try {
                     ts.reset();
-                    int cursur = -1;
+                    int matchPosition = -1;
                     int startPhraseInStr = -1;
                     int endPhraseInStr = -1;
                     while (ts.incrementToken()) {
                         int positionIncrement = positionIncrementAttribute.getPositionIncrement();
-                        cursur += positionIncrement;
+                        matchPosition += positionIncrement;
                         int start = offsetAttribute.startOffset();
                         int end = offsetAttribute.endOffset();
-                        if (cursur == (spanstart)) {
+                        if (matchPosition == spanstart) {
                             startPhraseInStr = start;
                             endPhraseInStr = end;
                         }
-                        if (cursur == (spanend)) {
+                        if (matchPosition == spanend) {
                             endPhraseInStr = end;
                             break;
                         }
@@ -204,7 +219,6 @@ public class SearchUtils {
                     ts.end();
                     if (startPhraseInStr >=0 && endPhraseInStr > 0) {
                         String keyword = str.substring(startPhraseInStr, endPhraseInStr);
-                        //        logger.info("KEYWORD: {}", keyword);
                         QTMatch qtMatch = new QTMatch(startPhraseInStr, endPhraseInStr, keyword);
                         qtMatch.setCustomData(dataValue);
                         qtMatch.setGroup(vocab_name);
@@ -313,10 +327,12 @@ public class SearchUtils {
                             break;
                         case LETTER:
                             whitespaceTokenizer = new WhitespaceTokenizer();
-                            tokenStream = new LowerCaseFilter(whitespaceTokenizer); //
-                            tokenStream = new PatternReplaceFilter(tokenStream, Pattern.compile("[^a-z0-9]+"), "", true);
-                            tokenStream = new LengthFilter(tokenStream, 3, 40);
-                            tokenStream = new PatternCaptureGroupTokenFilter(tokenStream, false, Pattern.compile("(.)"));
+                            tokenStream = new LowerCaseFilter(whitespaceTokenizer);
+                            tokenStream = new PatternReplaceFilter(tokenStream, Pattern.compile("[^a-z0-9]"), "", true);
+                            ShingleFilter shingleFilter = new ShingleFilter(tokenStream, 2,4);
+                            shingleFilter.setTokenSeparator("");
+                            shingleFilter.setFillerToken("");
+                            tokenStream = shingleFilter;
                             tokenStreamComponents =  new TokenStreamComponents(whitespaceTokenizer, tokenStream);
                             break;
                         case SIMPLE:
@@ -353,7 +369,7 @@ public class SearchUtils {
 
     public static SpanQuery getSpanQuery(Analyzer analyzer,
                                          String fld,
-                                         String query,
+                                         String query_string,
                                          int slop,
                                          int minTermLength,
                                          boolean isFuzzy,
@@ -361,9 +377,10 @@ public class SearchUtils {
     {
         QueryParser qp = new QueryParser("", analyzer);
         BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
-        Query q = isFuzzy ? getFuzzyQuery(analyzer, fld, query, minTermLength) :
-                qp.createBooleanQuery(fld, query, matching_mode);
-        String query_dsl = q.toString();
+        Query query = isFuzzy ? getFuzzyQuery(analyzer, fld, query_string, minTermLength) :
+                qp.createBooleanQuery(fld, query_string, matching_mode);
+
+        String query_dsl = query.toString();
         if (isFuzzy){
             query_dsl = query_dsl.replaceAll("\\~\\d(\\s*)", "$1");
         }
@@ -397,13 +414,14 @@ public class SearchUtils {
                                      String search_fld,
                                      int slop,
                                      AtomicInteger idx,
-                                     boolean is_synonym_clause,
+                                     boolean need_or_span,
                                      boolean is_Fuzzy,
                                      boolean ordered)
     {
         LinkedHashSet<SpanQuery> queryList = new LinkedHashSet<>();
         String fld = "";
         StringBuilder str = new StringBuilder();
+        boolean termsAreRequired = false;
 
         while (idx.get() < query.length()){
             int current_idx = idx.get();
@@ -411,6 +429,7 @@ public class SearchUtils {
             idx.incrementAndGet();
             switch (c) {
                 case '+':
+                    termsAreRequired = true;
                     break;
                 case ' ':
                     //check if this start of a field or continuation of token str
@@ -448,9 +467,9 @@ public class SearchUtils {
                     str = new StringBuilder();
                     break;
                 case '(':
-                    boolean synonym_clause = false;
+                    boolean synonym_clause = true;
                     if (str.toString().equals("Synonym")){
-                        synonym_clause = true;
+                        termsAreRequired = false;
                     }
                     SpanQuery spanQuery = parse(query, search_fld, slop, idx, synonym_clause, is_Fuzzy, ordered);
                     queryList.add(spanQuery);
@@ -468,7 +487,7 @@ public class SearchUtils {
                     } else if (queryList.size() == 1) {
                         return queryList.iterator().next();
                     } else {
-                        if (is_synonym_clause) {
+                        if (!termsAreRequired){
                             SpanOrQuery spanOrQuery = new SpanOrQuery(queryList.toArray(new SpanQuery[queryList.size()]));
                             return spanOrQuery;
                         } else {
