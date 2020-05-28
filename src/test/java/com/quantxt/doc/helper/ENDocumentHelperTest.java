@@ -64,10 +64,9 @@ public class ENDocumentHelperTest {
         String str = "Gilead Sciences Company Profile Gilead Sciences, Inc. "
                 + "is a research-based biopharmaceutical company that discovers, "
                 + "develops and commercializes medicines in areas of unmet medical need .";
-        List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str);
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(3).getStart(), tagged.get(3).getEnd()),
@@ -85,10 +84,9 @@ public class ENDocumentHelperTest {
                 "Personal luxury goods growth stalls in ME even as global market " +
                 "rebounds Global personal luxury goods market growth is on its way for a rebound " +
                 "on the back of a strong demand from Chinese customers, a recent research reveals.";
-        List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str);
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -105,10 +103,9 @@ public class ENDocumentHelperTest {
                 "for Technology Projects at Deloitte CIS, described the development of permissive " +
                 "regulatory frameworks for blockchain and cryptocurrency as necessary in order to " +
                 "empower innovation within the industry.";
-        List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str);
         // THEN
         Assert.assertEquals(str.substring(tagged.get(5).getStart(), tagged.get(5).getEnd()),
                 "Director");
@@ -125,10 +122,9 @@ public class ENDocumentHelperTest {
         String str = "Many venture capital firms and investment groups have recently keyed in " +
                 "on investing and acquiring innovative and out-of-the-box blockchain startups, "+
                 "that seek to push the boundaries of the technology and where it can reach.";
-        List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str);
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(2).getStart(), tagged.get(2).getEnd()),
@@ -148,10 +144,9 @@ public class ENDocumentHelperTest {
                 "rapidly turning the country into an energy export powerhouse, tipped last " +
                 "week by one prominent consultancy to start shipping more oil overseas than " +
                 "the majority of Opec countries by 2020.";
-        List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str);
 
         // THEN
         Assert.assertEquals(str.substring(tagged.get(0).getStart(), tagged.get(0).getEnd()),
@@ -277,10 +272,9 @@ public class ENDocumentHelperTest {
                 "rapidly turning the country into an energy export powerhouse, tipped last " +
                 "week by one prominent consultancy to start shipping more oil overseas than " +
                 "the majority of Opec countries by 2020.";
-        List<String> parts = helper.tokenize(str);
 
         // WHEN
-        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str, parts.toArray(new String[parts.size()]));
+        List<ExtIntervalSimple> tagged = helper.getNounAndVerbPhrases(str);
 
         // THEN
         assertNotNull(tagged);

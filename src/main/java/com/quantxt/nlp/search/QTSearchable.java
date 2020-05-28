@@ -77,7 +77,7 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
                     boolean found = false;
                     if (matchedDocs.size() != 0) {
                         for (Mode m : mode) {
-                            Collection<QTMatch> matches = getFragments(matchedDocs, m, minFuzzyTermLength,
+                            Collection<QTMatch> matches = getFragments(matchedDocs, m, 1,
                                     searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                                     search_fld, vocab_name, query_string);
                             if (matches.size() > 0) {
