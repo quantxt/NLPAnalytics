@@ -110,7 +110,9 @@ public class DctSearhFld implements Serializable {
                     @Override
                     protected TokenStreamComponents createComponents(String s) {
                         StandardTokenizer standardTokenizer = new StandardTokenizer();
-                        TokenStream tokenStream = new StopFilter(standardTokenizer, stopWords_charArray);
+                        TokenStream tokenStream = new LowerCaseFilter(standardTokenizer);
+                        tokenStream = new StopFilter(tokenStream, stopWords_charArray);
+
                         ShingleFilter shingleFilter = new ShingleFilter(tokenStream, 2, 5);
                         shingleFilter.setTokenSeparator("");
                         tokenStream = shingleFilter;
