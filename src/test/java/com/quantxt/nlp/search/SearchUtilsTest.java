@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.quantxt.nlp.search.SearchUtils.getSpanQuery;
 import static org.junit.Assert.*;
 
 public class SearchUtilsTest {
@@ -78,8 +79,8 @@ public class SearchUtilsTest {
         String str = "Amazon Inc. reported a gain on his earnings.";
 
         // WHEN
-        SpanQuery result = SearchUtils.getSpanQuery(qtSearchable.docSearchFldMap.get("Dict_Test").get(0).getSearch_analyzer(),
-                "DUMMY_FIELD", "report gain", 1, false, true);
+        SpanQuery result = getSpanQuery(qtSearchable.docSearchFldMap.get("Dict_Test").get(0).getSearch_analyzer(),
+                "DUMMY_FIELD", "report gain", 1, false, true, true);
 
         assertEquals(result.toString(), "spanNear([DUMMY_FIELD:report, spanOr([DUMMY_FIELD:gain, DUMMY_FIELD:profit])], 1, true)");
         List<QTMatch> res = qtSearchable.search(str);
@@ -130,8 +131,8 @@ public class SearchUtilsTest {
         // WHEN
         Map<String, Map<String, Long>> stas = qtSearchable.getTermCoverage(str);
 
-        assertTrue(stas.get("dicttest.stem").size()==3);
-        assertTrue(stas.get("dicttest.stem").get("tea")==1L);
+        assertTrue(stas.get("dict_test.stem").size()==3);
+        assertTrue(stas.get("dict_test.stem").get("tea")==1L);
     }
 
 
@@ -142,10 +143,8 @@ public class SearchUtilsTest {
 
         // WHEN
         SpanQuery result = SearchUtils.parse(query_Dsl,
-                "DUMMY_FIELD.exact",
-         1,
-        new AtomicInteger(0),
-        false, false,true);
+                "DUMMY_FIELD.exact", 1, new AtomicInteger(0),
+        true, false,true);
 
         assertEquals(result.toString(), "spanNear([DUMMY_FIELD.exact:report listed, DUMMY_FIELD.exact:profit], 1, true)");
     }
