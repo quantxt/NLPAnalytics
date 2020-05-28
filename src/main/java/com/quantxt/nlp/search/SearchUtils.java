@@ -31,6 +31,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.quantxt.nlp.search.DctSearhFld.*;
+import static com.quantxt.types.DictSearch.Mode.*;
 
 public class SearchUtils {
 
@@ -128,7 +129,7 @@ public class SearchUtils {
 
     public static Collection<QTMatch> getFragments(final Collection<Document> matchedDocs,
                                                    final DictSearch.Mode mode,
-                                                   final int minFuzzyTermLength,
+                                                   final int slop,
                                                    final Analyzer search_analyzer,
                                                    final Analyzer keyphrase_analyzer,
                                                    final String searchField,
@@ -136,28 +137,17 @@ public class SearchUtils {
                                                    final String str) throws Exception
     {
         List<QTMatch> allMatches = new ArrayList<>();
+        boolean isFuzzy = mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_FUZZY_SPAN
+                || mode == FUZZY_SPAN;
+        boolean ordered = mode == ORDERED_SPAN || mode == FUZZY_ORDERED_SPAN;
+        boolean isMatchAll = mode == ORDERED_SPAN || mode == SPAN || mode == FUZZY_ORDERED_SPAN
+                || mode == FUZZY_SPAN;
 
-        //TODO: this is messy; re-factor it with proper multi-field index
         for (Document matchedDoc : matchedDocs) {
-            SpanQuery query = null;
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
             String query_string = QueryParser.escape(query_string_raw);
-            switch (mode) {
-                case ORDERED_SPAN :
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, false, true);
-                    break;
-                case PARTIAL_SPAN:
-                case SPAN :
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, false, false);
-                    break;
-                case FUZZY_ORDERED_SPAN:
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, true, true);
-                    break;
-                case PARTIAL_FUZZY_SPAN:
-                case FUZZY_SPAN:
-                    query = getSpanQuery(keyphrase_analyzer , searchField, query_string, 1, true, false);
-                    break;
-            }
+            SpanQuery query = getSpanQuery(keyphrase_analyzer , searchField, query_string,
+                    slop, isFuzzy, ordered, isMatchAll);
             if (query == null) continue;
 
             TokenStream tokenStream = search_analyzer.tokenStream(searchField, str);
@@ -301,12 +291,14 @@ public class SearchUtils {
                                          String query_string,
                                          int slop,
                                          boolean isFuzzy,
-                                         boolean ordered)
+                                         boolean ordered,
+                                         boolean isMatchAll)
     {
-        Query q = getMultimatcheQuery(analyzer, fld, query_string);
+        Query q = isMatchAll ? getMatchAllQuery(analyzer, fld, query_string) : getMultimatcheQuery(analyzer, fld, query_string);
         String query_dsl = q.toString();
+        boolean operatorIsAnd = isMatchAll && !query_dsl.startsWith("(");
         AtomicInteger parse_start = new AtomicInteger();
-        SpanQuery spanQuery = parse(query_dsl, fld, slop, parse_start, !query_dsl.startsWith("("), isFuzzy, ordered);
+        SpanQuery spanQuery = parse(query_dsl, fld, slop, parse_start, operatorIsAnd, isFuzzy, ordered);
         return spanQuery;
     }
 
@@ -330,18 +322,43 @@ public class SearchUtils {
         return bqueryBuilder.build();
     }
 
+    public static Query getFuzzyQuery(Analyzer analyzer,
+                                      String fld,
+                                      String query,
+                                      int minTermLength,
+                                      int maxEdits,
+                                      int prefixLength,
+                                      boolean transpositions) {
+        BooleanQuery.Builder bqueryBuilder = new BooleanQuery.Builder();
+        TokenStream tokens = analyzer.tokenStream(fld, query);
+        try {
+            CharTermAttribute cattr = tokens.addAttribute(CharTermAttribute.class);
+            tokens.reset();
+            while (tokens.incrementToken()) {
+                String term = cattr.toString();
+                if (term.length() < minTermLength) continue;
+                bqueryBuilder.add(new FuzzyQuery(new Term(fld, term), maxEdits, prefixLength, 50, transpositions), BooleanClause.Occur.SHOULD);
+            }
+            tokens.end();
+            tokens.close();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+        return bqueryBuilder.build();
+    }
+
     protected static SpanQuery parse(String query,
                                      String search_fld,
                                      int slop,
                                      AtomicInteger idx,
-                                     boolean operator_is_and,
+                                     boolean termsAreRequired,
                                      boolean is_Fuzzy,
                                      boolean ordered)
     {
         LinkedHashSet<SpanQuery> queryList = new LinkedHashSet<>();
         String fld = "";
         StringBuilder str = new StringBuilder();
-        boolean termsAreRequired = false;
 
         while (idx.get() < query.length()){
             int current_idx = idx.get();
@@ -349,7 +366,6 @@ public class SearchUtils {
             idx.incrementAndGet();
             switch (c) {
                 case '+':
-                    termsAreRequired = true;
                     break;
                 case ' ':
                     //check if this start of a field or continuation of token str
@@ -388,8 +404,7 @@ public class SearchUtils {
                     str = new StringBuilder();
                     break;
                 case '(':
-                    operator_is_and = false;
-                    SpanQuery spanQuery = parse(query, search_fld, slop, idx, operator_is_and, is_Fuzzy, ordered);
+                    SpanQuery spanQuery = parse(query, search_fld, slop, idx, false, is_Fuzzy, ordered);
                     queryList.add(spanQuery);
                     str = new StringBuilder();
                     break;
@@ -408,7 +423,7 @@ public class SearchUtils {
                         return queryList.iterator().next();
                     } else {
                         SpanQuery currentSpanQuery = joinSpanQueryList(queryList,
-                                search_fld, slop, operator_is_and, ordered);
+                                search_fld, slop, false, ordered);
                         return currentSpanQuery;
                     }
                 default:
@@ -428,7 +443,7 @@ public class SearchUtils {
         if (queryList.size() == 1) {
             return queryList.iterator().next();
         } else {
-            SpanQuery squery = joinSpanQueryList(queryList, search_fld, slop, !query.startsWith("("), ordered);
+            SpanQuery squery = joinSpanQueryList(queryList, search_fld, slop, termsAreRequired, ordered);
             return squery;
         }
     }

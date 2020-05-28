@@ -1,5 +1,8 @@
 package com.quantxt.nlp.search;
 
+import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.helper.CommonQTDocumentHelper;
+import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.helper.types.QTMatch;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
@@ -163,6 +166,35 @@ public class QTSearchableTest {
         } catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+
+    @Test
+    public void test_weather()  {
+        // GIVEN
+        String str = "Accordingly, we are subject to risks, including labor disputes, inclement weather, natural disasters, cybersecurity attacks, possible acts of terrorism, availability of shipping containers, and increased security restrictions associated with such carriers’ ability to provide delivery services to meet our shipping needs.";
+
+        ArrayList<DictItm> dictItms_1 = new ArrayList<>();
+        dictItms_1.add(new DictItm("weather conditions","Weather"));
+        dictItms_1.add(new DictItm("climate change","Weather"));
+        dictItms_1.add(new DictItm("global warming","Weather"));
+
+        Map<String, List<DictItm>> entMap = new HashMap<>();
+        entMap.put("Weather", dictItms_1);
+
+        Dictionary dictionary = new Dictionary("QTSearchableTest", entMap);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, null, null, null,
+                DictSearch.Mode.SPAN, DictSearch.AnalyzType.STANDARD);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
+        List<QTSearchable> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        helper.extract(doc, searchableList, false, "");
+
+        // THEN
+        assertNotNull(doc.getValues());
+
     }
 
 }
