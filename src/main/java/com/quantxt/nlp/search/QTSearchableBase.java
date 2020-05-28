@@ -281,12 +281,12 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         try {
             for (Map.Entry<String, List<DictItm>> vocab : dictionary.getVocab_map().entrySet()) {
                 String vocab_name = vocab.getKey();
-                String vocab_name_conv = vocab_name.toLowerCase().replaceAll("[^a-z]", "");
+                String filednamePfx = vocab_name.toLowerCase().replaceAll("[^a-z0-9_]", "");
                 List<DctSearhFld> dctSearhFlds = new ArrayList<>();
                 for (AnalyzType at : analyzType) {
                     for (Mode m : mode) {
                         DctSearhFld dctSearhFld = new DctSearhFld(lang, synonymPairs, stopWords,
-                                m, at, vocab_name_conv);
+                                m, at, filednamePfx);
                         dctSearhFlds.add(dctSearhFld);
                     }
                 }
