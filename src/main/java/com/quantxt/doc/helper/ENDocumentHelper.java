@@ -6,10 +6,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.quantxt.helper.types.ExtIntervalSimple;
-import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
+import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +29,6 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     private static final String SENTENCES_FILE_PATH = "/en/en-sent.bin";
     private static final String POS_FILE_PATH = "/en/en-pos-maxent.bin";
     private static final String STOPLIST_FILE_PATH = "/en/stoplist.txt";
-    private static final String TOKENIZER_FILE_PATH = "/en/en-token.bin";
 
     private static final Set<String> PRONOUNS = new HashSet<>(
             Arrays.asList("he", "she", "He", "She"));
@@ -36,7 +36,8 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     private static Pattern NounPhrase = Pattern.compile("NJ+N|J+N+|N+");
     private static Pattern VerbPhrase = Pattern.compile("V+R+V+|V+");
 
-    private Tokenizer tokenizer;
+    private TokenizerME openNlpTokenizer;
+    private static final String OPENNLP_TOKENIZER_FILE_PATH = "/en/en-token.bin";
 
     public ENDocumentHelper() {
 
@@ -67,14 +68,6 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     }
 
     @Override
-    public List<String> tokenize(String str) {
-        synchronized (tokenizer) {
-            String[] toks = tokenizer.tokenize(str.replaceAll("([”“])", " $1 "));
-            return Arrays.asList(toks);
-        }
-    }
-
-    @Override
     public String normalize(String workingLine) {
         workingLine = normBasic(workingLine);
         return workingLine.toLowerCase();
@@ -89,17 +82,25 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     public void preInit() {
         //Analyzer
         analyzer = new EnglishAnalyzer();
-        try (FileInputStream fis = new FileInputStream(getModelBaseDir() + TOKENIZER_FILE_PATH)) {
-            TokenizerModel tokenizermodel = new TokenizerModel(fis);
-            tokenizer = new TokenizerME(tokenizermodel);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        tokenizer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
+
     }
 
+    private String [] tokenizeUsingOpenNLP(String str){
+        if (openNlpTokenizer == null) {
+            try (FileInputStream fis = new FileInputStream(getModelBaseDir() + OPENNLP_TOKENIZER_FILE_PATH)) {
+                TokenizerModel tokenizermodel = new TokenizerModel(fis);
+                openNlpTokenizer = new TokenizerME(tokenizermodel);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return openNlpTokenizer.tokenize(str);
+    }
     //https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
-    public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str,
-                                                         String[] tokens) {
+    public List<ExtIntervalSimple> getNounAndVerbPhrases(final String orig_str) {
+
+        String [] tokens = tokenizeUsingOpenNLP(orig_str);
         String[] taags = getPosTags(tokens);
         StringBuilder allTags = new StringBuilder();
         ExtIntervalSimple[] tokenSpans = findAllSpans(orig_str, tokens);
