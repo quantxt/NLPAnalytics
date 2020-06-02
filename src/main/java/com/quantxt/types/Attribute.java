@@ -2,12 +2,8 @@ package com.quantxt.types;
 
 public interface Attribute {
 
-    public Integer getSourceIndex();
+    String getName();
 
-    public String getName();
-
-    public String getNameCode();
-
-    public AttrType getType();
+    AttrType getType();
 
 }

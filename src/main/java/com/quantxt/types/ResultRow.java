@@ -17,11 +17,11 @@ public class ResultRow {
         return cell;
     }
 
-    public synchronized ResultCell getCell(Attribute attribute) {
-        ResultCell cell = cells.get(attribute.getSourceIndex());
+    public synchronized ResultCell getCell(int sourceIndex, Attribute attribute) {
+        ResultCell cell = cells.get(sourceIndex);
         if (cell == null) {
-            cell = new ResultCell(attribute.getSourceIndex(), attribute);
-            cells.put(attribute.getSourceIndex(), cell);
+            cell = new ResultCell(sourceIndex, attribute);
+            cells.put(sourceIndex, cell);
         }
         return cell;
     }
@@ -36,13 +36,6 @@ public class ResultRow {
 
     public ResultCell getCell(int index) {
         return cells.get(index);
-    }
-
-    public ResultCell getByNameCode(String name) {
-        return cells.values().parallelStream()
-                .filter(c -> c.getAttribute().getNameCode().equals(name))
-                .findFirst()
-                .orElse(null);
     }
 
     public ResultCell getByName(String name) {
