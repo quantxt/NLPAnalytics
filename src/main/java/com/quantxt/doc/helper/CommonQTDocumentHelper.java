@@ -441,20 +441,20 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
         if (!m.find()) return false;
 
-        int start = m.start(group);
-        int end = m.end(group);
-
+        int start_of_match = m.start();
         boolean match_is_valid = validateFoundValue(content, start_search_shift,
-                start + start_search_shift,
+                start_of_match + start_search_shift,
                 gap_pattern);
 
         if (!match_is_valid) return false;
 
         // start and end should be shifted to match with the position of the match in
         // content
-        ExtIntervalSimple ext = new ExtIntervalSimple(start + start_search_shift, end + start_search_shift);
+        int start_match = m.start(group);
+        int end_match = m.end(group);
+        ExtIntervalSimple ext = new ExtIntervalSimple(start_match + start_search_shift, end_match + start_search_shift);
         ext.setType(QTField.QTFieldType.KEYWORD);
-        String extractionStr = string_to_search.substring(start, end);
+        String extractionStr = string_to_search.substring(start_match, end_match);
         ext.setStringValue(extractionStr);
         ext.setCustomData(extractionStr);
 
