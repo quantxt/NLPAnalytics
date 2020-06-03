@@ -4,6 +4,6 @@ public interface Attribute {
 
     String getName();
 
-    AttrType getType();
+    boolean isNumericType();
 
 }
