@@ -58,29 +58,6 @@ public class ResultCell {
         return !m.find() ? null : new BigDecimal(Double.parseDouble(val)).doubleValue();
     }
 
-    public Integer getIntegerCellValue() {
-        if (isEmpty()) {
-            return 0;
-        }
-        String val = NLPUtil.cleanDouble(value);
-        Matcher m = Const.POS_DOUBLE_PATTERN.matcher(val);
-        return !m.find() ? null : (int) Double.parseDouble(val);
-    }
-
-    public Long getLongCellValue() {
-        if (isEmpty()) {
-            return 0L;
-        }
-        String val = NLPUtil.cleanDouble(value);
-        Matcher m = Const.POS_DOUBLE_PATTERN.matcher(val);
-        return !m.find() ? null : (long) Double.parseDouble(val);
-    }
-
-    public boolean isNumericType() {
-        return attribute.getType() == AttrType.DOUBLE
-                || attribute.getType() == AttrType.PERCENT;
-    }
-
     public boolean isEmpty() {
         return NLPUtil.isEmpty(value);
     }
@@ -88,7 +65,7 @@ public class ResultCell {
     @Override
     public String toString() {
         return "[name=" + (attribute == null ? null : attribute.getName())
-                + ", type=" + (attribute == null ? null : attribute.getType())
+                + ", numericType=" + (attribute == null ? null : attribute.isNumericType())
                 + ", index=" + index
                 + ", value=" + value
                 + ", highlight=" + highlight + "]";

@@ -18,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.quantxt.io.Converter;
-import com.quantxt.types.AttrType;
 import com.quantxt.types.ResultCell;
 import com.quantxt.types.ResultRow;
 import com.quantxt.types.ResultSheet;
@@ -56,14 +55,8 @@ public class ExcelResultDataToStreamConverter implements Converter<ResultWrapper
                         continue;
                     }
 
-                    //TODO Dejan: Check this for all types
-                    if (resultCell.isNumericType()) {
+                    if (resultCell.getAttribute().isNumericType()) {
                         newCell.setCellValue(resultCell.getNumericCellValue());
-                    } else if (resultCell.getAttribute().getType() == AttrType.LONG) {
-                        newCell.setCellValue(resultCell.getLongCellValue());
-                    } else if (resultCell.getAttribute().getType() == AttrType.INTEGER
-                            || resultCell.getAttribute().getType() == AttrType.SEQ) {
-                        newCell.setCellValue(resultCell.getIntegerCellValue());
                     } else {
                         newCell.setCellValue(resultCell.getValue());
                     }

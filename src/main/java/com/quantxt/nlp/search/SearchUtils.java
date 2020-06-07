@@ -5,7 +5,6 @@ import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
 import org.apache.lucene.analysis.core.LetterTokenizer;
-import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
@@ -30,7 +29,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.quantxt.nlp.search.DctSearhFld.*;
+import static com.quantxt.nlp.search.DctSearhFld.DataField;
+import static com.quantxt.nlp.search.DctSearhFld.SearchFieldType;
 import static com.quantxt.types.DictSearch.Mode.*;
 
 public class SearchUtils {
