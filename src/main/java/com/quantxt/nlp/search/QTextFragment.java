@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.helper.types.QTMatch;
+import com.quantxt.types.ExtInterval;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
 public class QTextFragment {
 
     private static boolean qtFollows(String str,
-                              QTMatch match1,
-                              QTMatch match2){
+                                     ExtInterval match1,
+                                     ExtInterval match2){
         if (match2.getStart() < match1.getEnd()) return false;
         String gap = str.substring(match1.getEnd()+1, match2.getStart());
 
@@ -25,13 +25,14 @@ public class QTextFragment {
         return false;
     }
 
-    public static List<QTMatch> getBestTextFragments(TokenStream tokenStream,
-                                                     SpanQuery query,
-                                                     String text,
-                                                     String dataValue,
-                                                     String vocab_name) throws IOException, InvalidTokenOffsetsException
+    public static List<ExtInterval> getBestTextFragments(TokenStream tokenStream,
+                                                         SpanQuery query,
+                                                         String text,
+                                                         String category,
+                                                         String dictionary_name,
+                                                         String dictionary_id) throws IOException, InvalidTokenOffsetsException
     {
-        List<QTMatch> matchList = new ArrayList<>();
+        List<ExtInterval> matchList = new ArrayList<>();
         QueryScorer fragmentScorer = new QueryScorer(query);
         Fragmenter textFragmenter = new SimpleSpanFragmenter(fragmentScorer, Integer.MAX_VALUE);
 
@@ -70,9 +71,11 @@ public class QTextFragment {
                     endOffset = tokenGroup.getEndOffset();
                     if (score >0) {
                         String keyword = text.substring(startOffset, endOffset);
-                        QTMatch qtMatch = new QTMatch(startOffset, endOffset, keyword);
-                        qtMatch.setCustomData(dataValue);
-                        qtMatch.setGroup(vocab_name);
+                        ExtInterval qtMatch = new ExtInterval(startOffset, endOffset);
+                        qtMatch.setStr(keyword);
+                        qtMatch.setCategory(category);
+                        qtMatch.setDict_name(dictionary_name);
+                        qtMatch.setDict_id(dictionary_id);
                         matchList.add(qtMatch);
                     }
                     tokenGroup.clear();
@@ -95,9 +98,11 @@ public class QTextFragment {
                     startOffset = tokenGroup.getStartOffset();
                     endOffset = tokenGroup.getEndOffset();
                     String keyword = text.substring(startOffset, endOffset);
-                    QTMatch qtMatch = new QTMatch(startOffset, endOffset, keyword);
-                    qtMatch.setCustomData(dataValue);
-                    qtMatch.setGroup(vocab_name);
+                    ExtInterval qtMatch = new ExtInterval(startOffset, endOffset);
+                    qtMatch.setStr(keyword);
+                    qtMatch.setCategory(category);
+                    qtMatch.setDict_name(dictionary_name);
+                    qtMatch.setDict_id(dictionary_id);
                     matchList.add(qtMatch);
                 }
             }
@@ -124,7 +129,7 @@ public class QTextFragment {
     }
 
     private static void mergeContiguousFragments(String text,
-                                                 List<QTMatch> matches)
+                                                 List<ExtInterval> matches)
     {
         if (matches.size() < 2) return;
         boolean mergingStillBeingDone;
@@ -148,7 +153,7 @@ public class QTextFragment {
                         // match_x  match_i
                         matches.get(i).setStart(matches.get(x).getStart());
                         String new_keyword = text.substring(matches.get(i).getStart(), matches.get(i).getEnd());
-                        matches.get(i).setKeyword(new_keyword);
+                        matches.get(i).setStr(new_keyword);
                         matches.set(x, null);
                     }
                     else if ( qtFollows(text, matches.get(i), matches.get(x)))
@@ -156,7 +161,7 @@ public class QTextFragment {
                         // match_i match_x
                         matches.get(i).setEnd(matches.get(x).getEnd());
                         String new_keyword = text.substring(matches.get(i).getStart(), matches.get(i).getEnd());
-                        matches.get(i).setKeyword(new_keyword);
+                        matches.get(i).setStr(new_keyword);
                         matches.set(x, null);
                     }
                 }

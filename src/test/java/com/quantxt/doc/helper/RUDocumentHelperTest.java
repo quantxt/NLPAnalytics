@@ -3,7 +3,7 @@ package com.quantxt.doc.helper;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.quantxt.helper.types.ExtIntervalSimple;
+import com.quantxt.types.ExtIntervalSimple;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;

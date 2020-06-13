@@ -1,7 +1,6 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.helper.types.ExtIntervalSimple;
-import org.apache.lucene.analysis.TokenStream;
+import com.quantxt.types.ExtIntervalSimple;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
 import org.apache.lucene.analysis.ja.JapaneseTokenizer;
@@ -18,7 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.quantxt.doc.helper.CommonQTDocumentHelper.QTPosTags.*;
-import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
+import static com.quantxt.types.QTField.DataType.NOUN;
 import static com.quantxt.util.NLPUtil.findAllSpans;
 
 
@@ -204,29 +203,6 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
 
     }
 
-    @Override
-    public ArrayList<String> stemmer(String str) {
-        ArrayList<String> tokStrings = new ArrayList<>();
-        try {
-            TokenStream tokens = analyzer.tokenStream("field", str);
-            CharTermAttribute cattr = tokens.addAttribute(CharTermAttribute.class);
-            tokens.reset();
-
-            while (tokens.incrementToken()) {
-                String term = cattr.toString();
-                tokStrings.add(term);
-
-            }
-            if (tokStrings.size() == 0) return null;
-            tokens.end();
-            tokens.close();
-        } catch (Exception e){
-            return null;
-        }
-
-        return tokStrings;
-    }
-
     protected boolean isTagDC(String tag) {
         return tag.equals("助詞") || tag.startsWith("接") || tag.startsWith("記号");
     }
@@ -309,8 +285,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
             int ee = tokenSpans[e].getEnd();
             ExtIntervalSimple eit = new ExtIntervalSimple(ss, ee);
             String str = orig_str.substring(ss, ee);
-            eit.setCustomData(str);
-            eit.setStringValue(str);
+            eit.setStr(str);
             eit.setType(NOUN);
             intervals.add(eit);
         }

@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
-import com.quantxt.helper.types.ExtIntervalSimple;
+import com.quantxt.types.ExtIntervalSimple;
 import com.quantxt.nlp.entity.QTValueNumber;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
@@ -21,8 +21,9 @@ import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.ENDocumentHelper;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.*;
+import static com.quantxt.types.QTField.DataType.MONEY;
 import static com.quantxt.types.DictSearch.AnalyzType.STEM;
+import static com.quantxt.types.Dictionary.ExtractionType.*;
 import static com.quantxt.util.NLPUtil.findSpan;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
@@ -48,22 +49,16 @@ public class ENDocumentInfoTest {
             return;
         }
         try {
-            ArrayList<DictItm> d1_items = new ArrayList<>();
-            d1_items.add(new DictItm("Gilead Sciences, Inc.", "Gilead Sciences, Inc.", "Gilead Sciences , Inc."));
-            d1_items.add(new DictItm("Amazon Inc.", "Amazon Inc.", "Amazon"));
+            ArrayList<DictItm> items = new ArrayList<>();
+            items.add(new DictItm("Gilead Sciences, Inc.", "Gilead Sciences, Inc.", "Gilead Sciences , Inc."));
+            items.add(new DictItm("Amazon Inc.", "Amazon Inc.", "Amazon"));
 
-            ArrayList<DictItm> d2_items = new ArrayList<>();
-            d2_items.add(new DictItm("Director", "Director"));
-            d2_items.add(new DictItm("Senior Director", "Senior Director"));
+            items.add(new DictItm("Director", "Director"));
+            items.add(new DictItm("Senior Director", "Senior Director"));
 
-            ArrayList<DictItm> d3_items = new ArrayList<>();
-            d3_items.add(new DictItm("10 Year Exposure", "10 Year Exposure", "10 yr", "ten year"));
-            Map<String, List<DictItm>> vocab_map = new HashMap<>();
+            items.add(new DictItm("10 Year Exposure", "10 Year Exposure", "10 yr", "ten year"));
 
-            vocab_map.put("Company" , d1_items);
-            vocab_map.put("Title" , d2_items);
-            vocab_map.put("Exposure" , d3_items);
-            global_dict = new Dictionary("ENDocumentInfoTest_dict", vocab_map);
+            global_dict = new Dictionary(null, "Company", items);
             qtSearchable = new QTSearchable(global_dict);
             helperSentenceDetect = new ENDocumentHelper().init();
             setUpIsDone = true;
@@ -87,12 +82,9 @@ public class ENDocumentInfoTest {
             ArrayList<DictItm> items = new ArrayList<>();
             items.add(new DictItm("FEIN OR SOC SEC", "FEIN OR SOC SEC"));
 
-            Map<String, List<DictItm>> dicts = new HashMap<>();
-            dicts.put("FEIN" , items);
-
             Pattern keyPaddingPattern = Pattern.compile("^.{20,130}$");
 
-            Dictionary dictionary = new Dictionary(dicts, "test", KEYWORD,
+            Dictionary dictionary = new Dictionary(items, null,"FEIN", REGEX,
                     keyPaddingPattern, null, Pattern.compile("(\\d+\\-\\d+)"), new int []{1});
             QTSearchable qtSearchable = new QTSearchable(dictionary);
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
@@ -127,17 +119,14 @@ public class ENDocumentInfoTest {
             ArrayList<DictItm> items = new ArrayList<>();
             items.add(new DictItm("TOTAL AREA 1", "TOTAL AREA"));
 
-            Map<String, List<DictItm>> dicts = new HashMap<>();
-            dicts.put("AREA" , items);
-
             Pattern keyPaddingPattern = Pattern.compile("^[A-Za-z\\-\\n ]{20,600}$");
 
             Pattern keyVerticalPaddingPattern = Pattern.compile("^\\s*$");
 
-            Dictionary dictionary_1 = new Dictionary(dicts, "number_dict_1", DOUBLE,
+            Dictionary dictionary_1 = new Dictionary(items, null,"AREA", NUMBER,
                     keyPaddingPattern, null, null, null);
 
-            Dictionary dictionary_2 = new Dictionary(dicts, "number_dict_2", DOUBLE,
+            Dictionary dictionary_2 = new Dictionary(items, null,"AREA", NUMBER,
                     keyVerticalPaddingPattern, null, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
@@ -192,13 +181,9 @@ public class ENDocumentInfoTest {
             ArrayList<DictItm> items = new ArrayList<>();
             items.add(new DictItm("Area", "TOTAL AREA"));
 
-            Map<String, List<DictItm>> dicts = new HashMap<>();
-            dicts.put("Area" , items);
-
-
             Pattern match = Pattern.compile("([\\d,]+)");
 
-            Dictionary dictionary_1 = new Dictionary(dicts, "test", KEYWORD,
+            Dictionary dictionary_1 = new Dictionary(items, null,"Area", REGEX,
                     null, null, match, new int[]{1});
 
 
@@ -233,9 +218,9 @@ public class ENDocumentInfoTest {
         List<QTSearchable> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
-
+        String id = qtSearchable.getDictionary().getId();
         Map<String, List<String>> entityMap = doc.getEntity();
-        Assert.assertEquals(entityMap.get("Company").get(0), "Gilead Sciences, Inc.");
+        Assert.assertEquals(entityMap.get(id).get(0), "Gilead Sciences, Inc.");
     }
 
     @Test
@@ -249,7 +234,9 @@ public class ENDocumentInfoTest {
         helper.extract(doc, qtSearchableList, false, "");
 
         Map<String, List<String>> entityMap = doc.getEntity();
-        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
+        String id = qtSearchable.getDictionary().getId();
+
+        Assert.assertEquals(entityMap.get(id).get(0), "Amazon Inc.");
     }
 
     @Test
@@ -261,9 +248,10 @@ public class ENDocumentInfoTest {
         List<QTSearchable> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
+        String id = qtSearchable.getDictionary().getId();
 
         Map<String, List<String>> entityMap = doc.getEntity();
-        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
+        Assert.assertEquals(entityMap.get(id).get(0), "Amazon Inc.");
     }
 
     @Test
@@ -275,9 +263,10 @@ public class ENDocumentInfoTest {
         List<QTSearchable> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
+        String id = qtSearchable.getDictionary().getId();
 
         Map<String, List<String>> entityMap = doc.getEntity();
-        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
+        Assert.assertEquals(entityMap.get(id).get(0), "Amazon Inc.");
     }
 
     @Test
@@ -289,9 +278,10 @@ public class ENDocumentInfoTest {
         List<QTSearchable> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
+        String id = qtSearchable.getDictionary().getId();
 
         Map<String, List<String>> entityMap = doc.getEntity();
-        Assert.assertEquals(entityMap.get("Company").get(0), "Amazon Inc.");
+        Assert.assertEquals(entityMap.get(id).get(0), "Amazon Inc.");
     }
 
     @Test
@@ -303,9 +293,10 @@ public class ENDocumentInfoTest {
         List<QTSearchable> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
+        String id = qtSearchable.getDictionary().getId();
 
         Map<String, List<String>> entityMap = doc.getEntity();
-        Assert.assertTrue(entityMap.get("Title").contains("Senior Director"));
+        Assert.assertTrue(entityMap.get(id).contains("Senior Director"));
     }
 
     @Test
@@ -368,7 +359,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6%";
 
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),  "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(),  null,"test", NUMBER,
                 null, null, null, null);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -391,7 +382,7 @@ public class ENDocumentInfoTest {
     public void findExppsureTable1() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6% 6.4% 9.8%";
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),"test", DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
                 padding_bet_key_value, padding_bet_values, null, null);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -416,7 +407,7 @@ public class ENDocumentInfoTest {
     public void findExppsureTable2() {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% 9.8%";
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
                 padding_bet_key_value, padding_bet_values, null, null);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -440,7 +431,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% 6.4% 9.8%";
 
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
                 padding_bet_key_value, padding_bet_values, null, null);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -464,7 +455,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(),"test",  DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test",  NUMBER,
                 Pattern.compile("^[\\s\\(\\)\\d]+$"), padding_bet_values, null, null);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -488,7 +479,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
                 Pattern.compile("^[\\s\\(\\)\\d]+$"), padding_bet_values, null, null);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -512,7 +503,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String str = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
                 padding_bet_key_value, padding_bet_values, null, null);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
@@ -540,10 +531,7 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Sovereign" ,"Sovereign"));
         dictItms.add(new DictItm("Quasi Sovereign" , "Quasi Sovereign"));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Company" , dictItms);
-
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Company", NUMBER,
                 null, padding_bet_values, null, null);
 
 
@@ -576,11 +564,8 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Branded postpaid net customer additions" , "Branded postpaid net customer additions", "Branded postpaid net customer additions were"));
         dictItms.add(new DictItm("Branded postpaid phone net customer additions" , "Branded postpaid phone net customer additions", "Branded postpaid phone net customer additions were"));
         dictItms.add(new DictItm("net customer additions" , "net customer additions", "net customer additions"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Company" , dictItms);
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s{0,3}\\(\\d+\\)");
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Company", NUMBER,
                 null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
@@ -604,10 +589,8 @@ public class ENDocumentInfoTest {
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Net market value" , "Net market value", "Net market value, as of"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Net value" , dictItms);
 
-        Dictionary dictionary = new Dictionary(entMap, "test", DATETIME,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Net value", DATETIME,
                 null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
@@ -631,19 +614,15 @@ public class ENDocumentInfoTest {
 
         ArrayList<DictItm> dictItms_1 = new ArrayList<>();
         dictItms_1.add(new DictItm("Returns" , "Returns", "returned"));
-        Map<String, List<DictItm>> entMap1 = new HashMap<>();
-        entMap1.put("Fund Performance" , dictItms_1);
 
-        Dictionary dictionary_1 = new Dictionary(entMap1, "keyword_test", KEYWORD,
+        Dictionary dictionary_1 = new Dictionary(dictItms_1, null, "Fund Performance", REGEX,
                 null, null, Pattern.compile("([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
         ArrayList<DictItm> dictItms_2 = new ArrayList<>();
         dictItms_2.add(new DictItm("Net market value" , "Net market value", "Net market value, as of"));
-        Map<String, List<DictItm>> entMap2 = new HashMap<>();
-        entMap2.put("Net value" , dictItms_2);
 
-        Dictionary dictionary_2 = new Dictionary(entMap2, "date_test", DATETIME,
+        Dictionary dictionary_2 = new Dictionary(dictItms_2, null, "Net value", DATETIME,
                 null, null, null, null);
         QTSearchable qtSearchable_2 = new QTSearchable(dictionary_2);
 
@@ -670,9 +649,8 @@ public class ENDocumentInfoTest {
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Returns" , "Returns", "returned"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Fund Performance" , dictItms);
-        Dictionary dictionary = new Dictionary(entMap, "test", KEYWORD,
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Fund Performance", REGEX,
                 null, null, Pattern.compile("([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
@@ -697,11 +675,9 @@ public class ENDocumentInfoTest {
 
         ArrayList<DictItm> dictItms_1 = new ArrayList<>();
         dictItms_1.add(new DictItm("Returns" , "Returns", "returned"));
-        Map<String, List<DictItm>> entMap1 = new HashMap<>();
-        entMap1.put("Fund Performance" , dictItms_1);
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+(\\(\\d+\\)|[\\:\\,;]+)");
-        Dictionary dictionary_1 = new Dictionary(entMap1, "test", STRING,
+        Dictionary dictionary_1 = new Dictionary(dictItms_1, null, "Fund Performance", null,
                 null, null, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
@@ -713,8 +689,8 @@ public class ENDocumentInfoTest {
 
         // THEN
         assertFalse(doc.getValues() == null);
-        assertEquals(doc.getValues().get(0).getKey(), "Returns");
-        assertEquals(doc.getValues().get(0).getKeyGroup(), "Fund Performance");
+        assertEquals(doc.getValues().get(0).getCategory(), "Returns");
+        assertEquals(doc.getValues().get(0).getDict_name(), "Fund Performance");
 
  //       assertEquals(doc.getTitle(),
  //               "<table width=\"100%\"><tr><td>Returns</td><td>InceptionPortfolio Benchmark (Annualized) Asset Class Composition (Net market value, as of 10/31/18) Fund Performance External: Local: Sovereign 68% Sovereign 2% The Fund returned -2.67% (net I-shares) in October, underperforming the Quasi Sovereign 10% Quasi Sovereign 0% benchmark by 51 bps.</td></tr></table>");
@@ -730,7 +706,7 @@ public class ENDocumentInfoTest {
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
                 null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
@@ -754,7 +730,7 @@ public class ENDocumentInfoTest {
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
         Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
-        Dictionary dictionary = new Dictionary(global_dict.getVocab_map(), "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
                 null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
@@ -806,9 +782,7 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Prepaid expenses and other current assets" ,"Prepaid expenses and other current assets"));
         dictItms.add(new DictItm("Warrant liability" , "Warrant liability"));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Company" , dictItms);
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Company", NUMBER,
                 padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
@@ -848,10 +822,7 @@ public class ENDocumentInfoTest {
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Company" , dictItms);
-
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Company", NUMBER,
                 padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
@@ -891,11 +862,8 @@ public class ENDocumentInfoTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Company" , dictItms);
 
-
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Company", NUMBER,
                 padding_bet_key_value, padding_bet_values, null, null);
 
 
@@ -943,9 +911,7 @@ public class ENDocumentInfoTest {
 
         dictItms.add(new DictItm("Royalty costs" , "royalty costs"));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Royalty" , dictItms);
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Royalty", NUMBER,
                 padding_bet_key_value, padding_bet_values, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary,

@@ -49,7 +49,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
     protected transient IndexSearcher indexSearcher;
     protected String index_path;
 
-    protected Map<String, List<DctSearhFld>> docSearchFldMap = new HashMap<>();
+    protected List<DctSearhFld> docSearchFldList = new ArrayList<>();
     protected QTDocument.Language lang;
     protected List<String> synonymPairs;
     protected List<String> stopWords;
@@ -66,7 +66,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         this.dictionary = dictionary;
         this.stopWords = null;
         this.index_path = null;
-        initDocSearchFldMap();
+        initDocSearchFld();
     }
 
     public QTSearchableBase(Dictionary dictionary,
@@ -83,7 +83,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         this.mode = new DictSearch.Mode[]{mode};
         this.analyzType = new DictSearch.AnalyzType[]{analyzType};
         this.dictionary = dictionary;
-        initDocSearchFldMap();
+        initDocSearchFld();
     }
 
     public QTSearchableBase(Dictionary dictionary,
@@ -100,7 +100,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         this.mode = mode;
         this.analyzType = analyzType;
         this.dictionary = dictionary;
-        initDocSearchFldMap();
+        initDocSearchFld();
     }
 
     public List<Document> getMatchedDocs(Query query) throws IOException {
@@ -159,7 +159,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
             logger.error("Path to Index must be set");
             return null;
         }
-        initDocSearchFldMap();
+        initDocSearchFld();
         try {
             Directory mMapDirectory = new MMapDirectory(Paths.get(index_path));
             DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
@@ -173,10 +173,8 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
     public void purge() throws IOException {
         Map<String, Analyzer> analyzerMap = new HashMap<>();
 
-        for (Map.Entry<String, List<DctSearhFld>> e : docSearchFldMap.entrySet()) {
-            for (DctSearhFld dctSearhFld : e.getValue()) {
-                analyzerMap.put(dctSearhFld.getSearch_fld(), dctSearhFld.getIndex_analyzer());
-            }
+        for (DctSearhFld dctSearhFld : docSearchFldList) {
+            analyzerMap.put(dctSearhFld.getSearch_fld(), dctSearhFld.getIndex_analyzer());
         }
 
         PerFieldAnalyzerWrapper pfaw = new PerFieldAnalyzerWrapper(new KeywordAnalyzer(), analyzerMap);
@@ -199,10 +197,8 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
     public QTSearchableBase create() {
         Map<String, Analyzer> analyzerMap = new HashMap<>();
 
-        for (Map.Entry<String, List<DctSearhFld>> e : docSearchFldMap.entrySet()) {
-            for (DctSearhFld dctSearhFld : e.getValue()) {
-                analyzerMap.put(dctSearhFld.getSearch_fld(), dctSearhFld.getIndex_analyzer());
-            }
+        for (DctSearhFld dctSearhFld : docSearchFldList) {
+            analyzerMap.put(dctSearhFld.getSearch_fld(), dctSearhFld.getIndex_analyzer());
         }
 
         PerFieldAnalyzerWrapper pfaw = new PerFieldAnalyzerWrapper(new KeywordAnalyzer(), analyzerMap);
@@ -218,27 +214,20 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
         try {
             IndexWriter writer = new IndexWriter(mMapDirectory, config);
-            int seq = 0;
-            for (Map.Entry<String, List<DictItm>> e : dictionary.getVocab_map().entrySet()) {
-                String vocab_name = e.getKey();
-                List<DctSearhFld> dctSearhFldList = docSearchFldMap.get(vocab_name);
-                List<DictItm> item_vals = e.getValue();
 
-                for (DictItm dictItm : item_vals) {
-                    String item_key = dictItm.getKey();
-                    List<String> values = dictItm.getValue();
-                    for (String value : values) {
-                        Document doc = new Document();
-                        doc.add(new Field(DataField, item_key, DataFieldType));
-                        for (DctSearhFld dctSearhFld : dctSearhFldList) {
-                            Field field = new Field(dctSearhFld.getSearch_fld(), value, SearchFieldType);
-                            doc.add(field);
-                        }
-                        writer.addDocument(doc);
+            for (DictItm dictItm : dictionary.getVocab()) {
+                String category = dictItm.getCategory();
+                List<String> phraseList = dictItm.getPhraseList();
+                for (String value : phraseList) {
+                    Document doc = new Document();
+                    doc.add(new Field(DataField, category, DataFieldType));
+                    for (DctSearhFld dctSearhFld : docSearchFldList) {
+                        Field field = new Field(dctSearhFld.getSearch_fld(), value, SearchFieldType);
+                        doc.add(field);
                     }
+                    writer.addDocument(doc);
                 }
             }
-
             writer.close();
             DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
             indexSearcher = new IndexSearcher(dreader);
@@ -252,47 +241,41 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
     {
         Map<String, Map<String, Long>> stats = new HashMap<>();
 
-        for (Map.Entry<String, List<DctSearhFld>> e : docSearchFldMap.entrySet()){
-            for (DctSearhFld dctSearhFld : e.getValue()){
-                Map<String, Long> fld_stats = new HashMap<>();
-                Analyzer analyzer = dctSearhFld.getSearch_analyzer();
-                String sch_fld = dctSearhFld.getSearch_fld();
-                try {
-                    String[] tokens = tokenize(analyzer, str);
-                    for (String t : tokens) {
-                        long freq = indexSearcher.getIndexReader().docFreq(new Term(sch_fld, t));
-                        Long l = fld_stats.get(t);
-                        if (l == null){
-                            l = 0L;
-                        }
-                        fld_stats.put(t, l + freq);
+        for (DctSearhFld dctSearhFld : docSearchFldList){
+            Map<String, Long> fld_stats = new HashMap<>();
+            Analyzer analyzer = dctSearhFld.getSearch_analyzer();
+            String sch_fld = dctSearhFld.getSearch_fld();
+            try {
+                String[] tokens = tokenize(analyzer, str);
+                for (String t : tokens) {
+                    long freq = indexSearcher.getIndexReader().docFreq(new Term(sch_fld, t));
+                    Long l = fld_stats.get(t);
+                    if (l == null){
+                        l = 0L;
                     }
-                } catch (Exception ee){
-                    ee.printStackTrace();
+                    fld_stats.put(t, l + freq);
                 }
-                stats.put(sch_fld, fld_stats);
+            } catch (Exception ee){
+                ee.printStackTrace();
             }
+            stats.put(sch_fld, fld_stats);
         }
 
         return stats;
     }
 
-    public void initDocSearchFldMap() {
+    public void initDocSearchFld() {
         try {
-            for (Map.Entry<String, List<DictItm>> vocab : dictionary.getVocab_map().entrySet()) {
-                String vocab_name = vocab.getKey();
-                String filednamePfx = vocab_name.toLowerCase().replaceAll("[^a-z0-9_]", "");
-                List<DctSearhFld> dctSearhFlds = new ArrayList<>();
-                for (AnalyzType at : analyzType) {
-                    for (Mode m : mode) {
-                        DctSearhFld dctSearhFld = new DctSearhFld(lang, synonymPairs, stopWords,
-                                m, at, filednamePfx);
-                        dctSearhFlds.add(dctSearhFld);
-                    }
+            String filednamePfx = dictionary.getName().toLowerCase().replaceAll("[^a-z0-9_]", "");
+            docSearchFldList = new ArrayList<>();
+            for (AnalyzType at : analyzType) {
+                for (Mode m : mode) {
+                    DctSearhFld dctSearhFld = new DctSearhFld(lang, synonymPairs, stopWords,
+                            m, at, filednamePfx);
+                    docSearchFldList.add(dctSearhFld);
                 }
-                dctSearhFlds.sort((DctSearhFld s1, DctSearhFld s2) -> s2.getPriority() - s1.getPriority());
-                docSearchFldMap.put(vocab_name, dctSearhFlds);
             }
+            docSearchFldList.sort((DctSearhFld s1, DctSearhFld s2) -> s2.getPriority() - s1.getPriority());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -331,8 +314,8 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         this.minFuzzyTermLength = minFuzzyTermLength;
     }
 
-    public Map<String, List<DctSearhFld>> getDocSearchFldMap() {
-        return docSearchFldMap;
+    public List<DctSearhFld> getDocSearchFldList() {
+        return docSearchFldList;
     }
 
     public List<String> getStopWords() {
@@ -347,8 +330,8 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         return index_path;
     }
 
-    public void setDocSearchFldMap(Map<String, List<DctSearhFld>> docSearchFldMap) {
-        this.docSearchFldMap = docSearchFldMap;
+    public void setDocSearchFldList(List<DctSearhFld> docSearchFldList) {
+        this.docSearchFldList = docSearchFldList;
     }
 
     public void setIndex_path(String index_path) {

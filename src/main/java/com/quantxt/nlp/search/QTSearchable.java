@@ -1,7 +1,7 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.helper.types.QTMatch;
+import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.apache.lucene.analysis.Analyzer;
@@ -16,7 +16,7 @@ import java.util.*;
 import static com.quantxt.nlp.search.SearchUtils.*;
 
 
-public class QTSearchable extends QTSearchableBase<QTMatch> {
+public class QTSearchable extends QTSearchableBase<ExtInterval> {
 
     final private static Logger logger = LoggerFactory.getLogger(QTSearchable.class);
 
@@ -48,10 +48,10 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
     }
 
     @Override
-    public List<QTMatch> search(final String query_string) {
+    public List<ExtInterval> search(final String query_string) {
 
         String escaped_query = QueryParser.escape(query_string);
-        ArrayList<QTMatch> res = new ArrayList<>();
+        ArrayList<ExtInterval> res = new ArrayList<>();
         boolean useFuzzyMatching = false;
         for (Mode m : mode){
             if  (m ==  Mode.FUZZY_SPAN || m == Mode.FUZZY_ORDERED_SPAN
@@ -61,34 +61,32 @@ public class QTSearchable extends QTSearchableBase<QTMatch> {
             }
         }
         try {
-            for (Map.Entry<String, List<DctSearhFld>> dctSearhFldEntry : docSearchFldMap.entrySet()) {
-                // This list is ordered by priorities
-                // so if we find an entry that is matched with STANDARD analysis we won't consider it using STEM analysis
-                List<DctSearhFld> dctSearhFldList = dctSearhFldEntry.getValue();
-                String vocab_name = dctSearhFldEntry.getKey();
-                for (DctSearhFld dctSearhFld : dctSearhFldList) {
-                    String search_fld = dctSearhFld.getSearch_fld();
-                    Analyzer searchAnalyzer = dctSearhFld.getSearch_analyzer();
+            // This list is ordered by priorities
+            // so if we find an entry that is matched with STANDARD analysis we won't consider it using STEM analysis
+            String vocab_name = dictionary.getName();
+            String vocab_id = dictionary.getId();
+            for (DctSearhFld dctSearhFld : docSearchFldList) {
+                String search_fld = dctSearhFld.getSearch_fld();
+                Analyzer searchAnalyzer = dctSearhFld.getSearch_analyzer();
 
-                    Query query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
-                            getMultimatcheQuery(searchAnalyzer, search_fld, escaped_query);
+                Query query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
+                        getMultimatcheQuery(searchAnalyzer, search_fld, escaped_query);
 
-                    List<Document> matchedDocs = getMatchedDocs(query);
-                    boolean found = false;
-                    if (matchedDocs.size() != 0) {
-                        for (Mode m : mode) {
-                            Collection<QTMatch> matches = getFragments(matchedDocs, m, 1,
-                                    searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
-                                    search_fld, vocab_name, query_string);
-                            if (matches.size() > 0) {
-                                found = true;
-                                res.addAll(matches);
-                                break;
-                            }
+                List<Document> matchedDocs = getMatchedDocs(query);
+                boolean found = false;
+                if (matchedDocs.size() != 0) {
+                    for (Mode m : mode) {
+                        Collection<ExtInterval> matches = getFragments(matchedDocs, m, 1,
+                                searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
+                                search_fld, vocab_name, vocab_id, query_string);
+                        if (matches.size() > 0) {
+                            found = true;
+                            res.addAll(matches);
+                            break;
                         }
                     }
-                    if (found) break;
                 }
+                if (found) break;
             }
         } catch (Exception e ){
             e.printStackTrace();

@@ -3,7 +3,7 @@ package com.quantxt.nlp.search;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.helper.types.QTMatch;
+import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
@@ -28,24 +28,19 @@ public class QTSearchableTest {
             return;
         }
         try {
-            ArrayList<DictItm> dictItms_1 = new ArrayList<>();
-            dictItms_1.add(new DictItm("Gilead Sciences, Inc.", "Gilead Sciences, Inc."));
-            dictItms_1.add(new DictItm("Amazon Inc.", "Amazon Inc.", "Amazon" ));
-            dictItms_1.add(new DictItm("Amazon Inc.", "Amazon Inc."));
+            ArrayList<DictItm> dictItms = new ArrayList<>();
+            dictItms.add(new DictItm("Gilead Sciences, Inc.", "Gilead Sciences, Inc."));
+            dictItms.add(new DictItm("Amazon Inc.", "Amazon Inc.", "Amazon" ));
+            dictItms.add(new DictItm("Amazon Inc.", "Amazon Inc."));
 
-            ArrayList<DictItm> dictItms_2 = new ArrayList<>();
-            dictItms_2.add(new DictItm("Director","Director" ));
-            dictItms_2.add(new DictItm("Senior Director", "Senior Director"));
-
-            Map<String, List<DictItm>> entMap = new HashMap<>();
-            entMap.put("Company", dictItms_1);
-            entMap.put("Title", dictItms_2);
+            dictItms.add(new DictItm("Director","Director" ));
+            dictItms.add(new DictItm("Senior Director", "Senior Director"));
 
             // synonyms;
             ArrayList<String> synonym_pairs = new ArrayList<>();
             synonym_pairs.add("Inc\tinciobi");
             synonym_pairs.add("Inc\tcorporate");
-            Dictionary dictionary = new Dictionary("QTSearchableTest", entMap);
+            Dictionary dictionary = new Dictionary(null, "Company", dictItms);
             qtSearchable = new QTSearchable(dictionary, null, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
             setUpIsDone = true;
@@ -59,15 +54,17 @@ public class QTSearchableTest {
         String str = "Amazon Inc. reported a gain on his earnings.";
 
         // WHEN
-        List<QTMatch> result = qtSearchable.search(str);
+        List<ExtInterval> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
         assertFalse(result.isEmpty());
         assertTrue(result.size() == 1);
         //TODO: this should be Amazon Inc.  with the dot
-        assertEquals(result.get(0).getGroup(), "Company");
-        assertEquals(result.get(0).getKeyword(), "Amazon Inc");
+        assertEquals(result.get(0).getDict_name(), "Company");
+        assertEquals(result.get(0).getCategory(), "Amazon Inc.");
+        String matchedStr = str.substring(result.get(0).getStart(), result.get(0).getEnd());
+        assertEquals(matchedStr, "Amazon Inc");
 
     }
 
@@ -77,13 +74,13 @@ public class QTSearchableTest {
         String str = "Amazon inciobi reported a gain on his earnings.";
 
         // WHEN
-        List<QTMatch> result = qtSearchable.search(str);
+        List<ExtInterval> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
         assertFalse(result.isEmpty());
         assertTrue(result.size() == 1);
-        assertEquals(result.get(0).getKeyword(), "Amazon inciobi");
+        assertEquals(result.get(0).getStr(), "Amazon inciobi");
 
     }
 
@@ -93,44 +90,41 @@ public class QTSearchableTest {
         String str = "Amazon corporate reported a gain on his earnings.";
 
         // WHEN
-        List<QTMatch> result = qtSearchable.search(str);
+        List<ExtInterval> result = qtSearchable.search(str);
 
         // THEN
         assertNotNull(result);
         assertFalse(result.isEmpty());
         assertTrue(result.size() == 1);
-        assertEquals(result.get(0).getKeyword(), "Amazon corporate");
+        assertEquals(result.get(0).getStr(), "Amazon corporate");
 
     }
 
     @Test
     public void testStopWord() {
         try {
-            ArrayList<DictItm> dictItms_1 = new ArrayList<>();
-            dictItms_1.add(new DictItm("Gilead Sciences, Inc.", "Gilead Sciences, Inc."));
-            dictItms_1.add(new DictItm("Amazon Inc.", "Amazon Inc.", "Amazon"));
-            dictItms_1.add(new DictItm("Amazon Inc.", "Amazon Inc."));
-
-            Map<String, List<DictItm>> entMap = new HashMap<>();
-            entMap.put("Company", dictItms_1);
+            ArrayList<DictItm> dictItms = new ArrayList<>();
+            dictItms.add(new DictItm("Gilead Sciences, Inc.", "Gilead Sciences, Inc."));
+            dictItms.add(new DictItm("Amazon Inc.", "Amazon Inc.", "Amazon"));
+            dictItms.add(new DictItm("Amazon Inc.", "Amazon Inc."));
 
             // synonyms;
             ArrayList<String> stopword = new ArrayList<>();
             stopword.add("inc");
-            Dictionary dictionary = new Dictionary("QTSearchableTest", entMap);
+            Dictionary dictionary = new Dictionary(null, "Company", dictItms);
             QTSearchable qtSearchable = new QTSearchable(dictionary, null, null, stopword,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
             // GIVEN
             String str = "Gilead Sciences, Inc. reported a gain on his earnings.";
 
             // WHEN
-            List<QTMatch> result = qtSearchable.search(str);
+            List<ExtInterval> result = qtSearchable.search(str);
 
             // THEN
             assertNotNull(result);
             assertFalse(result.isEmpty());
             assertTrue(result.size() == 1);
-           assertEquals(result.get(0).getKeyword(), "Gilead Sciences");
+           assertEquals(result.get(0).getStr(), "Gilead Sciences");
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -140,29 +134,26 @@ public class QTSearchableTest {
     @Ignore
     public void testStopWordList() {
         try {
-            ArrayList<DictItm> dictItms_1 = new ArrayList<>();
-            dictItms_1.add(new DictItm("CONSTRUCTION TYPE Fire Resistive", "CONSTRUCTION TYPE Fire Resistive"));
-
-            Map<String, List<DictItm>> entMap = new HashMap<>();
-            entMap.put("Construction", dictItms_1);
+            ArrayList<DictItm> dictItms = new ArrayList<>();
+            dictItms.add(new DictItm("CONSTRUCTION TYPE Fire Resistive", "CONSTRUCTION TYPE Fire Resistive"));
 
             String [] stopword = new String [] {"distance", "to", "hydrant", "district", "code", "stat",
                     "number", "prot" ,"cl" , "#", "stories", "basm'ts", "yr", "built", "total", "area"};
 
-            Dictionary dictionary = new Dictionary("QTSearchableTest", entMap);
+            Dictionary dictionary = new Dictionary(null, "Construction", dictItms);
             QTSearchable qtSearchable = new QTSearchable(dictionary, null, null, Arrays.asList(stopword),
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
             // GIVEN
             String str = "CONSTRUCTION TYPE DISTANCE TO HYDRANT STAT DISTRICT CODE NUMBER PROT CL # STORIES # BASM'TS YR BUILT TOTAL AREA Fire Resistive";
 
             // WHEN
-            List<QTMatch> result = qtSearchable.search(str);
+            List<ExtInterval> result = qtSearchable.search(str);
 
             // THEN
             assertNotNull(result);
             assertFalse(result.isEmpty());
             assertTrue(result.size() == 1);
-            assertEquals(result.get(0).getGroup(), "Construction");
+            assertEquals(result.get(0).getCategory(), "Construction");
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -174,15 +165,12 @@ public class QTSearchableTest {
         // GIVEN
         String str = "Accordingly, we are subject to risks, including labor disputes, inclement weather, natural disasters, cybersecurity attacks, possible acts of terrorism, availability of shipping containers, and increased security restrictions associated with such carriers’ ability to provide delivery services to meet our shipping needs.";
 
-        ArrayList<DictItm> dictItms_1 = new ArrayList<>();
-        dictItms_1.add(new DictItm("weather conditions","Weather"));
-        dictItms_1.add(new DictItm("climate change","Weather"));
-        dictItms_1.add(new DictItm("global warming","Weather"));
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("weather conditions","Weather"));
+        dictItms.add(new DictItm("climate change","Weather"));
+        dictItms.add(new DictItm("global warming","Weather"));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Weather", dictItms_1);
-
-        Dictionary dictionary = new Dictionary("QTSearchableTest", entMap);
+        Dictionary dictionary = new Dictionary(null, "Weather", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, null, null, null,
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.STANDARD);
 
