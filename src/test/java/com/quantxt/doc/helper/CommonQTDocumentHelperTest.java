@@ -2,7 +2,7 @@ package com.quantxt.doc.helper;
 
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
-import com.quantxt.helper.types.QTMatch;
+import com.quantxt.types.ExtInterval;
 import com.quantxt.io.pdf.PDFManager;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.DOUBLE;
+import static com.quantxt.types.Dictionary.ExtractionType.NUMBER;
+import static com.quantxt.types.Dictionary.ExtractionType.REGEX;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
@@ -52,10 +53,7 @@ public class CommonQTDocumentHelperTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Expense" , dictItms);
-
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
                 Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -87,10 +85,8 @@ public class CommonQTDocumentHelperTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Expense" , dictItms);
 
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
                 Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -122,10 +118,8 @@ public class CommonQTDocumentHelperTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Expense" , dictItms);
 
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
                 Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -194,11 +188,9 @@ public class CommonQTDocumentHelperTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
 
         dictItms.add(new DictItm("SPK", "% SPRNK"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("SPK", dictItms);
 
         Pattern skipBetweenValues = Pattern.compile("^(?:[ ,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]*\n){0,10}$");
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "SPK", NUMBER,
                 skipBetweenValues, skipBetweenValues, null, null);
 
         //      logger.info(content.get(25));
@@ -220,11 +212,9 @@ public class CommonQTDocumentHelperTest {
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Orig Year Built", "Orig Year Built"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Orig Year Built", dictItms);
 
         Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,13}\n){0,3}$");
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Orig Year Built", NUMBER,
                 skipBetweenKeyValues, null, null, null);
 
 
@@ -250,11 +240,9 @@ public class CommonQTDocumentHelperTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
         //YR Built is a valid phrase but an invalid header (label)
         dictItms.add(new DictItm("Year Built", "YR Built"));
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Year Built", dictItms);
 
         Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,10}\n){0,3}$");
-        Dictionary dictionary = new Dictionary(entMap, "test", DOUBLE,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Year Built", NUMBER,
                 skipBetweenKeyValues, null, null, null);
 
 
@@ -265,6 +253,30 @@ public class CommonQTDocumentHelperTest {
         helper.extract(doc, searchableList, true, "");
 
         assertTrue(doc.getValues() == null);
+    }
+
+    @Test
+    public void regex_extraction_v1() {
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        //YR Built is a valid phrase but an invalid header (label)
+        dictItms.add(new DictItm("SSN", "Social security"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "SSN", REGEX,
+                null, null, Pattern.compile("(is|was)\\s+(\\d{3}\\-\\d{2}\\-\\d{4})"), new int []{2});
+
+        String content = "may social security  is 123-23-1234";
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
+        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
+        List<QTSearchable> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        helper.extract(doc, searchableList, false, "");
+
+        assertFalse(doc.getValues() == null);
+        assertTrue(doc.getValues().size() == 1);
+        assertTrue(doc.getValues().get(0).getExtIntervalSimples().get(0).getStr().equals("123-23-1234"));
     }
 
     @Test
@@ -299,10 +311,7 @@ public class CommonQTDocumentHelperTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Business", "Item 1. Business" ));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Business", dictItms);
-
-        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        Dictionary dictionary = new Dictionary(null, "Business", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.STEM);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -325,14 +334,11 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Item1", "Search 1 has gas and rockes" ));
         dictItms.add(new DictItm("Item2", "Search 2 has rock and ga" ));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Test", dictItms);
-
-        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        Dictionary dictionary = new Dictionary(null, "Test", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
                 new DictSearch.Mode[] {DictSearch.Mode.PARTIAL_SPAN}, new DictSearch.AnalyzType[] {DictSearch.AnalyzType.STANDARD, DictSearch.AnalyzType.STEM});
 
-        List<QTMatch> matches = qtSearchable.search(query);
+        List<ExtInterval> matches = qtSearchable.search(query);
 
         assertTrue(matches.size() == 1);
     }

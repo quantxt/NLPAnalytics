@@ -1,16 +1,14 @@
 package com.quantxt.nlp.types;
 
-import com.quantxt.helper.types.ExtIntervalSimple;
+import com.quantxt.types.ExtIntervalSimple;
 import com.quantxt.nlp.entity.QTValueNumber;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.MONEY;
-import static com.quantxt.helper.types.QTField.QTFieldType.PERCENT;
+import static com.quantxt.types.QTField.DataType.MONEY;
+import static com.quantxt.types.QTField.DataType.PERCENT;
 import static org.junit.Assert.assertTrue;
 
 /**

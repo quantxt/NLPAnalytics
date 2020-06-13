@@ -3,7 +3,7 @@ package com.quantxt.QTDocument;
 import com.quantxt.doc.JADocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.JADocumentHelper;
-import com.quantxt.helper.types.ExtIntervalSimple;
+import com.quantxt.types.ExtIntervalSimple;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
+import static com.quantxt.types.QTField.DataType.NOUN;
 import static org.junit.Assert.assertTrue;
 
 /**

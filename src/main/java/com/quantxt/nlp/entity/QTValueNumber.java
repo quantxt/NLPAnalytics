@@ -1,9 +1,8 @@
 package com.quantxt.nlp.entity;
 
-import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.helper.DateResolver;
-import com.quantxt.helper.types.ExtIntervalSimple;
-import com.quantxt.helper.types.QTField;
+import com.quantxt.types.ExtIntervalSimple;
+import com.quantxt.types.QTField;
 import com.quantxt.types.Dictionary;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -13,8 +12,9 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
+import static com.quantxt.types.QTField.DataType.LONG;
+import static com.quantxt.types.QTField.DataType.PERCENT;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.*;
 
 /**
  * Created by matin on 11/24/18.
@@ -86,22 +86,20 @@ public class QTValueNumber {
         while (m.find()) {
             if ( groups == null){
                 ExtIntervalSimple ext = new ExtIntervalSimple(m.start(), m.end());
-                ext.setType(QTField.QTFieldType.KEYWORD);
+                ext.setType(QTField.DataType.STRING);
                 int start = m.start();
                 int end = m.end();
                 String extractionStr = str.substring(start, end);
-                ext.setStringValue(extractionStr);
-                ext.setCustomData(extractionStr);
+                ext.setStr(extractionStr);
                 valIntervals.add(ext);
             } else {
                 for (int g : groups) {
                     ExtIntervalSimple ext = new ExtIntervalSimple(m.start(), m.end());
-                    ext.setType(QTField.QTFieldType.KEYWORD);
+                    ext.setType(QTField.DataType.STRING);
                     int start = m.start(g);
                     int end = m.end(g);
                     String extractionStr = str.substring(start, end);
-                    ext.setStringValue(extractionStr);
-                    ext.setCustomData(extractionStr);
+                    ext.setStr(extractionStr);
                     valIntervals.add(ext);
                 }
             }
@@ -131,9 +129,8 @@ public class QTValueNumber {
             // start and end should be shifted to match with the position of the match in
             // content
             ExtIntervalSimple ext = new ExtIntervalSimple(start + shift, end + shift);
-            ext.setType(QTField.QTFieldType.KEYWORD);
-            ext.setStringValue(extractionStr);
-            ext.setCustomData(extractionStr);
+            ext.setType(QTField.DataType.STRING);
+            ext.setStr(extractionStr);
             matches.add(ext);
             if (ext.getEnd() > stop) break;
         }
@@ -193,7 +190,7 @@ public class QTValueNumber {
         }
 
         try {
-            QTField.QTFieldType t = null;
+            QTField.DataType t = null;
 
             if (m.group(4) != null){
                 t = PERCENT;
@@ -204,7 +201,7 @@ public class QTValueNumber {
                 String string_to_lookbehind_for_currencieis = str.substring(Math.max(0, start - 50), start);
                 Matcher currency_matcher = currencies.matcher(string_to_lookbehind_for_currencieis);
                 if (currency_matcher.find()){
-                    t = QTField.QTFieldType.MONEY;
+                    t = QTField.DataType.MONEY;
                     // and move the start to where the currency was found
                     int start_currency = currency_matcher.start();
                     int shift = string_to_lookbehind_for_currencieis.length() - start_currency;
@@ -218,7 +215,7 @@ public class QTValueNumber {
                 if (extractionStr.indexOf(".") < 0){
                     t = LONG;
                 } else {
-                    t = QTField.QTFieldType.DOUBLE;
+                    t = QTField.DataType.DOUBLE;
                 }
             }
 
@@ -244,9 +241,9 @@ public class QTValueNumber {
             if (t == LONG){
                 long long_value = (long) parsed;
                 ext.setIntValue(long_value);
-                ext.setCustomData(String.valueOf(long_value));
+                ext.setStr(String.valueOf(long_value));
             } else {
-                ext.setCustomData(String.valueOf(parsed));
+                ext.setStr(String.valueOf(parsed));
                 ext.setDoubleValue(parsed);
             }
             return ext;
@@ -318,7 +315,7 @@ public class QTValueNumber {
             }
 
             try {
-                QTField.QTFieldType t = null;
+                QTField.DataType t = null;
 
                 if (m.group(4) != null){
                     t = PERCENT;
@@ -329,7 +326,7 @@ public class QTValueNumber {
                     String string_to_lookbehind_for_currencieis = str.substring(Math.max(0, start - 50), start);
                     Matcher currency_matcher = currencies.matcher(string_to_lookbehind_for_currencieis);
                     if (currency_matcher.find()){
-                        t = QTField.QTFieldType.MONEY;
+                        t = QTField.DataType.MONEY;
                         // and move the start to where the currency was found
                         int start_currency = currency_matcher.start();
                         int shift = string_to_lookbehind_for_currencieis.length() - start_currency;
@@ -343,7 +340,7 @@ public class QTValueNumber {
                     if (extractionStr.indexOf(".") < 0){
                         t = LONG;
                     } else {
-                        t = QTField.QTFieldType.DOUBLE;
+                        t = QTField.DataType.DOUBLE;
                     }
                 }
 
@@ -369,9 +366,9 @@ public class QTValueNumber {
                 if (t == LONG){
                     long long_value = (long) parsed;
                     ext.setIntValue(long_value);
-                    ext.setCustomData(String.valueOf(long_value));
+                    ext.setStr(String.valueOf(long_value));
                 } else {
-                    ext.setCustomData(String.valueOf(parsed));
+                    ext.setStr(String.valueOf(parsed));
                     ext.setDoubleValue(parsed);
                 }
                 valIntervals.add(ext);

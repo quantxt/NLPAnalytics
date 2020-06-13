@@ -1,6 +1,6 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.helper.types.ExtIntervalSimple;
+import com.quantxt.types.ExtIntervalSimple;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
@@ -12,8 +12,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.NOUN;
-import static com.quantxt.helper.types.QTField.QTFieldType.VERB;
+import static com.quantxt.types.QTField.DataType.NOUN;
+import static com.quantxt.types.QTField.DataType.VERB;
 import static com.quantxt.util.NLPUtil.findAllSpans;
 
 /**
@@ -109,8 +109,7 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
             ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
             eit.setType(NOUN);
             String str = orig_str.substring(eit.getStart(), eit.getEnd());
-            eit.setCustomData(str);
-            eit.setStringValue(str);
+            eit.setStr(str);
             intervals.add(eit);
         }
 
@@ -121,8 +120,7 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
             ExtIntervalSimple eit = new ExtIntervalSimple(tokenSpans[s].getStart(), tokenSpans[e].getEnd());
             eit.setType(VERB);
             String str = orig_str.substring(eit.getStart(), eit.getEnd());
-            eit.setCustomData(str);
-            eit.setStringValue(str);
+            eit.setStr(str);
             intervals.add(eit);
         }
 
