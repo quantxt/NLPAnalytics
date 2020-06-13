@@ -1,7 +1,7 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.helper.types.QTMatch;
+import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
@@ -14,7 +14,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,14 +40,11 @@ public class SearchUtilsTest {
             dictItms.add(new DictItm("Cold Drink", "water" ));
             dictItms.add(new DictItm("Amazon Inc", "Amazon Inc"));
 
-            Map<String, List<DictItm>> entMap = new HashMap<>();
-            entMap.put("Dict_Test", dictItms);
-
             // synonyms;
             ArrayList<String> synonym_pairs = new ArrayList<>();
             synonym_pairs.add("ert\tearning");
             synonym_pairs.add("gain\tprofit");
-            Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+            Dictionary dictionary = new Dictionary(null, "Dict_Test", dictItms);
             qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STEM);
 
@@ -66,10 +62,10 @@ public class SearchUtilsTest {
         // GIVEN
         String str = "Amazon Inc. reported a profit on his earnings.";
 
-        List<QTMatch> res = qtSearchable.search(str);
+        List<ExtInterval> res = qtSearchable.search(str);
         assertTrue(res.size() == 2);
-        assertTrue(res.get(1).getCustomData().equals("Profit"));
-        assertTrue(res.get(1).getKeyword().equals("profit"));
+        assertTrue(res.get(1).getCategory().equals("Profit"));
+        assertTrue(res.get(1).getStr().equals("profit"));
     }
 
 
@@ -79,24 +75,25 @@ public class SearchUtilsTest {
         String str = "Amazon Inc. reported a gain on his earnings.";
 
         // WHEN
-        SpanQuery result = getSpanQuery(qtSearchable.docSearchFldMap.get("Dict_Test").get(0).getSearch_analyzer(),
+        SpanQuery result = getSpanQuery(qtSearchable.docSearchFldList.get(0).getSearch_analyzer(),
                 "DUMMY_FIELD", "report gain", 1, false, true, true);
 
         assertEquals(result.toString(), "spanNear([DUMMY_FIELD:report, spanOr([DUMMY_FIELD:gain, DUMMY_FIELD:profit])], 1, true)");
-        List<QTMatch> res = qtSearchable.search(str);
+        List<ExtInterval> res = qtSearchable.search(str);
         assertTrue(res.size() == 2);
-        assertTrue(res.get(1).getCustomData().equals("Profit"));
-        assertTrue(res.get(1).getKeyword().equals("gain"));
+        assertTrue(res.get(1).getCategory().equals("Profit"));
+        String matchedStr = str.substring(res.get(1).getStart(), res.get(1).getEnd());
+        assertTrue(matchedStr.equals("gain"));
     }
 
     @Test
     public void parseTermsFuzzy1EditQuery() {
         // GIVEN
         String str = "AmazonInc. reported a profit on his earnings.";
-        List<QTMatch> res = qtSearchable_fuzzy.search(str);
+        List<ExtInterval> res = qtSearchable_fuzzy.search(str);
         assertTrue(res.size() == 2);
-        assertTrue(res.get(0).getCustomData().equals("Amazon Inc"));
-        assertTrue(res.get(0).getKeyword().equals("AmazonInc"));
+        assertTrue(res.get(0).getCategory().equals("Amazon Inc"));
+        assertTrue(res.get(0).getStr().equals("AmazonInc"));
     }
 
     @Test
@@ -104,10 +101,10 @@ public class SearchUtilsTest {
         // GIVEN
         // we should NOT match on profit that is in middle of `wordstartproftiwordend`
         String str = "Amazon Inc. reported a wordstartproftiwordend on his earnings.";
-        List<QTMatch> res = qtSearchable_fuzzy.search(str);
+        List<ExtInterval> res = qtSearchable_fuzzy.search(str);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Amazon Inc"));
-        assertTrue(res.get(0).getKeyword().equals("Amazon Inc"));
+        assertTrue(res.get(0).getCategory().equals("Amazon Inc"));
+        assertTrue(res.get(0).getStr().equals("Amazon Inc"));
     }
 
     @Ignore
@@ -116,10 +113,10 @@ public class SearchUtilsTest {
         // GIVEN
         String str = "Amazon Inc. reported a gain on his earnings.";
 
-        List<QTMatch> res = qtSearchable_fuzzy.search(str);
+        List<ExtInterval> res = qtSearchable_fuzzy.search(str);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Profit"));
-        assertTrue(res.get(0).getKeyword().equals("profti"));
+        assertTrue(res.get(0).getCategory().equals("Profit"));
+        assertTrue(res.get(0).getStr().equals("profti"));
     }
 
 
@@ -172,17 +169,14 @@ public class SearchUtilsTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Amazon", "Amazon Inc." ));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Amazon_typo", dictItms);
-
-        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        Dictionary dictionary = new Dictionary(null, "Amazon_typo", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
 
 
-        List<QTMatch> res = qtSearchable.search(str);
+        List<ExtInterval> res = qtSearchable.search(str);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Amazon"));
+        assertTrue(res.get(0).getCategory().equals("Amazon"));
     }
 
 
@@ -194,17 +188,14 @@ public class SearchUtilsTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Amazon", "Amazon Inc." ));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Amazon_unordered", dictItms);
-
-        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        Dictionary dictionary = new Dictionary(null, "Amazon_unordered", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.SIMPLE);
 
 
-        List<QTMatch> res = qtSearchable.search(str);
+        List<ExtInterval> res = qtSearchable.search(str);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Amazon"));
+        assertTrue(res.get(0).getCategory().equals("Amazon"));
     }
 
 
@@ -216,17 +207,14 @@ public class SearchUtilsTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Amazon", "Amazon Inc." ));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Amazon_typo", dictItms);
-
-        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        Dictionary dictionary = new Dictionary(null, "Amazon_typo", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
                 DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
 
-        List<QTMatch> res = qtSearchable.search(str);
+        List<ExtInterval> res = qtSearchable.search(str);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Amazon"));
+        assertTrue(res.get(0).getCategory().equals("Amazon"));
     }
 
     @Test
@@ -237,17 +225,14 @@ public class SearchUtilsTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Amazon", "Amazon Inc" ));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Amazon_typo", dictItms);
-
-        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        Dictionary dictionary = new Dictionary(null, "Amazon_typo", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
                 DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
 
-        List<QTMatch> res = qtSearchable.search(str);
+        List<ExtInterval> res = qtSearchable.search(str);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Amazon"));
+        assertTrue(res.get(0).getCategory().equals("Amazon"));
     }
 
     @Test
@@ -265,15 +250,12 @@ public class SearchUtilsTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Business", "Item 1. Business" ));
 
-        Map<String, List<DictItm>> entMap = new HashMap<>();
-        entMap.put("Business", dictItms);
-
-        Dictionary dictionary = new Dictionary("SearchUtilsTest", entMap);
+        Dictionary dictionary = new Dictionary(null, "Business", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.STEM);
 
-        List<QTMatch> res = qtSearchable.search(result.toString("UTF-8"));
+        List<ExtInterval> res = qtSearchable.search(result.toString("UTF-8"));
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCustomData().equals("Business"));
+        assertTrue(res.get(0).getCategory().equals("Business"));
     }
 }

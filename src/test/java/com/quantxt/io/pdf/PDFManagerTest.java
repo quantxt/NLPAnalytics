@@ -16,12 +16,10 @@ import org.junit.Test;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.DOUBLE;
+import static com.quantxt.types.Dictionary.ExtractionType.NUMBER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 
@@ -122,15 +120,12 @@ public class PDFManagerTest {
             ArrayList<DictItm> items = new ArrayList<>();
             items.add(new DictItm("Adjusted EBITDA", "Adjusted EBITDA"));
 
-            Map<String, List<DictItm>> dicts = new HashMap<>();
-            dicts.put("EBITDA", items);
-
             CommonQTDocumentHelper helper = new ENDocumentHelper();
 
             Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
             Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE,
+            Dictionary dictionary_1 = new Dictionary(items, null, "EBITDA", NUMBER,
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
@@ -167,15 +162,12 @@ public class PDFManagerTest {
             items.add(new DictItm("Q3", "Q3"));
             items.add(new DictItm("Q4", "Q4"));
 
-            Map<String, List<DictItm>> dicts = new HashMap<>();
-            dicts.put("Quarters", items);
-
             CommonQTDocumentHelper helper = new ENDocumentHelper();
 
             Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
             Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE,
+            Dictionary dictionary_1 = new Dictionary(items, null, "Quarters", NUMBER,
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
@@ -208,15 +200,12 @@ public class PDFManagerTest {
             ArrayList<DictItm> items = new ArrayList<>();
             items.add(new DictItm("Adjusted EBITDA", "Adjusted EBITDA"));
 
-            Map<String, List<DictItm>> dicts = new HashMap<>();
-            dicts.put("Adjusted EBITDA", items);
-
             CommonQTDocumentHelper helper = new ENDocumentHelper();
 
             Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
             Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(dicts, "test", DOUBLE,
+            Dictionary dictionary_1 = new Dictionary(items, null, "Adjusted EBITDA", NUMBER,
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);

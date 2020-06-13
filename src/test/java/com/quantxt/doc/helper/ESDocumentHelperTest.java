@@ -1,6 +1,6 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.helper.types.ExtIntervalSimple;
+import com.quantxt.types.ExtIntervalSimple;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;

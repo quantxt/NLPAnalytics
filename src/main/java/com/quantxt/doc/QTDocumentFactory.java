@@ -42,13 +42,13 @@ public class QTDocumentFactory {
         int max = 500;
         for (String p : parts) {
             if (max-- < 0) break;
-            if (new ESDocumentHelper().isStopWord(p)) {
+            if (new ESDocumentHelper().getStopwords().contains(p)) {
                 int c = map.get(SPANISH);
                 map.put(SPANISH, c + 1);
-            } else if (new RUDocumentHelper().isStopWord(p)) {
+            } else if (new RUDocumentHelper().getStopwords().contains(p)) {
                 int c = map.get(RUSSIAN);
                 map.put(RUSSIAN, c + 1);
-            } else if (new ENDocumentHelper().isStopWord(p)) {
+            } else if (new ENDocumentHelper().getStopwords().contains(p)) {
                 int c = map.get(ENGLISH);
                 map.put(ENGLISH, c + 1);
             }

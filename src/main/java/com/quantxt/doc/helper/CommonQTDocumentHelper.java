@@ -8,20 +8,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.helper.types.ExtInterval;
-import com.quantxt.helper.types.ExtIntervalSimple;
-import com.quantxt.helper.types.QTField;
-import com.quantxt.helper.types.QTMatch;
-import com.quantxt.interval.Interval;
+import com.quantxt.types.ExtInterval;
+import com.quantxt.types.ExtIntervalSimple;
+import com.quantxt.types.Interval;
+import com.quantxt.types.QTField;
 import com.quantxt.nlp.entity.QTValueNumber;
+import com.quantxt.nlp.search.DctSearhFld;
 import com.quantxt.nlp.search.QTSearchable;
-import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.core.StopFilter;
-import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +30,8 @@ import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
 
-import static com.quantxt.helper.types.QTField.*;
+import static com.quantxt.types.QTField.*;
 
-import static com.quantxt.helper.types.QTField.QTFieldType.*;
 import static com.quantxt.util.NLPUtil.isEmpty;
 
 /**
@@ -83,11 +79,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     protected Analyzer tokenizer;
 
     public CommonQTDocumentHelper() {
-    }
-
-    @Override
-    public boolean isStopWord(String p) {
-        return stopwords.contains(p);
     }
 
     abstract void preInit();
@@ -166,46 +157,21 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return tokens;
     }
 
-    public ArrayList<String> stemmer(String str) {
-        ArrayList<String> postEdit = new ArrayList<>();
-
+    private String tokenize(Analyzer analyzer , String str){
+        StringBuilder sb = new StringBuilder();
         try {
-            TokenStream stream = analyzer.tokenStream(null, new StringReader(str));
-            //    stream = new StopFilter(stream, stopwords);
-            CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
-            stream.reset();
-            while (stream.incrementToken()) {
-                String term = charTermAttribute.toString();
-                postEdit.add(term);
+            TokenStream result = analyzer.tokenStream(null, str);
+            CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
+            result.reset();
+
+            while (result.incrementToken()) {
+                sb.append(resultAttr.toString()).append(" ");
             }
-            stream.close();
+            result.close();
         } catch (Exception e) {
-            logger.error("Error Analyzer tokenStream for input String {}", str, e);
+            logger.error("Analyzer: " + e.getMessage());
         }
-
-        return postEdit;
-    }
-
-    @Override
-    public String removeStopWords(String str) {
-        ArrayList<String> postEdit = new ArrayList<>();
-
-        Analyzer wspaceAnalyzer = new WhitespaceAnalyzer();  // this constructor do nothing
-        try {
-            TokenStream stream = wspaceAnalyzer.tokenStream(null, new StringReader(str));
-            stream = new StopFilter(stream, stopwords);
-            CharTermAttribute charTermAttribute = stream.addAttribute(CharTermAttribute.class);
-            stream.reset();
-            while (stream.incrementToken()) {
-                String term = charTermAttribute.toString();
-                postEdit.add(term);
-            }
-            stream.close();
-        } catch (Exception e) {
-            logger.error("Error Analyzer tokenStream for input String {}", str, e);
-        }
-
-        return String.join(" ", postEdit);
+        return sb.toString().trim();
     }
 
     protected static String normBasic(String workingLine) {
@@ -232,7 +198,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return String.join(" ", normParts);
     }
 
-    @Override
     public String normalize(String workingLine) {
         return normBasic(workingLine).toLowerCase();
     }
@@ -297,12 +262,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private Map<String, List<ExtInterval>> findLabels(List<QTSearchable> extractDictionaries,
                                                       String content) {
         Map<String, List<ExtInterval>> labels = new HashMap<>();
-        for (DictSearch<QTMatch> dictSearch : extractDictionaries) {
-            QTFieldType valueType = dictSearch.getDictionary().getValType();
-            String dictname = dictSearch.getDictionary().getName();
-            Collection<QTMatch> qtMatches = dictSearch.search(content);
+        for (QTSearchable dictSearch : extractDictionaries) {
+            String dict_id = dictSearch.getDictionary().getId();
+            Dictionary.ExtractionType extractionType = dictSearch.getDictionary().getValType();
+            Collection<ExtInterval> qtMatches = dictSearch.search(content);
             ArrayList<ExtInterval> dicLabels = new ArrayList<>();
-            for (QTMatch qtMatch : qtMatches) {
+            for (ExtInterval qtMatch : qtMatches) {
                 //Matching ignore whitespace but in input string whitespace is used to maintain position of the text when needed
                 // be concious of the span of the matches and avoid cases when there is large gap between tokens of a match
                 String qtMatch_str = content.substring(qtMatch.getStart(), qtMatch.getEnd());
@@ -335,15 +300,17 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
 
                 ExtInterval extInterval = new ExtInterval();
-                extInterval.setKeyGroup(qtMatch.getGroup());
-                extInterval.setKey(qtMatch.getCustomData());
+                extInterval.setDict_name(qtMatch.getDict_name());
+                extInterval.setDict_id(qtMatch.getDict_id());
                 extInterval.setStart(qtMatch.getStart());
+                extInterval.setCategory(qtMatch.getCategory());
+                extInterval.setStr(qtMatch.getStr());
                 extInterval.setEnd(qtMatch.getEnd());
-                extInterval.setType(valueType);
+                extInterval.setType(extractionType);
                 extInterval.setLine(getLineNumber(content,qtMatch.getStart()));
                 dicLabels.add(extInterval);
             }
-            labels.put(dictname, dicLabels);
+            labels.put(dict_id, dicLabels);
         }
         return labels;
     }
@@ -358,26 +325,22 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         long took = System.currentTimeMillis() - start;
         logger.debug("Found all labels in {}ms", took);
 
-        Map<String, Dictionary> valueNeededDictionaryMap = new HashMap<>();
+        Map<String, QTSearchable> valueNeededDictionaryMap = new HashMap<>();
 
-        for (DictSearch<QTMatch> dictSearch : extractDictionaries) {
-            QTField.QTFieldType valueType = dictSearch.getDictionary().getValType();
-            String dicName = dictSearch.getDictionary().getName();
-            switch (valueType) {
-                case DATETIME:
-                case KEYWORD:
-                case DOUBLE:
-                    valueNeededDictionaryMap.put(dicName, dictSearch.getDictionary());
-                    break;
-                default: //This account for STRING, NONE Null
-                    if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
-                    List<ExtInterval> labelExtIntervalList = labels.get(dicName);
-                    if (labelExtIntervalList == null || labelExtIntervalList.isEmpty()) continue;
-                    qtDocument.getValues().addAll(labelExtIntervalList);
-                    // These labels don't need a value,
-                    for (ExtInterval labelExtInterval : labelExtIntervalList){
-                        qtDocument.addEntity(labelExtInterval.getKeyGroup(), labelExtInterval.getKey());
-                    }
+        for (QTSearchable qtSearchable : extractDictionaries) {
+            Dictionary.ExtractionType extractionType = qtSearchable.getDictionary().getValType();
+            String dicId = qtSearchable.getDictionary().getId();
+            if ( extractionType != null ) {
+                valueNeededDictionaryMap.put(dicId, qtSearchable);
+            } else {
+                if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
+                List<ExtInterval> labelExtIntervalList = labels.get(dicId);
+                if (labelExtIntervalList == null || labelExtIntervalList.isEmpty()) continue;
+                qtDocument.getValues().addAll(labelExtIntervalList);
+                // These labels don't need a value,
+                for (ExtInterval labelExtInterval : labelExtIntervalList){
+                    qtDocument.addEntity(labelExtInterval.getDict_id(), labelExtInterval.getCategory());
+                }
             }
         }
 
@@ -386,37 +349,41 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         //Searching for values that are associated with a label
         //This should cover only DATE, DOUBLE and KEYWORD type labels
         for (Map.Entry<String, List<ExtInterval>> labelEntry : labels.entrySet()){
-            String dicname = labelEntry.getKey();
+            String dictId = labelEntry.getKey();
 
             long start_dictionary_match = System.currentTimeMillis();
             //get the dictionary
-            Dictionary dictionary = valueNeededDictionaryMap.get(dicname);
-            if (dictionary == null) continue; // Label is not associated with a dictionary that extracts values
 
-            QTFieldType dictionaryType = dictionary.getValType();
-            boolean canHaveValue =  (dictionaryType == DOUBLE || dictionaryType == KEYWORD || dictionaryType == DATETIME);
-            if (!canHaveValue) continue;
+            QTSearchable qtSearchable = valueNeededDictionaryMap.get(dictId);
+            if (qtSearchable == null) continue;
+
+            Dictionary dictionary = qtSearchable.getDictionary();
+            Dictionary.ExtractionType extractionType = dictionary.getValType();
+            if (extractionType == null) continue;
 
             List<ExtInterval> dictLabelList = labelEntry.getValue();
 
             for (ExtInterval labelInterval : dictLabelList) {
 
-                ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, dictionary, labelInterval);
+                ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, qtSearchable, labelInterval);
                 if (canSearchVertical && rowValues.size() == 0){
-                    rowValues = findAllVerticalMatches(content, dictionary, labelInterval);
+                    rowValues = findAllVerticalMatches(content, qtSearchable, labelInterval);
                 }
 
                 if (rowValues.size() == 0) continue;
 
                 ExtInterval extInterval = new ExtInterval();
                 extInterval.setExtIntervalSimples(rowValues);
-                extInterval.setKeyGroup(labelInterval.getKeyGroup());
-                extInterval.setKey(labelInterval.getKey());
+                extInterval.setDict_name(labelInterval.getDict_name());
+                extInterval.setDict_id(labelInterval.getDict_id());
+                extInterval.setLine(labelInterval.getLine());
+                extInterval.setCategory(labelInterval.getCategory());
+                extInterval.setStr(labelInterval.getStr());
                 extInterval.setStart(labelInterval.getStart());
                 extInterval.setEnd(labelInterval.getEnd());
                 if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
                 qtDocument.getValues().add(extInterval);
-                qtDocument.addEntity(labelInterval.getKeyGroup(), labelInterval.getKey());
+                qtDocument.addEntity(labelInterval.getDict_id(), labelInterval.getCategory());
             }
 
             long took_dictionary_match = System.currentTimeMillis() - start_dictionary_match;
@@ -432,6 +399,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                                      int start_search_shift,
                                      Pattern match_pattern,
                                      int group,
+                                     Analyzer analyzer,
                                      Pattern gap_pattern,
                                      List<ExtIntervalSimple> matches)
     {
@@ -443,7 +411,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
         int start_of_match = m.start();
         boolean match_is_valid = validateFoundValue(content, start_search_shift,
-                start_of_match + start_search_shift,
+                start_of_match + start_search_shift, analyzer,
                 gap_pattern);
 
         if (!match_is_valid) return false;
@@ -453,10 +421,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         int start_match = m.start(group);
         int end_match = m.end(group);
         ExtIntervalSimple ext = new ExtIntervalSimple(start_match + start_search_shift, end_match + start_search_shift);
-        ext.setType(QTField.QTFieldType.KEYWORD);
+        ext.setType(DataType.STRING);
         String extractionStr = string_to_search.substring(start_match, end_match);
-        ext.setStringValue(extractionStr);
-        ext.setCustomData(extractionStr);
+        ext.setStr(extractionStr);
 
         matches.add(ext);
         return true;
@@ -466,25 +433,38 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private boolean validateFoundValue(String content,
                                        int start,
                                        int end,
+                                       Analyzer analyzer,
                                        Pattern gapPattern){
         String gap_between = content.substring(start, end);
+        if (gap_between.length() == 0) return false;
+        //first tokenize the gap
+        if (analyzer != null) {
+            gap_between = tokenize(analyzer, gap_between);
+            if (gap_between.isEmpty()) return true;
+        }
+
         Matcher gapmatcher = gapPattern.matcher(gap_between);
         if (!gapmatcher.find()) return false;
         return true;
     }
 
     private ArrayList<ExtIntervalSimple> findAllHorizentalMatches(String content,
-                                                                  Dictionary dictionary,
+                                                                  QTSearchable qtSearchable,
                                                                   Interval labelInterval)
     {
         ArrayList<ExtIntervalSimple> results = new ArrayList<>();
+        Dictionary dictionary = qtSearchable.getDictionary();
         Pattern padding_between_values = dictionary.getSkip_between_values();
         Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
+        // Find the lowest priority analyzer to tokenize the gaps
+        // list of DctSearhFld is teh same for all fields so we get the first one
+        List<DctSearhFld> dctSearhFldList = qtSearchable.getDocSearchFldList();
+        Analyzer gap_analyzer = dctSearhFldList.get(dctSearhFldList.size() -1).getIndex_analyzer();
 
         int start_search_shift = labelInterval.getEnd();
-        QTFieldType search_type = dictionary.getValType();
+        Dictionary.ExtractionType extractionType = dictionary.getValType();
 
-        switch (search_type) {
+        switch (extractionType) {
 
             case DATETIME:
                 int end_search_shift = (int) Math.max(200, .1 * content.length());
@@ -501,19 +481,19 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                     results.add(eis);
                 }
                 break;
-            case KEYWORD:
-                int group = dictionary.getGroups() != null ? 1 : 0;
+            case REGEX:
+                int group = (dictionary.getGroups() == null || dictionary.getGroups().length ==0 )  ? 0 : dictionary.getGroups()[0];
                 Pattern pattern = dictionary.getPattern();
                 boolean canContinueSearchForValue = addShiftedValues(content, start_search_shift,
-                        pattern, group, padding_between_key_value, results);
+                        pattern, group, gap_analyzer, padding_between_key_value, results);
 
                 while (canContinueSearchForValue) {
                     start_search_shift = results.get(results.size() - 1).getEnd();
                     canContinueSearchForValue = addShiftedValues(content, start_search_shift,
-                            pattern, group, padding_between_values, results);
+                            pattern, group, null, padding_between_values, results);
                 }
                 break;
-            case DOUBLE:
+            case NUMBER:
                 String str_2_search = content.substring(start_search_shift);
                 ExtIntervalSimple numeric = QTValueNumber.findFirstNumeric(str_2_search, start_search_shift);
                 if (numeric == null) return results;
@@ -526,7 +506,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
 
                 canContinueSearchForValue = validateFoundValue(content, start_search_shift,
-                        numeric.getStart() , padding_between_key_value);
+                        numeric.getStart() , gap_analyzer, padding_between_key_value);
                 while (canContinueSearchForValue) {
 
                     results.add(numeric);
@@ -536,7 +516,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                     numeric = QTValueNumber.findFirstNumeric(str_2_search, start_search_shift);
                     if (numeric == null) break;
                     canContinueSearchForValue = validateFoundValue(content, start_search_shift,
-                            numeric.getStart(), padding_between_values);
+                            numeric.getStart(), null, padding_between_values);
                 }
                 break;
         }
@@ -546,13 +526,14 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     private ArrayList<ExtIntervalSimple> findAllVerticalMatches(String content,
-                                                                Dictionary dictionary,
+                                                                QTSearchable qtSearchable,
                                                                 Interval labelInterval)
     {
         ArrayList<ExtIntervalSimple> results = new ArrayList<>();
+        Dictionary dictionary = qtSearchable.getDictionary();
         Pattern padding_between_values = dictionary.getSkip_between_values();
         Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
-        QTFieldType search_type = dictionary.getValType();
+        Dictionary.ExtractionType extractionType = dictionary.getValType();
 
         //Best match has closest distance to center of label in X axis
 
@@ -583,7 +564,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             String string2Search4Value = content.substring(start_local_interval, end_local_interval);
 
             ExtIntervalSimple foundValue = null;
-            switch (search_type) {
+            switch (extractionType) {
                 case DATETIME:
                     List<ExtIntervalSimple> dateExtIntervalSimples = QTValueNumber.detectDates(string2Search4Value);
                     if (dateExtIntervalSimples.size() >0){
@@ -594,7 +575,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                         foundValue.setEnd(e + start_local_interval);
                     }
                     break;
-                case KEYWORD:
+                case REGEX:
                     int group = dictionary.getGroups() != null ? 1 : 0;
                     Pattern pattern = dictionary.getPattern();
                     String string_to_search = content.substring(start_local_interval);
@@ -603,13 +584,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                         int start = m.start(group);
                         int end = m.end(group);
                         foundValue = new ExtIntervalSimple(start + start_local_interval, end + start_local_interval);
-                        foundValue.setType(QTField.QTFieldType.KEYWORD);
+                        foundValue.setType(QTField.DataType.KEYWORD);
                         String extractionStr = string_to_search.substring(start, end);
-                        foundValue.setStringValue(extractionStr);
-                        foundValue.setCustomData(extractionStr);
+                        foundValue.setStr(extractionStr);
                     }
                     break;
-                case DOUBLE:
+                case NUMBER:
                     foundValue = QTValueNumber.findFirstNumeric(string2Search4Value, start_local_interval);
                     break;
             }

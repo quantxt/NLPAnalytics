@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.helper.types.QTMatch;
+import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
@@ -127,16 +127,17 @@ public class SearchUtils {
         return new IndexSearcher(dreader);
     }
 
-    public static Collection<QTMatch> getFragments(final Collection<Document> matchedDocs,
-                                                   final DictSearch.Mode mode,
-                                                   final int slop,
-                                                   final Analyzer search_analyzer,
-                                                   final Analyzer keyphrase_analyzer,
-                                                   final String searchField,
-                                                   final String vocab_name,
-                                                   final String str) throws Exception
+    public static Collection<ExtInterval> getFragments(final Collection<Document> matchedDocs,
+                                                       final DictSearch.Mode mode,
+                                                       final int slop,
+                                                       final Analyzer search_analyzer,
+                                                       final Analyzer keyphrase_analyzer,
+                                                       final String searchField,
+                                                       final String vocab_name, //group_name
+                                                       final String vocab_id, //group_id
+                                                       final String str) throws Exception
     {
-        List<QTMatch> allMatches = new ArrayList<>();
+        List<ExtInterval> allMatches = new ArrayList<>();
         boolean isFuzzy = mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_FUZZY_SPAN
                 || mode == FUZZY_SPAN;
         boolean ordered = mode == ORDERED_SPAN || mode == FUZZY_ORDERED_SPAN;
@@ -152,41 +153,41 @@ public class SearchUtils {
 
             TokenStream tokenStream = search_analyzer.tokenStream(searchField, str);
             String dataValue = matchedDoc.getField(DataField).stringValue();
-            List<QTMatch> matches = QTextFragment.getBestTextFragments(tokenStream, query,
-                    str, dataValue, vocab_name);
+            List<ExtInterval> matches = QTextFragment.getBestTextFragments(tokenStream, query,
+                    str, dataValue, vocab_name, vocab_id);
 
             if (matches.size() == 0) continue;
             allMatches.addAll(matches);
         }
 
-        ArrayList<QTMatch> matchs_sorted_by_length = new ArrayList<>(allMatches);
-        matchs_sorted_by_length.sort((QTMatch s1, QTMatch s2)-> (s2.getEnd() - s2.getStart()) - (s1.getEnd() - s1.getStart()));
+        ArrayList<ExtInterval> matchs_sorted_by_length = new ArrayList<>(allMatches);
+        matchs_sorted_by_length.sort((ExtInterval s1, ExtInterval s2)-> (s2.getEnd() - s2.getStart()) - (s1.getEnd() - s1.getStart()));
 
         boolean [] overlaps = new boolean[matchs_sorted_by_length.size()];
 
         for (int i = 0; i < matchs_sorted_by_length.size(); i++) {
             if (overlaps[i]) continue;
-            final QTMatch firstMatch = matchs_sorted_by_length.get(i);
+            final ExtInterval firstMatch = matchs_sorted_by_length.get(i);
             int firstMatchStart = firstMatch.getStart();
             int firstMatchEnd   = firstMatch.getEnd();
             for (int j = i+1; j < matchs_sorted_by_length.size(); j++) {
                 if (overlaps[j]) continue;
-                final QTMatch otherMatch = matchs_sorted_by_length.get(j);
+                final ExtInterval otherMatch = matchs_sorted_by_length.get(j);
                 int otherMatchStart = otherMatch.getStart();
                 int otherMatchEnd   = otherMatch.getEnd();
                 if ((otherMatchStart >= firstMatchStart) && (otherMatchEnd <= firstMatchEnd) &&
-                firstMatch.getGroup().equals(otherMatch.getGroup())) {
+                firstMatch.getDict_id().equals(otherMatch.getDict_id())) {
                     overlaps[j] = true;
                 }
             }
         }
 
-        ArrayList<QTMatch> noOverlapOutput = new ArrayList<>();
+        ArrayList<ExtInterval> noOverlapOutput = new ArrayList<>();
         for (int i = 0; i < matchs_sorted_by_length.size(); i++){
             if (overlaps[i]) continue;
             noOverlapOutput.add(matchs_sorted_by_length.get(i));
         }
-        noOverlapOutput.sort((QTMatch s1, QTMatch s2)-> (s1.getStart() -  s2.getStart()));
+        noOverlapOutput.sort((ExtInterval s1, ExtInterval s2)-> (s1.getStart() -  s2.getStart()));
         return noOverlapOutput;
 
     }
