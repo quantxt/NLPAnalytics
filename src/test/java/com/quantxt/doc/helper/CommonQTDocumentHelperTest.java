@@ -256,6 +256,31 @@ public class CommonQTDocumentHelperTest {
     }
 
     @Test
+    public void exceprt_v1() throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("tsv_w_space.txt");
+
+        String content = IOUtils.toString(is);
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        //YR Built is a valid phrase but an invalid header (label)
+        dictItms.add(new DictItm("Year Built", "Orig Year Built"));
+
+        Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,20}\n){0,3}$");
+        Dictionary dictionary = new Dictionary(dictItms, null, "Year Built", NUMBER,
+                skipBetweenKeyValues, null, null, null);
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
+        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
+        List<QTSearchable> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        helper.extract(doc, searchableList, true, "");
+        String excerpt = helper.extractHtmlExcerpt(content, doc.getValues().get(0));
+        int ii = excerpt.indexOf("<b>1982</b>");
+       assertTrue(excerpt.indexOf("<b>1982</b>") == 215);
+    }
+
+    @Test
     public void regex_extraction_v1() {
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
