@@ -253,7 +253,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return System.getenv(DEFAULT_NLP_MODEL_DIR);
     }
 
-
     @Override
     public String getValues(String str, String context, List<ExtIntervalSimple> valueInterval) {
         return QTValueNumber.detect(str, context, valueInterval);
@@ -307,7 +306,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 extInterval.setStr(qtMatch.getStr());
                 extInterval.setEnd(qtMatch.getEnd());
                 extInterval.setType(extractionType);
-                extInterval.setLine(getLineNumber(content,qtMatch.getStart()));
+                extInterval.setLine(getLineNumber(content, qtMatch.getStart()));
                 dicLabels.add(extInterval);
             }
             labels.put(dict_id, dicLabels);
@@ -372,6 +371,10 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
                 if (rowValues.size() == 0) continue;
 
+                for (ExtIntervalSimple eis : rowValues){
+                    eis.setLine(getLineNumber(content, eis.getStart()));
+                }
+
                 ExtInterval extInterval = new ExtInterval();
                 extInterval.setExtIntervalSimples(rowValues);
                 extInterval.setDict_name(labelInterval.getDict_name());
@@ -391,7 +394,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 logger.warn("Matching on [{} - {} - {} - {}] took {}ms", dictionary.getName(), dictionary.getValType()
                         , dictionary.getSkip_between_key_and_value(), dictionary.getSkip_between_values(), took );
             }
-
         }
     }
 
@@ -543,9 +545,13 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         int last_index_before_label = endPrevToken(content, labelInterval.getStart());
 
         int offsetStartLabel = last_index_before_label  - startLineLabelInterval;
+        if (offsetStartLabel < 0) offsetStartLabel = 0;
+
         int offsetEndLabel   = first_index_after_label  - startLineLabelInterval;
 
         int end_interval = content.indexOf('\n', labelInterval.getEnd());
+
+        if (end_interval < 0) return results; // no more lines to process
 
         String [] lines = content.substring(end_interval).split("\n");
         int position_in_lines_array = end_interval;
@@ -609,7 +615,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             String vertical_gap = String.join("", verticalGap);
             Matcher match_on_gap = pattern_to_try_on_gap.matcher(vertical_gap);
             if (vertical_gap.isEmpty() || match_on_gap.find()) {
-                foundValue.setLine(getLineNumber(content, foundValue.getStart()));
                 results.add(foundValue);
                 verticalGap = new ArrayList<>();
             } else if (results.size() > 1){
@@ -681,7 +686,104 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     protected int getFirstNewLineBefore(String str, int index) {
         int index_start_line = str.substring(0, index).lastIndexOf('\n') + 1;
-        if (index_start_line < 0) return -1;
+        if (index_start_line < 0) return 0;
         return index_start_line;
+    }
+
+    protected int getFirstNewLineAfter(String str, int index) {
+        int end_of_line = str.indexOf('\n', index);
+        if (end_of_line < 0) return str.length();
+        return end_of_line;
+    }
+
+    public String extractHtmlExcerptForDocument(QTDocument qtDocument){
+        StringBuilder sb = new StringBuilder();
+        ArrayList<ExtInterval> values = qtDocument.getValues();
+        if (values == null || values.size() == 0) return sb.toString();
+
+        for (ExtInterval extInterval : values){
+            String excerpt = extractHtmlExcerpt(qtDocument.getTitle(), extInterval);
+            sb.append("<p>").append(excerpt).append("</p>");
+        }
+        return sb.toString();
+    }
+
+    public String extractHtmlExcerpt(String content,
+                                     ExtInterval extInterval)
+    {
+        int bleed = 35;
+        int s = extInterval.getStart();
+        int e = extInterval.getEnd();
+        int firstNewLineBeforeStart = getFirstNewLineBefore(content, s);
+        int firstNewLineAfterEnd = getFirstNewLineAfter(content, e);
+
+        int distanceFromLineEnd = firstNewLineAfterEnd - e;
+        int distanceFromLineBegin = s - firstNewLineBeforeStart;
+
+
+        int maxDistanceFromLineBgein = e - getFirstNewLineBefore(content, e) + Math.min(distanceFromLineEnd , bleed);
+        int minDistanceFromLineBgein = distanceFromLineBegin - Math.min(bleed, distanceFromLineBegin);
+
+        StringBuilder sb = new StringBuilder();
+        int startSegment = firstNewLineBeforeStart;
+        sb.append("\n");
+
+        int lastIndex = 0;
+        sb
+                .append(content, startSegment, s)
+                .append("<b>")
+                .append(content, s, e)
+                .append("</b>");
+        startSegment = e;
+        if (extInterval.getExtIntervalSimples() != null){
+            for (ExtIntervalSimple eis : extInterval.getExtIntervalSimples()){
+                s = eis.getStart();
+                e = eis.getEnd();
+                firstNewLineBeforeStart = getFirstNewLineBefore(content, s);
+                firstNewLineAfterEnd = getFirstNewLineAfter(content, e);
+
+                distanceFromLineEnd = firstNewLineAfterEnd - e;
+                distanceFromLineBegin = s - firstNewLineBeforeStart;
+
+                int maxDistanceFromLineBgein_L = e - getFirstNewLineBefore(content, e) + Math.min(distanceFromLineEnd , bleed);
+                int minDistanceFromLineBgein_L = s - getFirstNewLineBefore(content, s) - Math.min(bleed, distanceFromLineBegin);
+
+                if (minDistanceFromLineBgein_L < minDistanceFromLineBgein){
+                    minDistanceFromLineBgein = minDistanceFromLineBgein_L;
+                }
+
+                if (maxDistanceFromLineBgein_L > maxDistanceFromLineBgein){
+                    maxDistanceFromLineBgein = maxDistanceFromLineBgein_L;
+                }
+
+                sb
+                        .append(content, startSegment, s)
+                        .append("<b>")
+                        .append(content, s, e)
+                        .append("</b>");
+
+                startSegment = e;
+                lastIndex = e;
+            }
+        }
+
+        distanceFromLineEnd = getFirstNewLineAfter(content, lastIndex);
+
+        sb.append(content, lastIndex, distanceFromLineEnd).append("\n");
+
+        int excerpt_width = maxDistanceFromLineBgein - minDistanceFromLineBgein;
+        String excerpt = sb.toString();
+        Pattern ptr = Pattern.compile("\n.{" +minDistanceFromLineBgein +"}(.{" + excerpt_width + "})");
+        Matcher m = ptr.matcher(excerpt);
+        StringBuilder output = new StringBuilder();
+        while (m.find()){
+            output.append(m.group(1)).append("\n");
+        }
+
+
+        String out_str =  output.toString();
+        //remove empty lines
+        out_str = out_str.replaceAll("\n +(?=\n)","\n");
+        return out_str.replaceAll("[\n]+", "<br>");
     }
 }
