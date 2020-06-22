@@ -32,7 +32,6 @@ import static org.junit.Assert.assertEquals;
  * Created by matin on 10/10/17.
  */
 
-@Slf4j
 public class ENDocumentInfoTest {
 
     private static QTSearchable qtSearchable;
