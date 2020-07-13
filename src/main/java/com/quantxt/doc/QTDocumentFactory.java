@@ -21,16 +21,6 @@ public class QTDocumentFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(QTDocumentFactory.class);
 
-    public static QTDocument createQTDoct(String body, String title,
-            QTDocument.Language lang) {
-        if (lang == SPANISH) {
-            return new ESDocumentInfo(body, title);
-        } else if (lang == RUSSIAN) {
-            return new RUDocumentInfo(body, title);
-        }
-        return new ENDocumentInfo(body, title);
-    }
-
     public static QTDocument createQTDoct(String body, String title) {
         String [] parts = body == null ? title.toLowerCase().split("\\s+")
                                        : body.toLowerCase().split("\\s+");
