@@ -21,7 +21,7 @@ public class QTextFragment {
         if (match2.getStart() < match1.getEnd()) return false;
         String gap = str.substring(match1.getEnd()+1, match2.getStart());
 
-        if (gap.trim().length() == 0) return true;
+        if (gap.replaceAll("[^A-Za-z0-9]+", "").trim().length() == 0) return true;
         return false;
     }
 
@@ -38,7 +38,6 @@ public class QTextFragment {
 
         CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
         OffsetAttribute offsetAtt = tokenStream.addAttribute(OffsetAttribute.class);
-
         fragmentScorer.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
 
         TokenStream newStream = fragmentScorer.init(tokenStream);
