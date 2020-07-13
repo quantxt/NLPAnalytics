@@ -18,6 +18,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
+import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.search.spans.*;
 import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.Formatter;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.quantxt.nlp.search.DctSearhFld.DataField;
@@ -151,10 +153,27 @@ public class SearchUtils {
                     slop, isFuzzy, ordered, isMatchAll);
             if (query == null) continue;
 
-            TokenStream tokenStream = search_analyzer.tokenStream(searchField, str);
+            TokenStream tokenStream = search_analyzer.tokenStream(null, str);
             String dataValue = matchedDoc.getField(DataField).stringValue();
             List<ExtInterval> matches = QTextFragment.getBestTextFragments(tokenStream, query,
                     str, dataValue, vocab_name, vocab_id);
+
+            /*
+            SimpleHTMLFormatter formatter = new SimpleHTMLFormatter();
+            QueryScorer scorer = new QueryScorer(query);
+            Highlighter highlighter = new Highlighter(formatter, scorer);
+            Fragmenter fragmenter = new SimpleSpanFragmenter(scorer, 40);
+            highlighter.setTextFragmenter(fragmenter);
+            tokenStream = search_analyzer.tokenStream(null, str);
+            //Get highlighted text fragments
+            String[] frags = highlighter.getBestFragments(tokenStream, str, 10);
+            for (String frag : frags)
+            {
+                System.out.println("=======================");
+                System.out.println(frag);
+            }
+
+             */
 
             if (matches.size() == 0) continue;
             allMatches.addAll(matches);
@@ -357,7 +376,7 @@ public class SearchUtils {
                                      boolean is_Fuzzy,
                                      boolean ordered)
     {
-        LinkedHashSet<SpanQuery> queryList = new LinkedHashSet<>();
+        List<SpanQuery> queryList = new ArrayList<>();
         String fld = "";
         StringBuilder str = new StringBuilder();
 
@@ -449,11 +468,11 @@ public class SearchUtils {
         }
     }
 
-    private static SpanQuery joinSpanQueryList(LinkedHashSet<SpanQuery> queryList,
-                                        String search_fld,
-                                        int slop,
-                                        boolean operator_is_and,
-                                        boolean ordered){
+    private static SpanQuery joinSpanQueryList(List<SpanQuery> queryList,
+                                               String search_fld,
+                                               int slop,
+                                               boolean operator_is_and,
+                                               boolean ordered){
         if (!operator_is_and) {
             return new SpanOrQuery(queryList.toArray(new SpanQuery[queryList.size()]));
         }

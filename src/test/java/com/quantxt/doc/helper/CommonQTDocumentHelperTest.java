@@ -59,7 +59,7 @@ public class CommonQTDocumentHelperTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, false, "");
 
@@ -92,7 +92,7 @@ public class CommonQTDocumentHelperTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, false, "");
 
@@ -125,7 +125,7 @@ public class CommonQTDocumentHelperTest {
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, false, "");
 
@@ -196,7 +196,7 @@ public class CommonQTDocumentHelperTest {
         //      logger.info(content.get(25));
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo("", content.get(25), helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, true, "");
         assertTrue(doc.getValues() == null);
@@ -220,7 +220,7 @@ public class CommonQTDocumentHelperTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, true, "");
 
@@ -248,7 +248,7 @@ public class CommonQTDocumentHelperTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, true, "");
 
@@ -272,12 +272,12 @@ public class CommonQTDocumentHelperTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, true, "");
         String excerpt = helper.extractHtmlExcerpt(content, doc.getValues().get(0));
         int ii = excerpt.indexOf("<b>1982</b>");
-       assertTrue(excerpt.indexOf("<b>1982</b>") == 215);
+        assertEquals(excerpt.indexOf("<b>1982</b>"), 182);
     }
 
     @Test
@@ -295,7 +295,7 @@ public class CommonQTDocumentHelperTest {
         String content = "may social security  is 123-23-1234";
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, false, "");
 
@@ -329,6 +329,7 @@ public class CommonQTDocumentHelperTest {
     }
 
     @Test
+    @Ignore
     public void apart_keywords_v1() {
         // GIVEN
         String content = "There is Item 1.                       Business here.";
@@ -341,7 +342,7 @@ public class CommonQTDocumentHelperTest {
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.STEM);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, true, "");
 
@@ -368,11 +369,73 @@ public class CommonQTDocumentHelperTest {
         assertTrue(matches.size() == 1);
     }
 
+    @Test
+    public void multiLineSearch() throws IOException {
+        // GIVEN
+        String content = "         COMPANYMAILING                     ADDRESS                             PROPERTY             LOCATION\n" +
+                "\n" +
+                "         Selective         Ins.Co       ofNew                                    65     CANAL         ST\n" +
+                "\n" +
+                "         PO     BOX782747                                                         MILLBURY,MA01527-3266\n" +
+                "                                                                             dumm y iline";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Address", "PROPERTY LOCATION" ));
+
+        Dictionary dictionary = new Dictionary(null, "Address", dictItms);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+                new DictSearch.Mode[] {DictSearch.Mode.SPAN}, new DictSearch.AnalyzType[] {DictSearch.AnalyzType.STEM});
+
+        dictionary.setValType(REGEX);
+        dictionary.setPattern(Pattern.compile("(?:\\S+ +){0,4}(?:(?:(?:\\d+|\\d+[ \\-]+\\d+) +[A-Za-z \\-\\n,]+)([A-Z]{2}) {0,20}(\\d{5})(?:\\-\\d{4})?)[ \\n]+"));
+        dictionary.setGroups(new int [1]);
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        QTDocument qtDocument = new ENDocumentInfo("", content, helper);
+
+        List<DictSearch> qtSearchableList = new ArrayList<>();
+        qtSearchableList.add(qtSearchable);
+        helper.extract(qtDocument, qtSearchableList, true, null);
+
+        assertTrue(qtDocument.getValues().size() == 1);
+        assertTrue(qtDocument.getValues().get(0).getExtIntervalSimples().get(0).getStr().equals("MA"));
+    }
+
     private PDDocument getPDFDocument(InputStream ins) throws IOException {
         PDFParser parser = new PDFParser(new RandomAccessBuffer(new BufferedInputStream(ins)));
         parser.parse();
         COSDocument cosDoc = parser.getDocument();
         PDDocument pdDoc = new PDDocument(cosDoc);
         return pdDoc;
+    }
+
+
+    @Test
+    @Ignore
+    public void flood_long_phrase() throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("flood2.txt");
+
+        String content = IOUtils.toString(is);
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        //YR Built is a valid phrase but an invalid header (label)
+        dictItms.add(new DictItm("Condo", "BuildingIndicator:Non-Elevated"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Zone", null,
+                null, null, null, null);
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH,
+                null,
+                null,
+                new DictSearch.Mode[] {DictSearch.Mode.ORDERED_SPAN},
+        new DictSearch.AnalyzType[]{DictSearch.AnalyzType.SIMPLE,
+                DictSearch.AnalyzType.STANDARD});
+
+        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+
+        helper.extract(doc, searchableList, true, "");
+        String excerpt = helper.extractHtmlExcerpt(content, doc.getValues().get(0));
     }
 }
