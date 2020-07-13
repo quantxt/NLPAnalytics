@@ -3,6 +3,7 @@ package com.quantxt.doc.helper;
 import com.quantxt.types.ExtIntervalSimple;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
+import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,8 @@ public class FRDocumentHelper extends CommonQTDocumentHelper {
     private static final Set<String> PRONOUNS = new HashSet<>(Arrays.asList("il", "elle", "Elle", "Il"));
 
     public FRDocumentHelper() {
-
+        tokenizer = new FrenchAnalyzer();
+        analyzer = new FrenchAnalyzer();
     }
 
     @Override

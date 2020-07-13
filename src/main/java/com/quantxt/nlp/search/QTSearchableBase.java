@@ -286,6 +286,11 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         return null;
     }
 
+    @Override
+    public List<T> search(final String query_string, int slop) {
+        return null;
+    }
+
     public IndexSearcher getIndexSearcher() {
         return indexSearcher;
     }

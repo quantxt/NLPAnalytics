@@ -11,7 +11,6 @@ import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -88,7 +87,7 @@ public class ENDocumentInfoTest {
             QTSearchable qtSearchable = new QTSearchable(dictionary);
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
 
-            List<QTSearchable> qtSearchableList = new ArrayList<>();
+            List<DictSearch> qtSearchableList = new ArrayList<>();
             qtSearchableList.add(qtSearchable);
             helper.extract(doc, qtSearchableList, false, "");
 
@@ -135,7 +134,7 @@ public class ENDocumentInfoTest {
 
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
 
-            List<QTSearchable> qtSearchableList = new ArrayList<>();
+            List<DictSearch> qtSearchableList = new ArrayList<>();
             qtSearchableList.add(qtSearchable);
             helper.extract(doc, qtSearchableList, false, "");
 
@@ -144,21 +143,20 @@ public class ENDocumentInfoTest {
             // THEN
             assertFalse(doc.getValues() == null);
             assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>TOTAL AREA 1</td><td>2</td><td>5</td><td>2000</td><td>1590</td></tr></table>");
-            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 13454);
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 355);
 
             //Check for vertical match: Total area and 1590
 
             doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
-            List<QTSearchable> searchableList = new ArrayList<>();
+            List<DictSearch> searchableList = new ArrayList<>();
             searchableList.add(qtSearchableVertical);
             helper.extract(doc, searchableList, true, "");
 
             doc.convertValues2titleTable();
             // THEN
-            assertFalse(doc.getValues() == null);
+            assertNotNull(doc.getValues());
             assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>TOTAL AREA 1</td><td>1590</td></tr></table>");
-            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 13591);
-
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 492);
 
         } catch (Exception e){
             e.printStackTrace();
@@ -189,7 +187,7 @@ public class ENDocumentInfoTest {
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
 
             CommonQTDocumentHelper helper = new ENDocumentHelper();
-            List<QTSearchable> searchableList = new ArrayList<>();
+            List<DictSearch> searchableList = new ArrayList<>();
             searchableList.add(qtSearchable);
 
             QTDocument doc = new ENDocumentInfo("", result.toString("UTF-8"), helper);
@@ -200,7 +198,7 @@ public class ENDocumentInfoTest {
             // THEN
             assertFalse(doc.getValues() == null);
             assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>Area</td><td>1,590</td></tr></table>");
-            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 13591);
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 492);
 
 
         } catch (Exception e){
@@ -214,7 +212,7 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
         String id = qtSearchable.getDictionary().getId();
@@ -228,7 +226,7 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -244,7 +242,7 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
         String id = qtSearchable.getDictionary().getId();
@@ -259,7 +257,7 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
         String id = qtSearchable.getDictionary().getId();
@@ -274,7 +272,7 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
         String id = qtSearchable.getDictionary().getId();
@@ -289,7 +287,7 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
         String id = qtSearchable.getDictionary().getId();
@@ -366,7 +364,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -390,7 +388,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -414,7 +412,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -438,7 +436,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -462,7 +460,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -486,7 +484,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -509,7 +507,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
         doc.convertValues2titleTable();
@@ -536,7 +534,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -568,7 +566,7 @@ public class ENDocumentInfoTest {
                 null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -593,7 +591,7 @@ public class ENDocumentInfoTest {
                 null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -625,7 +623,7 @@ public class ENDocumentInfoTest {
                 null, null, null, null);
         QTSearchable qtSearchable_2 = new QTSearchable(dictionary_2);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable_1);
         qtSearchableList.add(qtSearchable_2);
         helper.extract(doc, qtSearchableList, false, "");
@@ -653,7 +651,7 @@ public class ENDocumentInfoTest {
                 null, null, Pattern.compile("([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
 
         helper.extract(doc, qtSearchableList, false, "");
@@ -680,7 +678,7 @@ public class ENDocumentInfoTest {
                 null, null, Pattern.compile("returned ([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable_1);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -709,7 +707,7 @@ public class ENDocumentInfoTest {
                 null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -733,7 +731,7 @@ public class ENDocumentInfoTest {
                 null, null, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -785,13 +783,13 @@ public class ENDocumentInfoTest {
                 padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
         doc.convertValues2titleTable();
 
         // THEN
-        assertFalse(doc.getValues() == null);
+        assertNotNull(doc.getValues());
         assertEquals(doc.getTitle(),
                 "<table width=\"100%\"><tr><td>Cash and cash equivalents</td><td>62458.0</td><td>73329.0</td></tr></table>");
 
@@ -825,7 +823,7 @@ public class ENDocumentInfoTest {
                 padding_bet_key_value, padding_bet_values, null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -868,7 +866,7 @@ public class ENDocumentInfoTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
 
@@ -918,7 +916,7 @@ public class ENDocumentInfoTest {
                 null, null,
                 DictSearch.Mode.SPAN, STEM);
 
-        List<QTSearchable> qtSearchableList = new ArrayList<>();
+        List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
         helper.extract(doc, qtSearchableList, false, "");
     }

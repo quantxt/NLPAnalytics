@@ -8,13 +8,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.types.ExtInterval;
-import com.quantxt.types.ExtIntervalSimple;
-import com.quantxt.types.Interval;
-import com.quantxt.types.QTField;
+import com.quantxt.types.*;
 import com.quantxt.nlp.entity.QTValueNumber;
-import com.quantxt.nlp.search.DctSearhFld;
-import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.Dictionary;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
@@ -46,8 +41,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
 
+    private static Character NewLine = '\n';
     private static Pattern WORD_PTR = Pattern.compile("\\S+");
-    private static Pattern LONG_SPACE = Pattern.compile("(?<=\\S)(\\s{2,})(?=\\S)");
     private static Pattern TOKEN = Pattern.compile("[A-Za-z0-9]+[^ ]*");
     private static Pattern SPC_BET_WORDS_PTR = Pattern.compile("\\S(?= \\S)");
 
@@ -258,55 +253,24 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return QTValueNumber.detect(str, context, valueInterval);
     }
 
-    private Map<String, List<ExtInterval>> findLabels(List<QTSearchable> extractDictionaries,
-                                                      String content) {
+    private Map<String, List<ExtInterval>> findLabels(List<DictSearch> extractDictionaries,
+                                                      String content,
+                                                      int slop) {
         Map<String, List<ExtInterval>> labels = new HashMap<>();
-        for (QTSearchable dictSearch : extractDictionaries) {
+        for (DictSearch dictSearch : extractDictionaries) {
             String dict_id = dictSearch.getDictionary().getId();
             Dictionary.ExtractionType extractionType = dictSearch.getDictionary().getValType();
-            Collection<ExtInterval> qtMatches = dictSearch.search(content);
+            Collection<ExtInterval> qtMatches = dictSearch.search(content, slop);
             ArrayList<ExtInterval> dicLabels = new ArrayList<>();
             for (ExtInterval qtMatch : qtMatches) {
-                //Matching ignore whitespace but in input string whitespace is used to maintain position of the text when needed
-                // be concious of the span of the matches and avoid cases when there is large gap between tokens of a match
-                String qtMatch_str = content.substring(qtMatch.getStart(), qtMatch.getEnd());
-                if (qtMatch_str.length() > 10) {
-
-                    int index_of_line_start = getFirstNewLineBefore(content, qtMatch.getStart());
-                    int index_of_line_end = content.indexOf('\n', qtMatch.getEnd());
-                    if (index_of_line_end < 0) { // there is no end of line
-                        index_of_line_end = content.length();
-                    }
-                    int lineLength = index_of_line_end - index_of_line_start;
-                    long length_of_white_space_in_match = content.substring(qtMatch.getStart(), qtMatch.getEnd()).chars().filter(ch -> ch == ' ').count();
-                    // a keyword's padding should not cover more than 20% of the line
-                    float r = (float)length_of_white_space_in_match / lineLength;
-                    if ( r > .2) {
-
-                        Matcher spaces = LONG_SPACE.matcher(qtMatch_str);
-                        int longest_space = 0;
-                        while (spaces.find()) {
-                            int l = spaces.group(1).length();
-                            if (l > longest_space) {
-                                longest_space = l;
-                            }
-                        }
-                        // if longest space is longer than half of the match length then discard
-                        // keyword1          keyword2
-                        float rr = (float) longest_space / qtMatch_str.length();
-                        if (rr > .4) continue;
-                    }
-                }
-
                 ExtInterval extInterval = new ExtInterval();
                 extInterval.setDict_name(qtMatch.getDict_name());
                 extInterval.setDict_id(qtMatch.getDict_id());
-                extInterval.setStart(qtMatch.getStart());
                 extInterval.setCategory(qtMatch.getCategory());
                 extInterval.setStr(qtMatch.getStr());
+                extInterval.setStart(qtMatch.getStart());
                 extInterval.setEnd(qtMatch.getEnd());
                 extInterval.setType(extractionType);
-                extInterval.setLine(getLineNumber(content, qtMatch.getStart()));
                 dicLabels.add(extInterval);
             }
             labels.put(dict_id, dicLabels);
@@ -314,19 +278,20 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return labels;
     }
 
+    @Override
     public void extract(QTDocument qtDocument,
-                        List<QTSearchable> extractDictionaries,
+                        List<DictSearch> extractDictionaries,
                         boolean canSearchVertical,
                         String context) {
         long start = System.currentTimeMillis();
         final String content = qtDocument.getTitle();
-        Map<String, List<ExtInterval>> labels = findLabels(extractDictionaries, content);
+        Map<String, List<ExtInterval>> labels = findLabels(extractDictionaries, content, 0);
         long took = System.currentTimeMillis() - start;
         logger.debug("Found all labels in {}ms", took);
 
-        Map<String, QTSearchable> valueNeededDictionaryMap = new HashMap<>();
+        Map<String, DictSearch> valueNeededDictionaryMap = new HashMap<>();
 
-        for (QTSearchable qtSearchable : extractDictionaries) {
+        for (DictSearch qtSearchable : extractDictionaries) {
             Dictionary.ExtractionType extractionType = qtSearchable.getDictionary().getValType();
             String dicId = qtSearchable.getDictionary().getId();
             if ( extractionType != null ) {
@@ -338,6 +303,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 qtDocument.getValues().addAll(labelExtIntervalList);
                 // These labels don't need a value,
                 for (ExtInterval labelExtInterval : labelExtIntervalList){
+                    int lableStart = labelExtInterval.getStart();
+                    LineInfo lineInfo = getLineInfo(content, lableStart);
+                    labelExtInterval.setStart(lineInfo.localStart);
+                    labelExtInterval.setEnd(lineInfo.localStart + labelExtInterval.getEnd() - lableStart);
+                    labelExtInterval.setLine(lineInfo.lineNumber);
+
                     qtDocument.addEntity(labelExtInterval.getDict_id(), labelExtInterval.getCategory());
                 }
             }
@@ -353,10 +324,10 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             long start_dictionary_match = System.currentTimeMillis();
             //get the dictionary
 
-            QTSearchable qtSearchable = valueNeededDictionaryMap.get(dictId);
-            if (qtSearchable == null) continue;
+            DictSearch dictSearch = valueNeededDictionaryMap.get(dictId);
+            if (dictSearch == null) continue;
 
-            Dictionary dictionary = qtSearchable.getDictionary();
+            Dictionary dictionary = dictSearch.getDictionary();
             Dictionary.ExtractionType extractionType = dictionary.getValType();
             if (extractionType == null) continue;
 
@@ -364,28 +335,30 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
             for (ExtInterval labelInterval : dictLabelList) {
 
-                ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, qtSearchable, labelInterval);
+                ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, dictSearch, labelInterval);
                 if (canSearchVertical && rowValues.size() == 0){
-                    rowValues = findAllVerticalMatches(content, qtSearchable, labelInterval);
+                    rowValues = findAllVerticalMatches(content, dictSearch, labelInterval);
                 }
 
                 if (rowValues.size() == 0) continue;
 
                 for (ExtIntervalSimple eis : rowValues){
-                    eis.setLine(getLineNumber(content, eis.getStart()));
+                    int gstart = eis.getStart();
+                    LineInfo extIntervalLineInfo = getLineInfo(content, gstart);
+                    eis.setEnd(extIntervalLineInfo.localStart + eis.getEnd() - eis.getStart());
+                    eis.setStart(extIntervalLineInfo.localStart);
+                    eis.setLine(extIntervalLineInfo.lineNumber);
                 }
 
-                ExtInterval extInterval = new ExtInterval();
-                extInterval.setExtIntervalSimples(rowValues);
-                extInterval.setDict_name(labelInterval.getDict_name());
-                extInterval.setDict_id(labelInterval.getDict_id());
-                extInterval.setLine(labelInterval.getLine());
-                extInterval.setCategory(labelInterval.getCategory());
-                extInterval.setStr(labelInterval.getStr());
-                extInterval.setStart(labelInterval.getStart());
-                extInterval.setEnd(labelInterval.getEnd());
+                labelInterval.setExtIntervalSimples(rowValues);
+                int lableStart = labelInterval.getStart();
+                LineInfo lineInfo = getLineInfo(content, lableStart);
+                labelInterval.setStart(lineInfo.localStart);
+                labelInterval.setEnd(lineInfo.localStart + labelInterval.getEnd() - lableStart);
+                labelInterval.setLine(lineInfo.lineNumber);
+
                 if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
-                qtDocument.getValues().add(extInterval);
+                qtDocument.getValues().add(labelInterval);
                 qtDocument.addEntity(labelInterval.getDict_id(), labelInterval.getCategory());
             }
 
@@ -437,6 +410,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                                        int end,
                                        Analyzer analyzer,
                                        Pattern gapPattern){
+        if (gapPattern == null) return false;
         String gap_between = content.substring(start, end);
         if (gap_between.length() == 0) return false;
         //first tokenize the gap
@@ -451,17 +425,15 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     private ArrayList<ExtIntervalSimple> findAllHorizentalMatches(String content,
-                                                                  QTSearchable qtSearchable,
+                                                                  DictSearch dictSearch,
                                                                   Interval labelInterval)
     {
         ArrayList<ExtIntervalSimple> results = new ArrayList<>();
-        Dictionary dictionary = qtSearchable.getDictionary();
+        Dictionary dictionary = dictSearch.getDictionary();
         Pattern padding_between_values = dictionary.getSkip_between_values();
         Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
         // Find the lowest priority analyzer to tokenize the gaps
         // list of DctSearhFld is teh same for all fields so we get the first one
-        List<DctSearhFld> dctSearhFldList = qtSearchable.getDocSearchFldList();
-        Analyzer gap_analyzer = dctSearhFldList.get(dctSearhFldList.size() -1).getIndex_analyzer();
 
         int start_search_shift = labelInterval.getEnd();
         Dictionary.ExtractionType extractionType = dictionary.getValType();
@@ -487,7 +459,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 int group = (dictionary.getGroups() == null || dictionary.getGroups().length ==0 )  ? 0 : dictionary.getGroups()[0];
                 Pattern pattern = dictionary.getPattern();
                 boolean canContinueSearchForValue = addShiftedValues(content, start_search_shift,
-                        pattern, group, gap_analyzer, padding_between_key_value, results);
+                        pattern, group, analyzer, padding_between_key_value, results);
 
                 while (canContinueSearchForValue) {
                     start_search_shift = results.get(results.size() - 1).getEnd();
@@ -508,7 +480,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
 
                 canContinueSearchForValue = validateFoundValue(content, start_search_shift,
-                        numeric.getStart() , gap_analyzer, padding_between_key_value);
+                        numeric.getStart() , analyzer, padding_between_key_value);
                 while (canContinueSearchForValue) {
 
                     results.add(numeric);
@@ -528,11 +500,11 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     private ArrayList<ExtIntervalSimple> findAllVerticalMatches(String content,
-                                                                QTSearchable qtSearchable,
+                                                                DictSearch dictSearch,
                                                                 Interval labelInterval)
     {
         ArrayList<ExtIntervalSimple> results = new ArrayList<>();
-        Dictionary dictionary = qtSearchable.getDictionary();
+        Dictionary dictionary = dictSearch.getDictionary();
         Pattern padding_between_values = dictionary.getSkip_between_values();
         Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
         Dictionary.ExtractionType extractionType = dictionary.getValType();
@@ -584,15 +556,34 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 case REGEX:
                     int group = dictionary.getGroups() != null ? 1 : 0;
                     Pattern pattern = dictionary.getPattern();
-                    String string_to_search = content.substring(start_local_interval);
-                    Matcher m = pattern.matcher(string2Search4Value);
-                    if (m.find()) {
-                        int start = m.start(group);
-                        int end = m.end(group);
-                        foundValue = new ExtIntervalSimple(start + start_local_interval, end + start_local_interval);
-                        foundValue.setType(QTField.DataType.KEYWORD);
-                        String extractionStr = string_to_search.substring(start, end);
-                        foundValue.setStr(extractionStr);
+                    boolean stopSearch = false;
+                    if (verticalGap.size() >0 && pattern.pattern().contains("\\n")){
+                        // if we allow multiline match
+                        String multiLineGap = String.join("\n", verticalGap);
+                        Matcher m = pattern.matcher(multiLineGap);
+                        if (m.find()) {
+                            int start = m.start(group);
+                            int end = m.end(group);
+                            if (start >= 0 && end > start) {
+                                foundValue = new ExtIntervalSimple(start + start_local_interval, end + start_local_interval);
+                                foundValue.setType(QTField.DataType.KEYWORD);
+                                foundValue.setStr(multiLineGap.substring(start, end));
+                                stopSearch = true;
+                            }
+                            verticalGap.clear();
+                        }
+                    }
+                    if (!stopSearch) {
+                        Matcher m = pattern.matcher(string2Search4Value);
+                        if (m.find()) {
+                            int start = m.start(group);
+                            int end = m.end(group);
+                            foundValue = new ExtIntervalSimple(start + start_local_interval, end + start_local_interval);
+                            foundValue.setType(QTField.DataType.KEYWORD);
+                            String string_to_search = content.substring(start_local_interval);
+                            String extractionStr = string_to_search.substring(start, end);
+                            foundValue.setStr(extractionStr);
+                        }
                     }
                     break;
                 case NUMBER:
@@ -611,6 +602,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 pattern_to_try_on_gap = padding_between_values;
             }
 
+            if (pattern_to_try_on_gap == null){
+                break;
+            }
 
             String vertical_gap = String.join("", verticalGap);
             Matcher match_on_gap = pattern_to_try_on_gap.matcher(vertical_gap);
@@ -626,10 +620,28 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     }
 
-    private int getLineNumber(String str, int startInterval){
-        String [] linesBetween = str.substring(0, startInterval).split("\n");
+    private static class LineInfo{
+        public int lineNumber;
+        public int localStart;
+        public LineInfo(int lineNumber, int localStart){
+            this.lineNumber = lineNumber;
+            this.localStart = localStart;
+        }
+    }
+
+    private LineInfo getLineInfo(String str, int start){
+        int lineNumber = 0;
+        int mostRecentNewLineIndex = 0;
+
+        for (int i = 0; i < start; i++) {
+            if (str.charAt(i) == NewLine) {
+                mostRecentNewLineIndex = i;
+                lineNumber++;
+            }
+        }
+
         // return 0-based line number
-        return linesBetween.length;
+        return new LineInfo(lineNumber, start - mostRecentNewLineIndex);
     }
 
     protected int startNextToken(String str, int start){
@@ -646,6 +658,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         // 70 is long enough to look, back??
         int charBeforeStart = start - 1;
         int startString = Math.max(0, charBeforeStart - 70);
+        if (charBeforeStart <= startString) return startString;
         String substringBeforeStart = str.substring(startString, charBeforeStart);
         Matcher m = TOKEN.matcher(substringBeforeStart);
         int endPreviousToken = startString;
@@ -690,12 +703,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return index_start_line;
     }
 
-    protected int getFirstNewLineAfter(String str, int index) {
-        int end_of_line = str.indexOf('\n', index);
-        if (end_of_line < 0) return str.length();
-        return end_of_line;
-    }
-
     public String extractHtmlExcerptForDocument(QTDocument qtDocument){
         StringBuilder sb = new StringBuilder();
         ArrayList<ExtInterval> values = qtDocument.getValues();
@@ -708,82 +715,66 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return sb.toString();
     }
 
-    public String extractHtmlExcerpt(String content,
-                                     ExtInterval extInterval)
+    private String getExcerpt(String[] lines,
+                              Interval interval)
     {
-        int bleed = 35;
-        int s = extInterval.getStart();
-        int e = extInterval.getEnd();
-        int firstNewLineBeforeStart = getFirstNewLineBefore(content, s);
-        int firstNewLineAfterEnd = getFirstNewLineAfter(content, e);
+        int horizentalBleed = 20;
+        int verticalBleed = 2;
 
-        int distanceFromLineEnd = firstNewLineAfterEnd - e;
-        int distanceFromLineBegin = s - firstNewLineBeforeStart;
-
-
-        int maxDistanceFromLineBgein = e - getFirstNewLineBefore(content, e) + Math.min(distanceFromLineEnd , bleed);
-        int minDistanceFromLineBgein = distanceFromLineBegin - Math.min(bleed, distanceFromLineBegin);
-
+        int start = interval.getStart();
+        int end = interval.getEnd();
+        if (end < start ) return "";
+        int lineNumber = interval.getLine();
         StringBuilder sb = new StringBuilder();
-        int startSegment = firstNewLineBeforeStart;
-        sb.append("\n");
 
-        int lastIndex = 0;
-        sb
-                .append(content, startSegment, s)
-                .append("<b>")
-                .append(content, s, e)
-                .append("</b>");
-        startSegment = e;
-        if (extInterval.getExtIntervalSimples() != null){
-            for (ExtIntervalSimple eis : extInterval.getExtIntervalSimples()){
-                s = eis.getStart();
-                e = eis.getEnd();
-                firstNewLineBeforeStart = getFirstNewLineBefore(content, s);
-                firstNewLineAfterEnd = getFirstNewLineAfter(content, e);
 
-                distanceFromLineEnd = firstNewLineAfterEnd - e;
-                distanceFromLineBegin = s - firstNewLineBeforeStart;
+        int left = Math.max(0, start - horizentalBleed);
+        int right = end + horizentalBleed;
+        int top = Math.max(0, lineNumber - verticalBleed);
+        int bottom = Math.min(lines.length, lineNumber + verticalBleed);
+        bottom = Math.min(bottom, lines.length);
 
-                int maxDistanceFromLineBgein_L = e - getFirstNewLineBefore(content, e) + Math.min(distanceFromLineEnd , bleed);
-                int minDistanceFromLineBgein_L = s - getFirstNewLineBefore(content, s) - Math.min(bleed, distanceFromLineBegin);
-
-                if (minDistanceFromLineBgein_L < minDistanceFromLineBgein){
-                    minDistanceFromLineBgein = minDistanceFromLineBgein_L;
-                }
-
-                if (maxDistanceFromLineBgein_L > maxDistanceFromLineBgein){
-                    maxDistanceFromLineBgein = maxDistanceFromLineBgein_L;
-                }
-
-                sb
-                        .append(content, startSegment, s)
+        for (int l=top; l<bottom; l++) {
+            String line_str = lines[l];
+            int line_length = line_str.length();
+            if (l == lineNumber) {
+                sb.append(line_str, left, start)
                         .append("<b>")
-                        .append(content, s, e)
+                        .append(interval.getStr())
                         .append("</b>");
-
-                startSegment = e;
-                lastIndex = e;
+                int post_fix_start = Math.min(end, line_length);
+                int post_fix_end   = Math.min(line_length, right);
+                if (post_fix_end > post_fix_start){
+                    sb.append(line_str, post_fix_start, post_fix_end);
+                }
+                sb.append("<br>");
+            } else {
+                int end_chop = Math.min(line_length, right);
+                if (left >= end_chop) continue;
+                sb.append(line_str, left, Math.min(line_length, right))
+                        .append("<br>");
             }
         }
 
-        distanceFromLineEnd = getFirstNewLineAfter(content, lastIndex);
+        return "<p>" + sb.toString() +"</p>";
+    }
 
-        sb.append(content, lastIndex, distanceFromLineEnd).append("\n");
+    public String extractHtmlExcerpt(String content,
+                                     ExtInterval extInterval)
+    {
+        String [] lines = content.split("\n");
+        ArrayList<String> block = new ArrayList<>();
+        block.add(getExcerpt(lines, extInterval));
 
-        int excerpt_width = maxDistanceFromLineBgein - minDistanceFromLineBgein;
-        String excerpt = sb.toString();
-        Pattern ptr = Pattern.compile("\n.{" +minDistanceFromLineBgein +"}(.{" + excerpt_width + "})");
-        Matcher m = ptr.matcher(excerpt);
-        StringBuilder output = new StringBuilder();
-        while (m.find()){
-            output.append(m.group(1)).append("\n");
+        if (extInterval.getExtIntervalSimples() != null){
+            for (ExtIntervalSimple eis : extInterval.getExtIntervalSimples()){
+                block.add(getExcerpt(lines, eis));
+            }
         }
 
-
-        String out_str =  output.toString();
+        String out_str =  String.join("", block);
         //remove empty lines
-        out_str = out_str.replaceAll("\n +(?=\n)","\n");
-        return out_str.replaceAll("[\n]+", "<br>");
+        out_str = out_str.replaceAll(" {2,}", "  ");
+        return out_str;
     }
 }

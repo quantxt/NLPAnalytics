@@ -131,7 +131,7 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     private Tokenizer tokenizer;
 
     public JADocumentHelper() {
-
+        analyzer = new JapaneseAnalyzer();
     }
 
     @Override

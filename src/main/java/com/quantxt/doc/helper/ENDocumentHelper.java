@@ -40,7 +40,8 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     private static final String OPENNLP_TOKENIZER_FILE_PATH = "/en/en-token.bin";
 
     public ENDocumentHelper() {
-
+        analyzer = new EnglishAnalyzer();
+        tokenizer = new EnglishAnalyzer();
     }
 
     @Override

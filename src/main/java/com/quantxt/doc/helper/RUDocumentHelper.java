@@ -37,6 +37,8 @@ public class RUDocumentHelper extends CommonQTDocumentHelper {
     private static Pattern VerbPhrase = Pattern.compile("V+");
 
     public RUDocumentHelper() {
+        tokenizer = new RussianAnalyzer();
+        analyzer = new RussianAnalyzer();
     }
 
     public void loadNERModel(){

@@ -32,6 +32,8 @@ public class ESDocumentHelper extends CommonQTDocumentHelper {
     private static Pattern VerbPhrase = Pattern.compile("RV+|V+");
 
     public ESDocumentHelper() {
+        analyzer = new SpanishAnalyzer();
+        tokenizer = new SpanishAnalyzer();
     }
 
     @Override
