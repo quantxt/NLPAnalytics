@@ -9,9 +9,9 @@ import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
-import org.apache.lucene.analysis.ja.JapaneseAnalyzer;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
 import org.apache.lucene.analysis.shingle.ShingleFilter;
+import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.document.FieldType;
@@ -132,24 +132,28 @@ public class DctSearhFld implements Serializable {
                 this.search_fld = pfx + ".stem";
                 this.priority = 4000;
                 addModePriority();
-                switch (lang) {
-                    case ENGLISH:
-                        this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
-                        break;
-                    case SPANISH:
-                        this.index_analyzer = new SpanishAnalyzer(stopWords_charArray);
-                        break;
-                    case RUSSIAN:
-                        this.index_analyzer = new RussianAnalyzer(stopWords_charArray);
-                        break;
-                    case JAPANESE:
-                        this.index_analyzer = new JapaneseAnalyzer();
-                        break;
-                    case FRENCH:
-                        this.index_analyzer = new FrenchAnalyzer(stopWords_charArray);
-                        break;
-                    default:
-                        this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
+                if (lang == null){
+                    this.index_analyzer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
+                } else {
+                    switch (lang) {
+                        case ENGLISH:
+                            this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
+                            break;
+                        case SPANISH:
+                            this.index_analyzer = new SpanishAnalyzer(stopWords_charArray);
+                            break;
+                        case RUSSIAN:
+                            this.index_analyzer = new RussianAnalyzer(stopWords_charArray);
+                            break;
+                        //         case JAPANESE:
+                        //             this.index_analyzer = new JapaneseAnalyzer();
+                        //             break;
+                        case FRENCH:
+                            this.index_analyzer = new FrenchAnalyzer(stopWords_charArray);
+                            break;
+                        default:
+                            this.index_analyzer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
+                    }
                 }
             }
             break;
