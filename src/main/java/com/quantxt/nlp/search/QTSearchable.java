@@ -48,8 +48,7 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
     }
 
     @Override
-    public List<ExtInterval> search(final String query_string) {
-
+    public List<ExtInterval> search(final String query_string, int slop) {
         String escaped_query = QueryParser.escape(query_string);
         ArrayList<ExtInterval> res = new ArrayList<>();
         boolean useFuzzyMatching = false;
@@ -60,6 +59,7 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
                 break;
             }
         }
+
         try {
             // This list is ordered by priorities
             // so if we find an entry that is matched with STANDARD analysis we won't consider it using STEM analysis
@@ -76,7 +76,7 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
                 boolean found = false;
                 if (matchedDocs.size() != 0) {
                     for (Mode m : mode) {
-                        Collection<ExtInterval> matches = getFragments(matchedDocs, m, 1,
+                        Collection<ExtInterval> matches = getFragments(matchedDocs, m, slop,
                                 searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                                 search_fld, vocab_name, vocab_id, query_string);
                         if (matches.size() > 0) {
@@ -94,6 +94,11 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
         }
 
         return res;
+    }
+
+    @Override
+    public List<ExtInterval> search(final String query_string) {
+        return  search(query_string, 1);
     }
 
     public int getMinTermLength(){
