@@ -102,15 +102,4 @@ public class JADocumentInfo extends QTDocument {
 
         return chunk_docs;
     }
-
-    @Override
-    public String Translate(String text, Language inLang, Language outLang) {
-        logger.error("Translation is not supported at this time");
-        return null;
-    }
-
-    @Override
-    public boolean isStatement(String s) {
-        return false;
-    }
 }
