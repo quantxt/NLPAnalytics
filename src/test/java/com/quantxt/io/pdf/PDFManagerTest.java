@@ -6,6 +6,7 @@ import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
+import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
@@ -129,7 +130,7 @@ public class PDFManagerTest {
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
-            List<QTSearchable> dictionaries = new ArrayList<>();
+            List<DictSearch> dictionaries = new ArrayList<>();
             dictionaries.add(qtSearchable);
             QTDocument doc = new ENDocumentInfo("", content.get(6), helper);
             helper.extract(doc, dictionaries, true, "");
@@ -171,7 +172,7 @@ public class PDFManagerTest {
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
-            List<QTSearchable> dictionaries = new ArrayList<>();
+            List<DictSearch> dictionaries = new ArrayList<>();
             dictionaries.add(qtSearchable);
             QTDocument doc = new ENDocumentInfo("", content.get(6), helper);
             helper.extract(doc, dictionaries, true, "");
@@ -209,7 +210,7 @@ public class PDFManagerTest {
                     padding_bet_key_value, padding_bet_values, null, null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
-            List<QTSearchable> dictionaries = new ArrayList<>();
+            List<DictSearch> dictionaries = new ArrayList<>();
             dictionaries.add(qtSearchable);
             QTDocument doc = new ENDocumentInfo("", content.get(0), helper);
             helper.extract(doc, dictionaries, true, "");

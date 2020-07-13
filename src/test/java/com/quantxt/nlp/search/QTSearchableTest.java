@@ -176,7 +176,7 @@ public class QTSearchableTest {
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
-        List<QTSearchable> searchableList = new ArrayList<>();
+        List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, false, "");
 
