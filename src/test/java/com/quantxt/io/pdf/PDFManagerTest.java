@@ -1,5 +1,7 @@
 package com.quantxt.io.pdf;
 
+import com.quantxt.commons.model.SearchDocument;
+import com.quantxt.commons.service.reader.PdfDocumentReader;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
@@ -8,10 +10,6 @@ import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.io.RandomAccessBuffer;
-import org.apache.pdfbox.pdfparser.PDFParser;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,203 +24,216 @@ import static org.junit.Assert.*;
 
 public class PDFManagerTest {
 
-    private PDDocument getPDFDocument(InputStream ins) throws IOException {
-        PDFParser parser = new PDFParser(new RandomAccessBuffer(new BufferedInputStream(ins)));
-        parser.parse();
-        COSDocument cosDoc = parser.getDocument();
-        PDDocument pdDoc = new PDDocument(cosDoc);
-        return pdDoc;
-    }
-
     @Test
     public void PDFOnePageReadNoSort() throws IOException {
-        InputStream is = getClass().getClassLoader().getResourceAsStream("803673_p1-compressed.pdf");
-        PDDocument pdDocument = getPDFDocument(is);
-        PDFManager pdfManager = new PDFManager(false);
-        ArrayList<String> content = pdfManager.read(pdDocument, true);
-        pdDocument.close();
-        assertFalse(content == null);
-        assertFalse(content.isEmpty());
-        String page = String.join("\n", content);
 
-        assertThat(page.indexOf("Years in Business:")).isEqualTo(3133);
-        assertThat(page.indexOf("9/12/2019")).isEqualTo(1377);
-        assertThat(page.indexOf("Sq Ft of Entire Bldg")).isEqualTo(16962);
+        InputStream is = getClass().getClassLoader().getResourceAsStream("803673_p1-compressed.pdf");
+
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setFileName("test.pdf");
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> pages = pdfDocumentReader.readByPage(searchDocument, true);
+
+        assertFalse(pages == null);
+        assertFalse(pages.isEmpty());
+        String page = String.join("\n", pages);
+
+        /*
+        System.out.println(page.indexOf("Years in Business"));
+        System.out.println(page.indexOf("9/12/2019"));
+        System.out.println(page.indexOf("Sq Ft of Entire Bldg"));
+         */
+
+        assertThat(page.indexOf("Years in Business:")).isEqualTo(3049);
+        assertThat(page.indexOf("9/12/2019")).isEqualTo(1370);
+        assertThat(page.indexOf("Sq Ft of Entire Bldg")).isEqualTo(16144);
     }
 
     @Test
     public void PDFOnePageReadSort() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("803673_p1-compressed.pdf");
-        PDDocument pdDocument = getPDFDocument(is);
-        PDFManager pdfManager = new PDFManager(true);
-        ArrayList<String> content = pdfManager.read(pdDocument, true);
-        pdDocument.close();
-        assertFalse(content == null);
-        assertFalse(content.isEmpty());
-        String page = String.join("\n", content);
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setFileName("test.pdf");
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> pages = pdfDocumentReader.readByPage(searchDocument, true);
+
+        assertFalse(pages == null);
+        assertFalse(pages.isEmpty());
+        String page = String.join("\n", pages);
+
         /*
         System.out.println(page.indexOf("Years in Business"));
         System.out.println(page.indexOf("9/12/2019"));
         System.out.println(page.indexOf("Sq Ft of Entire Bldg"));
-
-         */
-
-        assertThat(page.indexOf("Years in Business:")).isEqualTo(3133);
-        assertThat(page.indexOf("9/12/2019")).isEqualTo(1377);
-        assertThat(page.indexOf("Sq Ft of Entire Bldg")).isEqualTo(16962);
+        */
+        assertThat(page.indexOf("Years in Business:")).isEqualTo(3049);
+        assertThat(page.indexOf("9/12/2019")).isEqualTo(1370);
+        assertThat(page.indexOf("Sq Ft of Entire Bldg")).isEqualTo(16144);
     }
 
     @Test
     public void PDFOneBadPageReadSort() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("acord_p8.pdf");
-        PDDocument pdDocument = getPDFDocument(is);
-        PDFManager pdfManager = new PDFManager(true);
-        ArrayList<String> content = pdfManager.read(pdDocument, true);
-        pdDocument.close();
-        assertFalse(content == null);
-        assertFalse(content.isEmpty());
-        String page = String.join("\n", content);
 
-        assertThat(page.indexOf("BUS PERS PROP")).isEqualTo(2224);
-        assertThat(page.indexOf("10,196")).isEqualTo(2646);
-        assertThat(page.indexOf("CONSTRUCTION")).isEqualTo(5048);
-        assertThat(page.indexOf("TOTAL AREA")).isEqualTo(5556);
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setFileName("test.pdf");
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> pages = pdfDocumentReader.readByPage(searchDocument, true);
+
+        assertFalse(pages == null);
+        assertFalse(pages.isEmpty());
+        String page = String.join("\n", pages);
+
+        /*
+        System.out.println(page.indexOf("BUS PERS PROP"));
+        System.out.println(page.indexOf("10,196"));
+        System.out.println(page.indexOf("CONSTRUCTION"));
+        System.out.println(page.indexOf("TOTAL AREA"));
+         */
+
+
+        assertThat(page.indexOf("BUS PERS PROP")).isEqualTo(2633);
+        assertThat(page.indexOf("10,196")).isEqualTo(3044);
+        assertThat(page.indexOf("CONSTRUCTION")).isEqualTo(4639);
+        assertThat(page.indexOf("TOTAL AREA")).isEqualTo(5147);
     //    assertThat(page.indexOf("YR BUILT")).isEqualTo(4096);
     }
 
     @Test
     public void PDFDeck_v1() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("FT_ir_2019Q3.pdf");
-        PDDocument pdDocument = getPDFDocument(is);
-        PDFManager pdfManager = new PDFManager(true);
-        ArrayList<String> content = pdfManager.read(pdDocument, true);
-        pdDocument.close();
-        assertFalse(content == null);
-        assertFalse(content.isEmpty());
 
-        Assert.assertEquals(content.size(), 17);
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setFileName("test.pdf");
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> pages = pdfDocumentReader.readByPage(searchDocument, true);
 
-        assertThat(content.get(6).indexOf("Adjusted EBITDA Margin")).isEqualTo(10386);
-        assertThat(content.get(6).indexOf("Adjusted EBITDA*")).isEqualTo(8832);
-        assertThat(content.get(6).indexOf("CapEx")).isEqualTo(11829);
+        assertFalse(pages == null);
+        assertFalse(pages.isEmpty());
+
+        Assert.assertEquals(pages.size(), 17);
+        /*
+        System.out.println(pages.get(6).indexOf("Adjusted EBITDA Margin"));
+        System.out.println(pages.get(6).indexOf("Adjusted EBITDA*"));
+        System.out.println(pages.get(6).indexOf("CapEx"));
+         */
+
+        assertThat(pages.get(6).indexOf("Adjusted EBITDA Margin")).isEqualTo(11255);
+        assertThat(pages.get(6).indexOf("Adjusted EBITDA*")).isEqualTo(9855);
+        assertThat(pages.get(6).indexOf("CapEx")).isEqualTo(12650);
     }
 
     @Test
-    public void PDFNumberDetectionWithPAGE() {
-        try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("FT_ir_2019Q3.pdf");
-            PDDocument pdDocument = getPDFDocument(is);
-            PDFManager pdfManager = new PDFManager(true);
-            ArrayList<String> content = pdfManager.read(pdDocument, true);
-            pdDocument.close();
-            assertFalse(content == null);
+    public void PDFNumberDetectionWithPAGE() throws IOException {
+
+        InputStream is = getClass().getClassLoader().getResourceAsStream("FT_ir_2019Q3.pdf");
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setFileName("test.pdf");
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> pages = pdfDocumentReader.readByPage(searchDocument, true);
+
+        assertFalse(pages == null);
 
 
-            ArrayList<DictItm> items = new ArrayList<>();
-            items.add(new DictItm("Adjusted EBITDA", "Adjusted EBITDA"));
+        ArrayList<DictItm> items = new ArrayList<>();
+        items.add(new DictItm("Adjusted EBITDA", "Adjusted EBITDA"));
 
-            CommonQTDocumentHelper helper = new ENDocumentHelper();
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
 
-            Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
-            Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
+        Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
+        Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(items, null, "EBITDA", NUMBER,
-                    padding_bet_key_value, padding_bet_values, null, null);
+        Dictionary dictionary_1 = new Dictionary(items, null, "EBITDA", NUMBER,
+                padding_bet_key_value, padding_bet_values, null, null);
 
-            QTSearchable qtSearchable = new QTSearchable(dictionary_1);
-            List<DictSearch> dictionaries = new ArrayList<>();
-            dictionaries.add(qtSearchable);
-            QTDocument doc = new ENDocumentInfo("", content.get(6), helper);
-            helper.extract(doc, dictionaries, true, "");
+        QTSearchable qtSearchable = new QTSearchable(dictionary_1);
+        List<DictSearch> dictionaries = new ArrayList<>();
+        dictionaries.add(qtSearchable);
+        QTDocument doc = new ENDocumentInfo("", pages.get(6), helper);
+        helper.extract(doc, dictionaries, true, "");
 
-            doc.convertValues2titleTable();
-            // THEN
-            assertFalse(doc.getValues() == null);
-            assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>Adjusted EBITDA</td><td>908.0</td><td>884.0</td><td>878.0</td><td>895.0</td><td>873.0</td><td>882.0</td><td>804.0</td></tr></table>");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        doc.convertValues2titleTable();
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>Adjusted EBITDA</td><td>908.0</td><td>884.0</td><td>878.0</td><td>895.0</td><td>873.0</td><td>882.0</td><td>804.0</td></tr></table>");
 
     }
 
     @Test
-    public void PDFNumberDetectionWithPAGE_Label() {
-        try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("FT_ir_2019Q3.pdf");
-            PDDocument pdDocument = getPDFDocument(is);
-            PDFManager pdfManager = new PDFManager(false);
-            ArrayList<String> content = pdfManager.read(pdDocument, true);
-            pdDocument.close();
-            assertFalse(content == null);
+    public void PDFNumberDetectionWithPAGE_Label() throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("FT_ir_2019Q3.pdf");
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setFileName("test.pdf");
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> pages = pdfDocumentReader.readByPage(searchDocument, true);
+
+        assertFalse(pages == null);
 
 
-            ArrayList<DictItm> items = new ArrayList<>();
-            items.add(new DictItm("Q1", "Q1"));
-            items.add(new DictItm("Q2", "Q2"));
-            items.add(new DictItm("Q3", "Q3"));
-            items.add(new DictItm("Q4", "Q4"));
+        ArrayList<DictItm> items = new ArrayList<>();
+        items.add(new DictItm("Q1", "Q1"));
+        items.add(new DictItm("Q2", "Q2"));
+        items.add(new DictItm("Q3", "Q3"));
+        items.add(new DictItm("Q4", "Q4"));
 
-            CommonQTDocumentHelper helper = new ENDocumentHelper();
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
 
-            Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
-            Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
+        Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
+        Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(items, null, "Quarters", NUMBER,
-                    padding_bet_key_value, padding_bet_values, null, null);
+        Dictionary dictionary_1 = new Dictionary(items, null, "Quarters", NUMBER,
+                padding_bet_key_value, padding_bet_values, null, null);
 
-            QTSearchable qtSearchable = new QTSearchable(dictionary_1);
-            List<DictSearch> dictionaries = new ArrayList<>();
-            dictionaries.add(qtSearchable);
-            QTDocument doc = new ENDocumentInfo("", content.get(6), helper);
-            helper.extract(doc, dictionaries, true, "");
+        QTSearchable qtSearchable = new QTSearchable(dictionary_1);
+        List<DictSearch> dictionaries = new ArrayList<>();
+        dictionaries.add(qtSearchable);
+        QTDocument doc = new ENDocumentInfo("", pages.get(6), helper);
+        helper.extract(doc, dictionaries, true, "");
 
-            doc.convertValues2titleTable();
+        doc.convertValues2titleTable();
 
-            // THEN
-            assertFalse(doc.getValues() == null);
-            assertTrue(doc.getTitle().startsWith(
-                    "<table width=\"100%\"><tr><td>Q1</td><td>2018</td><td>2199.0</td><td>2102.0</td><td>97.0</td><td>20.0</td><td>251.0</td><td>1291.0</td><td>908.0</td><td>41.3</td><td>297.0</td><td>632.0</td>"));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // THEN
+        assertFalse(doc.getValues() == null);
+        assertTrue(doc.getTitle().startsWith(
+                "<table width=\"100%\"><tr><td>Q1</td><td>2018</td><td>2199.0</td><td>2102.0</td><td>97.0</td><td>20.0</td><td>251.0</td><td>1291.0</td><td>908.0</td><td>41.3</td><td>297.0</td><td>632.0</td>"));
     }
 
     @Test
-    public void PDFNumberDetectionWithPAGE_V2() {
-        try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("ft_p7.pdf");
-            PDDocument pdDocument = getPDFDocument(is);
-            PDFManager pdfManager = new PDFManager(true);
-            ArrayList<String> content = pdfManager.read(pdDocument, true);
-            pdDocument.close();
-            assertFalse(content == null);
+    public void PDFNumberDetectionWithPAGE_V2() throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("ft_p7.pdf");
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setFileName("test.pdf");
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> pages = pdfDocumentReader.readByPage(searchDocument, true);
+        assertFalse(pages == null);
 
-            ArrayList<DictItm> items = new ArrayList<>();
-            items.add(new DictItm("Adjusted EBITDA", "Adjusted EBITDA"));
+        ArrayList<DictItm> items = new ArrayList<>();
+        items.add(new DictItm("Adjusted EBITDA", "Adjusted EBITDA"));
 
-            CommonQTDocumentHelper helper = new ENDocumentHelper();
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
 
-            Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
-            Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
+        Pattern padding_bet_values = Pattern.compile("^[\\.%^&*;:\\s\\-\\$]+$");
+        Pattern padding_bet_key_value = Pattern.compile("^[\\.%^&*;:\\s\\*\\-\\$\\(\\)\\d]+$");
 
-            Dictionary dictionary_1 = new Dictionary(items, null, "Adjusted EBITDA", NUMBER,
-                    padding_bet_key_value, padding_bet_values, null, null);
+        Dictionary dictionary_1 = new Dictionary(items, null, "Adjusted EBITDA", NUMBER,
+                padding_bet_key_value, padding_bet_values, null, null);
 
-            QTSearchable qtSearchable = new QTSearchable(dictionary_1);
-            List<DictSearch> dictionaries = new ArrayList<>();
-            dictionaries.add(qtSearchable);
-            QTDocument doc = new ENDocumentInfo("", content.get(0), helper);
-            helper.extract(doc, dictionaries, true, "");
+        QTSearchable qtSearchable = new QTSearchable(dictionary_1);
+        List<DictSearch> dictionaries = new ArrayList<>();
+        dictionaries.add(qtSearchable);
+        QTDocument doc = new ENDocumentInfo("", pages.get(0), helper);
+        helper.extract(doc, dictionaries, true, "");
 
-            doc.convertValues2titleTable();
+        doc.convertValues2titleTable();
 
-            assertFalse(doc.getValues() == null);
-            assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>Adjusted EBITDA</td><td>908.0</td><td>884.0</td><td>878.0</td><td>895.0</td><td>873.0</td><td>882.0</td><td>804.0</td></tr></table>");
-
-     //       System.out.println(content.get(0));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        assertFalse(doc.getValues() == null);
+        assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>Adjusted EBITDA</td><td>908.0</td><td>884.0</td><td>878.0</td><td>895.0</td><td>873.0</td><td>882.0</td><td>804.0</td></tr></table>");
     }
 }
