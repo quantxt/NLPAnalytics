@@ -45,6 +45,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private static Pattern WORD_PTR = Pattern.compile("\\S+");
     private static Pattern TOKEN = Pattern.compile("[A-Za-z0-9]+[^ ]*");
     private static Pattern SPC_BET_WORDS_PTR = Pattern.compile("\\S(?= \\S)");
+    private static Pattern LONG_SPACE = Pattern.compile(" {5,}");
 
     // Single quotes to normalize
     protected static Pattern r_quote_norm = Pattern.compile("([`‘’])");
@@ -516,6 +517,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         int first_index_after_label = startNextToken(content, labelInterval.getEnd());
         int last_index_before_label = endPrevToken(content, labelInterval.getStart());
 
+        // Start of header label
         int offsetStartLabel = last_index_before_label  - startLineLabelInterval;
         if (offsetStartLabel < 0) offsetStartLabel = 0;
 
@@ -525,21 +527,59 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
         if (end_interval < 0) return results; // no more lines to process
 
+        int local_start_label = labelInterval.getStart() - startLineLabelInterval;
+        int local_end_label = labelInterval.getEnd() - startLineLabelInterval;
+        int header_length = local_end_label - local_start_label;
+        if (header_length < 4) header_length = 4;  // minimum length for english word
+
         String [] lines = content.substring(end_interval).split("\n");
         int position_in_lines_array = end_interval;
         List<String> verticalGap = new ArrayList<>();
-        for (String line : lines){
+
+        for (int lc=0; lc < lines.length; lc++){
+            String line = lines[lc];
             int line_length = line.length();
-            if (line_length < offsetStartLabel) {
+            if (line_length <= offsetStartLabel) {
                 position_in_lines_array += line_length + 1;
                 continue;
             }
-            int start_local_interval = position_in_lines_array+offsetStartLabel;
-            int end_local_interval = Math.min(offsetEndLabel, line_length) + position_in_lines_array;
+            int start_local_interval = offsetStartLabel + position_in_lines_array;
+            final int end_local_interval = Math.min(offsetEndLabel, line_length) + position_in_lines_array;
 
-            position_in_lines_array += line_length + 1;  // 1 is the length for \n
+            // This is experimental
+            // We look under a very wide range, the end of previous header all the way to the beginning of the next header
+            // If table columns are longer than table headers this can cause problems.
+            // let's move the start_local_interval forward if we find a wide white area. wide white area (aka spaces) means columns!
+            Matcher white_space_matcher = LONG_SPACE.matcher(line);
 
+            Map<Integer, Integer> index_2_space_width = new HashMap<>();
+            while (white_space_matcher.find()) {
+                if (white_space_matcher.start() > local_end_label) break;
+                int distance_from_label_start = white_space_matcher.end() - local_start_label;
+
+                index_2_space_width.put(white_space_matcher.end(), Math.abs(distance_from_label_start));
+            }
+
+            if (index_2_space_width.size() > 0){
+                // find the closest non-wide-space string as potential table value
+                Map<Integer, Integer> index_2_space_width_sorted = MapSort.sortByValue(index_2_space_width);
+                // end space gap is start of the cell value
+                int end_space = index_2_space_width_sorted.entrySet().iterator().next().getKey();
+                int cell_distance_from_header = Math.abs(local_start_label - end_space);
+                if (cell_distance_from_header < 4 * header_length)
+                {
+                    start_local_interval = end_space + position_in_lines_array;
+                } else {
+                    position_in_lines_array += line_length + 1;
+                    continue;
+                }
+            }
+
+            position_in_lines_array += line_length + 1;
+
+            if (start_local_interval >= end_local_interval) continue;
             String string2Search4Value = content.substring(start_local_interval, end_local_interval);
+              // 1 is the length for \n
 
             ExtIntervalSimple foundValue = null;
             switch (extractionType) {
@@ -565,7 +605,10 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                             int start = m.start(group);
                             int end = m.end(group);
                             if (start >= 0 && end > start) {
-                                foundValue = new ExtIntervalSimple(start + start_local_interval, end + start_local_interval);
+                                // for multiline - we only capture the last line match
+
+                                // we don't have a way of capturing bounding box of a multiline match!
+                                foundValue = new ExtIntervalSimple(start_local_interval,  end_local_interval);
                                 foundValue.setType(QTField.DataType.KEYWORD);
                                 foundValue.setStr(multiLineGap.substring(start, end));
                                 stopSearch = true;
@@ -610,7 +653,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             Matcher match_on_gap = pattern_to_try_on_gap.matcher(vertical_gap);
             if (vertical_gap.isEmpty() || match_on_gap.find()) {
                 results.add(foundValue);
-                verticalGap = new ArrayList<>();
+                verticalGap.clear();
             } else if (results.size() > 1){
                 break;
             }
@@ -632,8 +675,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private LineInfo getLineInfo(String str, int start){
         int lineNumber = 0;
         int mostRecentNewLineIndex = 0;
+        int str_length = str.length();
 
-        for (int i = 0; i < start; i++) {
+        for (int i = 0; i < start && i < str_length; i++) {
             if (str.charAt(i) == NewLine) {
                 mostRecentNewLineIndex = i;
                 lineNumber++;
@@ -656,14 +700,18 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         // there is no way to search backward
         // so we create a substring just before the start and find the last match
         // 70 is long enough to look, back??
-        int charBeforeStart = start - 1;
-        int startString = Math.max(0, charBeforeStart - 70);
-        if (charBeforeStart <= startString) return startString;
-        String substringBeforeStart = str.substring(startString, charBeforeStart);
+        int charBeforeStart = start;
+        int beginning_of_line = getFirstNewLineBefore(str, start);
+        if (beginning_of_line >= charBeforeStart) return charBeforeStart;
+
+    //    int startString = Math.max(0, charBeforeStart - 70);
+    //    if (charBeforeStart <= startString) return startString;
+    //    String substringBeforeStart = str.substring(startString, charBeforeStart);
+        String substringBeforeStart = str.substring(beginning_of_line, charBeforeStart);
         Matcher m = TOKEN.matcher(substringBeforeStart);
-        int endPreviousToken = startString;
+        int endPreviousToken = beginning_of_line;
         while (m.find()){
-            endPreviousToken = m.end() + startString;
+            endPreviousToken = m.end() + beginning_of_line;
         }
         return endPreviousToken;
     }
