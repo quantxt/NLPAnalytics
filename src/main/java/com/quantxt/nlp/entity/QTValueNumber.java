@@ -4,7 +4,6 @@ import com.quantxt.helper.DateResolver;
 import com.quantxt.types.ExtIntervalSimple;
 import com.quantxt.types.QTField;
 import com.quantxt.types.Dictionary;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -381,7 +380,11 @@ public class QTValueNumber {
             int st = e.getStart();
             int ed = e.getEnd();
             String pad = getPad(st, ed);
-            str = StringUtils.overlay(str, pad, st, ed);
+            if (st > 0){
+                str = str.substring(0, st) + pad + str.substring(ed);
+            } else {
+                str = pad + str.substring(ed);
+            }
         }
 
         return str;
