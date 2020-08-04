@@ -223,28 +223,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         }
     }
 
-    @Override
-    public boolean isSentence(String str, List<String> tokens) {
-        int numTokens = tokens.size();
-        //TODO: this is too high.. pass a parameter
-        // this is equal to size of almost one page of content
-        if (numTokens < 6 || numTokens > 500) {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public Set<String> getStopwords() {
-        Iterator iter = stopwords.iterator();
-        HashSet<String> set = new HashSet<>();
-        while (iter.hasNext()) {
-            Object obj = iter.next();
-            set.add(obj.toString());
-        }
-        return set;
-    }
-
     public static String getModelBaseDir() {
         return System.getenv(DEFAULT_NLP_MODEL_DIR);
     }
@@ -386,6 +364,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         if (!m.find()) return false;
 
         int start_of_match = m.start();
+
         boolean match_is_valid = validateFoundValue(content, start_search_shift,
                 start_of_match + start_search_shift, analyzer,
                 gap_pattern);
@@ -411,7 +390,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                                        int end,
                                        Analyzer analyzer,
                                        Pattern gapPattern){
-        if (gapPattern == null) return false;
+        if (gapPattern == null) return true;
+
         String gap_between = content.substring(start, end);
         if (gap_between.length() == 0) return false;
         //first tokenize the gap
@@ -457,12 +437,14 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
                 break;
             case REGEX:
-                int group = (dictionary.getGroups() == null || dictionary.getGroups().length ==0 )  ? 0 : dictionary.getGroups()[0];
+                int group = (dictionary.getGroups() == null || dictionary.getGroups().length == 0 )  ? 0 : dictionary.getGroups()[0];
                 Pattern pattern = dictionary.getPattern();
+                //field matching. One value for field
                 boolean canContinueSearchForValue = addShiftedValues(content, start_search_shift,
                         pattern, group, analyzer, padding_between_key_value, results);
 
-                while (canContinueSearchForValue) {
+                //Now find more than one value
+                while (canContinueSearchForValue && padding_between_values != null) {
                     start_search_shift = results.get(results.size() - 1).getEnd();
                     canContinueSearchForValue = addShiftedValues(content, start_search_shift,
                             pattern, group, null, padding_between_values, results);
@@ -482,16 +464,26 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
                 canContinueSearchForValue = validateFoundValue(content, start_search_shift,
                         numeric.getStart() , analyzer, padding_between_key_value);
-                while (canContinueSearchForValue) {
 
+                if (canContinueSearchForValue) {
                     results.add(numeric);
-                    start_search_shift = results.get(results.size() - 1).getEnd();
-                    //let's find following values
-                    str_2_search = content.substring(start_search_shift);
-                    numeric = QTValueNumber.findFirstNumeric(str_2_search, start_search_shift);
-                    if (numeric == null) break;
-                    canContinueSearchForValue = validateFoundValue(content, start_search_shift,
-                            numeric.getStart(), null, padding_between_values);
+
+                    if (padding_between_values != null) {
+                        while (true) {
+
+                            start_search_shift = results.get(results.size() - 1).getEnd();
+                            //let's find following values
+                            str_2_search = content.substring(start_search_shift);
+                            numeric = QTValueNumber.findFirstNumeric(str_2_search, start_search_shift);
+                            if (numeric == null) break;
+
+                            canContinueSearchForValue = validateFoundValue(content, start_search_shift,
+                                    numeric.getStart(), null, padding_between_values);
+
+                            if (!canContinueSearchForValue) break;
+                            results.add(numeric);
+                        }
+                    }
                 }
                 break;
         }
@@ -640,22 +632,29 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 continue;
             }
 
-            Pattern pattern_to_try_on_gap = padding_between_key_value;
-            if (results.size() > 0) {
-                pattern_to_try_on_gap = padding_between_values;
-            }
-
-            if (pattern_to_try_on_gap == null){
-                break;
-            }
-
-            String vertical_gap = String.join("", verticalGap);
-            Matcher match_on_gap = pattern_to_try_on_gap.matcher(vertical_gap);
-            if (vertical_gap.isEmpty() || match_on_gap.find()) {
-                results.add(foundValue);
-                verticalGap.clear();
-            } else if (results.size() > 1){
-                break;
+            if (results.size() == 0) {
+                // this is field look up, one value for field
+                if (padding_between_key_value == null){
+                    results.add(foundValue);
+                    if (padding_between_values == null) break;
+                } else {
+                    String vertical_gap = String.join("", verticalGap);
+                    Matcher match_on_gap = padding_between_key_value.matcher(vertical_gap);
+                    if (vertical_gap.isEmpty() || match_on_gap.find()) {
+                        results.add(foundValue);
+                        if (padding_between_values == null) break;
+                        verticalGap.clear();
+                    }
+                }
+            } else {
+                String vertical_gap = String.join("", verticalGap);
+                Matcher match_on_gap = padding_between_values.matcher(vertical_gap);
+                if (vertical_gap.isEmpty() || match_on_gap.find()) {
+                    results.add(foundValue);
+                    verticalGap.clear();
+                } else {
+                    break;
+                }
             }
         }
 
