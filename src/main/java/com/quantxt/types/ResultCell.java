@@ -2,11 +2,14 @@ package com.quantxt.types;
 
 import java.math.BigDecimal;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import com.quantxt.util.Const;
 import com.quantxt.util.NLPUtil;
 
 public class ResultCell {
+
+    static final Pattern POS_DOUBLE_PATTERN  = Pattern.compile("^\\s*\\d{1,15}|\\.\\d+|\\d{1,15}\\.\\d+\\s*$");
+
     private final Attribute attribute;
     private final int index;
     private String value;
@@ -53,9 +56,24 @@ public class ResultCell {
         if (isEmpty()) {
             return 0d;
         }
-        String val = NLPUtil.cleanDouble(value);
-        Matcher m = Const.POS_DOUBLE_PATTERN.matcher(val);
+        String val = cleanDouble(value);
+        Matcher m = POS_DOUBLE_PATTERN.matcher(val);
         return !m.find() ? null : new BigDecimal(Double.parseDouble(val)).doubleValue();
+    }
+
+    private String cleanDouble(String str) {
+        if (str == null || str.isEmpty()) return "";
+        boolean isnegative = false;
+
+        if (str.trim().startsWith("-")) {
+            isnegative = true;
+        }
+        str = str.replaceAll("[^\\d\\.]", "");
+        str = str.replaceAll("\\.(?=.*\\.)", ""); // Replace all but last dot
+        if (isnegative) {
+            return "-" + str;
+        }
+        return str;
     }
 
     public boolean isEmpty() {
