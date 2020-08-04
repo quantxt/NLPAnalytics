@@ -22,3 +22,4 @@ test-output/**
 *.ids
 *.orig
 classes/
+/.idea/
