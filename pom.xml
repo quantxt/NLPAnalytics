@@ -17,7 +17,7 @@
 
     <properties>
         <lucene.version>8.5.1</lucene.version>
-        <qt-core.version>2.8.12</qt-core.version>
+        <qt-core.version>2.8.13-SNAPSHOT</qt-core.version>
     </properties>
 
     <licenses>
@@ -207,7 +207,6 @@
             <version>1.2.9</version>
             <scope>test</scope>
         </dependency>
-
 
         <dependency>
             <groupId>org.mockito</groupId>

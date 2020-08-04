@@ -208,16 +208,6 @@ public class JADocumentHelper extends CommonQTDocumentHelper {
     }
 
     @Override
-    public boolean isSentence(String str, List<String> tokens) {
-        int numTokens = tokens.size();
-        //TODO: This is bad logic
-        if (numTokens < 5 || numTokens > 750) {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
     public String[] getSentences(String text) {
 
         ArrayList<String> allSents = new ArrayList<>();
