@@ -79,12 +79,6 @@ public class JADocumentInfo extends QTDocument {
                     }
                 }
                 break;
-            case PARAGRAPH:
-                for (String p : body) {
-                    String[] paragraphs = p.split("[\\?\\.][\\n\\r]+");
-                    chunks.addAll(Arrays.asList(paragraphs));
-                }
-                break;
             case PAGE:
                 chunks.addAll(body);
         }

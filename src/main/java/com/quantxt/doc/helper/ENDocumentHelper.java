@@ -75,11 +75,6 @@ public class ENDocumentHelper extends CommonQTDocumentHelper {
     }
 
     @Override
-    public boolean isSentence(String str, List<String> tokens) {
-        return true;
-    }
-
-    @Override
     public void preInit() {
         //Analyzer
         analyzer = new EnglishAnalyzer();
