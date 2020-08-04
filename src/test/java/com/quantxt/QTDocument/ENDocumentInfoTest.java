@@ -117,12 +117,11 @@ public class ENDocumentInfoTest {
             ArrayList<DictItm> items = new ArrayList<>();
             items.add(new DictItm("TOTAL AREA 1", "TOTAL AREA"));
 
-            Pattern keyPaddingPattern = Pattern.compile("^[A-Za-z\\-\\n ]{20,600}$");
 
             Pattern keyVerticalPaddingPattern = Pattern.compile("^\\s*$");
 
             Dictionary dictionary_1 = new Dictionary(items, null,"AREA", NUMBER,
-                    keyPaddingPattern, null, null, null);
+                    Pattern.compile("^[A-Za-z\\-\\n ]{20,600}$"), Pattern.compile("^ *$"), null, null);
 
             Dictionary dictionary_2 = new Dictionary(items, null,"AREA", NUMBER,
                     keyVerticalPaddingPattern, null, null, null);
@@ -178,7 +177,7 @@ public class ENDocumentInfoTest {
             ArrayList<DictItm> items = new ArrayList<>();
             items.add(new DictItm("Area", "TOTAL AREA"));
 
-            Pattern match = Pattern.compile("([\\d,]+)");
+            Pattern match = Pattern.compile("(^ *[\\d,]+)");
 
             Dictionary dictionary_1 = new Dictionary(items, null,"Area", REGEX,
                     null, null, match, new int[]{1});
@@ -357,7 +356,7 @@ public class ENDocumentInfoTest {
         String str = "Bloomberg Barclays exposure to 10 yr : 5.6%";
 
         Dictionary dictionary = new Dictionary(global_dict.getVocab(),  null,"test", NUMBER,
-                null, null, null, null);
+                null, Pattern.compile("^[ \\:]+$"), null, null);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
@@ -442,7 +441,7 @@ public class ENDocumentInfoTest {
 
         doc.convertValues2titleTable();
         // THEN
-        assertFalse(doc.getValues() == null);
+        assertNotNull(doc.getValues());
         assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
 
     }
@@ -547,7 +546,7 @@ public class ENDocumentInfoTest {
     }
 
     @Test
-    public void findSpane2() {
+    public void findSpan4() {
         String str =
                 "The effects of this change are applied retrospectively and are provided in the Reconciliation of Non-GAAP Financial Measures to " +
                         "GAAP Financial Measures tables. 2 CUSTOMER METRICS Total Branded Postpaid Net Additions " +
@@ -613,7 +612,7 @@ public class ENDocumentInfoTest {
         dictItms_1.add(new DictItm("Returns" , "Returns", "returned"));
 
         Dictionary dictionary_1 = new Dictionary(dictItms_1, null, "Fund Performance", REGEX,
-                null, null, Pattern.compile("([\\-+]?[\\d\\.]+)%"), new int[] {1});
+                null, null, Pattern.compile("^ *([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable_1 = new QTSearchable(dictionary_1);
 
         ArrayList<DictItm> dictItms_2 = new ArrayList<>();
@@ -648,7 +647,7 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Returns" , "Returns", "returned"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Fund Performance", REGEX,
-                null, null, Pattern.compile("([\\-+]?[\\d\\.]+)%"), new int[] {1});
+                null, null, Pattern.compile("^ *([\\-+]?[\\d\\.]+)%"), new int[] {1});
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
         List<DictSearch> qtSearchableList = new ArrayList<>();
@@ -702,9 +701,9 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
+        Pattern keyPaddingPattern = Pattern.compile("^\\s+\\(\\d+\\)|[\\:\\,;]+$");
         Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
-                null, null, null, null);
+                keyPaddingPattern, Pattern.compile("^[\\$\\s]*$"), null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
         List<DictSearch> qtSearchableList = new ArrayList<>();
@@ -726,9 +725,9 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
-        Pattern keyPaddingPattern = Pattern.compile("\\s+\\(\\d+\\)|[\\:\\,;]+");
+        Pattern keyPaddingPattern = Pattern.compile("^\\s+\\(\\d+\\)|[\\:\\,;]+$");
         Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", NUMBER,
-                null, null, null, null);
+                keyPaddingPattern, Pattern.compile("^[\\$\\s]*$"), null, null);
         QTSearchable qtSearchable = new QTSearchable(dictionary);
 
         List<DictSearch> qtSearchableList = new ArrayList<>();
@@ -876,25 +875,6 @@ public class ENDocumentInfoTest {
         assertEquals(doc.getTitle(),
                 "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
-    }
-
-    @Test
-    public void detectParagraph() {
-        String str = "2019 - 1, Critical: Damage to exterior wall on the south side of the building was noted. " +
-                "Penetrations in the exterior wall can allow water behind the moisture barrier where it " +
-                "can cause wood rot and mold. Damaged areas should be repaired in accordance with "+
-                "the manufacturer's specification.\n" +
-                "\n" +
-                "2019 - 2, Important: Sprinkler control valves located located in the rear riser room are not " +
-                "readily accessible. Access is obstructed by Cici's Pizza clutter and products. Obstruction " +
-                "should be removed to allow quick access to valves in the event of an emergency.";
-
-        CommonQTDocumentHelper helper = new ENDocumentHelper();
-        QTDocument doc = new ENDocumentInfo(str, "Title", helper);
-
-        List<QTDocument> docs = doc.getChunks(QTDocument.CHUNK.PARAGRAPH);
-        assertNotNull(docs);
-        assertTrue(docs.get(1).getTitle().startsWith("2019 - 2, Importa"));
     }
 
     @Test

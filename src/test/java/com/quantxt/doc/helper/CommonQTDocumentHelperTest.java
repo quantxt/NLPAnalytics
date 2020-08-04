@@ -9,10 +9,6 @@ import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.io.RandomAccessBuffer;
-import org.apache.pdfbox.pdfparser.PDFParser;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -52,7 +48,7 @@ public class CommonQTDocumentHelperTest {
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
+                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), Pattern.compile("^[\\$\\s]*$"), null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -85,7 +81,7 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
+                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"),  Pattern.compile("^[\\$\\s]*$"), null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -118,7 +114,7 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
+                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), Pattern.compile("^[\\$\\s]*$"), null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -176,10 +172,18 @@ public class CommonQTDocumentHelperTest {
     }
 
     @Test
+    public void pdf_vertical_lookup_1() throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("Acord_125_e1.pdf");
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> content = pdfDocumentReader.readByPage(searchDocument, true);
+    }
+
+    @Test
     public void tableRow_1() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("acord_27pages.pdf");
         SearchDocument searchDocument = new SearchDocument();
-        searchDocument.setFileName("test.pdf");
         searchDocument.setInputStream(is);
         PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
         List<String> content = pdfDocumentReader.readByPage(searchDocument, true);
@@ -200,7 +204,7 @@ public class CommonQTDocumentHelperTest {
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, true, "");
-        assertTrue(doc.getValues() == null);
+        assertNull(doc.getValues());
 
     }
 
@@ -216,7 +220,7 @@ public class CommonQTDocumentHelperTest {
 
         Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,30}\n){0,3}$");
         Dictionary dictionary = new Dictionary(dictItms, null, "Orig Year Built", NUMBER,
-                skipBetweenKeyValues, null, null, null);
+                skipBetweenKeyValues, Pattern.compile("^ *$"), null, null);
 
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -389,7 +393,7 @@ public class CommonQTDocumentHelperTest {
 
         dictionary.setValType(REGEX);
         dictionary.setPattern(Pattern.compile("(?:\\S+ +){0,4}(?:(?:(?:\\d+|\\d+[ \\-]+\\d+) +[A-Za-z \\-\\n,]+)([A-Z]{2}) {0,20}(\\d{5})(?:\\-\\d{4})?)[ \\n]+"));
-        dictionary.setGroups(new int [1]);
+        dictionary.setGroups(new int []{1});
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument qtDocument = new ENDocumentInfo("", content, helper);
 
@@ -401,15 +405,6 @@ public class CommonQTDocumentHelperTest {
         assertTrue(qtDocument.getValues().get(0).getExtIntervalSimples().get(0).getStr().equals("MA"));
 
     }
-
-    private PDDocument getPDFDocument(InputStream ins) throws IOException {
-        PDFParser parser = new PDFParser(new RandomAccessBuffer(new BufferedInputStream(ins)));
-        parser.parse();
-        COSDocument cosDoc = parser.getDocument();
-        PDDocument pdDoc = new PDDocument(cosDoc);
-        return pdDoc;
-    }
-
 
     @Test
     @Ignore
