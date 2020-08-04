@@ -1,7 +1,5 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.commons.model.SearchDocument;
-import com.quantxt.commons.service.reader.PdfDocumentReader;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.types.ExtInterval;
@@ -169,43 +167,6 @@ public class CommonQTDocumentHelperTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         int endPreviousToken = helper.endPrevToken(str, 102);
         assertTrue(endPreviousToken == 96);
-    }
-
-    @Test
-    public void pdf_vertical_lookup_1() throws IOException {
-        InputStream is = getClass().getClassLoader().getResourceAsStream("Acord_125_e1.pdf");
-        SearchDocument searchDocument = new SearchDocument();
-        searchDocument.setInputStream(is);
-        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
-        List<String> content = pdfDocumentReader.readByPage(searchDocument, true);
-    }
-
-    @Test
-    public void tableRow_1() throws IOException {
-        InputStream is = getClass().getClassLoader().getResourceAsStream("acord_27pages.pdf");
-        SearchDocument searchDocument = new SearchDocument();
-        searchDocument.setInputStream(is);
-        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
-        List<String> content = pdfDocumentReader.readByPage(searchDocument, true);
-
-        CommonQTDocumentHelper helper = new ENDocumentHelper();
-
-        ArrayList<DictItm> dictItms = new ArrayList<>();
-
-        dictItms.add(new DictItm("SPK", "% SPRNK"));
-
-        Pattern skipBetweenValues = Pattern.compile("^(?:[ ,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]*\n){0,10}$");
-        Dictionary dictionary = new Dictionary(dictItms, null, "SPK", NUMBER,
-                skipBetweenValues, skipBetweenValues, null, null);
-
-        //      logger.info(content.get(25));
-        QTSearchable qtSearchable = new QTSearchable(dictionary);
-        ENDocumentInfo doc = new ENDocumentInfo("", content.get(25), helper);
-        List<DictSearch> searchableList = new ArrayList<>();
-        searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, true, "");
-        assertNull(doc.getValues());
-
     }
 
     @Test
