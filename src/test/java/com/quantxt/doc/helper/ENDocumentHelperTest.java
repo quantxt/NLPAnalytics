@@ -207,33 +207,6 @@ public class ENDocumentHelperTest {
     }
 
     @Test
-    @Ignore
-    public void testStopWords1() {
-        // GIVEN
-        CharSequence word1 = "they";
-        CharSequence word2 = "about";
-        CharSequence word3 = "itself";
-        CharSequence word4 = "science";
-        CharSequence word5 = "student";
-
-        // WHEN
-        boolean isStopword1 = helper.getStopwords().contains(word1);
-        boolean isStopword2 = helper.getStopwords().contains(word2);
-        boolean isStopword3 = helper.getStopwords().contains(word3);
-
-        boolean isStopword4 = helper.getStopwords().contains(word4);
-        boolean isStopword5 = helper.getStopwords().contains(word5);
-
-        // THEN
-        assertTrue(isStopword1);
-        assertTrue(isStopword2);
-        assertTrue(isStopword3);
-
-        assertFalse(isStopword4);
-        assertFalse(isStopword5);
-    }
-
-    @Test
     public void testIsTag() {
         // GIVEN
         String tag1 = "IN";

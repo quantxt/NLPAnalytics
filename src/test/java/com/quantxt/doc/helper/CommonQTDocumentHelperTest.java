@@ -1,18 +1,14 @@
 package com.quantxt.doc.helper;
 
+import com.quantxt.commons.model.SearchDocument;
+import com.quantxt.commons.service.reader.PdfDocumentReader;
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.types.ExtInterval;
-import com.quantxt.io.pdf.PDFManager;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
-import org.apache.commons.io.IOUtils;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.io.RandomAccessBuffer;
-import org.apache.pdfbox.pdfparser.PDFParser;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -20,9 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.quantxt.types.Dictionary.ExtractionType.NUMBER;
@@ -54,7 +48,7 @@ public class CommonQTDocumentHelperTest {
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
+                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), Pattern.compile("^[\\$\\s]*$"), null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -87,7 +81,7 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
+                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"),  Pattern.compile("^[\\$\\s]*$"), null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -120,7 +114,7 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), null, null, null);
+                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), Pattern.compile("^[\\$\\s]*$"), null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -178,11 +172,22 @@ public class CommonQTDocumentHelperTest {
     }
 
     @Test
+    public void pdf_vertical_lookup_1() throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("Acord_125_e1.pdf");
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> content = pdfDocumentReader.readByPage(searchDocument, true);
+    }
+
+    @Test
     public void tableRow_1() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("acord_27pages.pdf");
-        PDDocument pdDocument = getPDFDocument(is);
-        PDFManager pdfManager = new PDFManager(true);
-        ArrayList<String> content = pdfManager.read(pdDocument, true);
+        SearchDocument searchDocument = new SearchDocument();
+        searchDocument.setInputStream(is);
+        PdfDocumentReader pdfDocumentReader = new PdfDocumentReader();
+        List<String> content = pdfDocumentReader.readByPage(searchDocument, true);
+
         CommonQTDocumentHelper helper = new ENDocumentHelper();
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
@@ -199,7 +204,7 @@ public class CommonQTDocumentHelperTest {
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         helper.extract(doc, searchableList, true, "");
-        assertTrue(doc.getValues() == null);
+        assertNull(doc.getValues());
 
     }
 
@@ -207,15 +212,15 @@ public class CommonQTDocumentHelperTest {
     public void tableRow_TSV() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("tsv_w_space.txt");
 
-        String content = IOUtils.toString(is);
+        String content = convertInputStreamToString(is);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Orig Year Built", "Orig Year Built"));
 
-        Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,13}\n){0,3}$");
+        Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,30}\n){0,3}$");
         Dictionary dictionary = new Dictionary(dictItms, null, "Orig Year Built", NUMBER,
-                skipBetweenKeyValues, null, null, null);
+                skipBetweenKeyValues, Pattern.compile("^ *$"), null, null);
 
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -234,7 +239,7 @@ public class CommonQTDocumentHelperTest {
     public void tableRow_TSV_noFound() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("tsv_w_space.txt");
 
-        String content = IOUtils.toString(is);
+        String content = convertInputStreamToString(is);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
@@ -259,7 +264,7 @@ public class CommonQTDocumentHelperTest {
     public void exceprt_v1() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("tsv_w_space.txt");
 
-        String content = IOUtils.toString(is);
+        String content = convertInputStreamToString(is);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
@@ -370,7 +375,7 @@ public class CommonQTDocumentHelperTest {
     }
 
     @Test
-    public void multiLineSearch() throws IOException {
+    public void multiLineSearch() {
         // GIVEN
         String content = "         COMPANYMAILING                     ADDRESS                             PROPERTY             LOCATION\n" +
                 "\n" +
@@ -388,7 +393,7 @@ public class CommonQTDocumentHelperTest {
 
         dictionary.setValType(REGEX);
         dictionary.setPattern(Pattern.compile("(?:\\S+ +){0,4}(?:(?:(?:\\d+|\\d+[ \\-]+\\d+) +[A-Za-z \\-\\n,]+)([A-Z]{2}) {0,20}(\\d{5})(?:\\-\\d{4})?)[ \\n]+"));
-        dictionary.setGroups(new int [1]);
+        dictionary.setGroups(new int []{1});
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument qtDocument = new ENDocumentInfo("", content, helper);
 
@@ -398,23 +403,15 @@ public class CommonQTDocumentHelperTest {
 
         assertTrue(qtDocument.getValues().size() == 1);
         assertTrue(qtDocument.getValues().get(0).getExtIntervalSimples().get(0).getStr().equals("MA"));
-    }
 
-    private PDDocument getPDFDocument(InputStream ins) throws IOException {
-        PDFParser parser = new PDFParser(new RandomAccessBuffer(new BufferedInputStream(ins)));
-        parser.parse();
-        COSDocument cosDoc = parser.getDocument();
-        PDDocument pdDoc = new PDDocument(cosDoc);
-        return pdDoc;
     }
-
 
     @Test
     @Ignore
     public void flood_long_phrase() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("flood2.txt");
 
-        String content = IOUtils.toString(is);
+        String content = convertInputStreamToString(is);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
@@ -437,5 +434,15 @@ public class CommonQTDocumentHelperTest {
 
         helper.extract(doc, searchableList, true, "");
         String excerpt = helper.extractHtmlExcerpt(content, doc.getValues().get(0));
+    }
+
+    private String convertInputStreamToString(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int length;
+        while ((length = inputStream.read(buffer)) != -1) {
+            result.write(buffer, 0, length);
+        }
+        return result.toString("UTF-8");
     }
 }

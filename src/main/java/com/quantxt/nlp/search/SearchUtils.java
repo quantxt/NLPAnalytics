@@ -18,7 +18,6 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.search.spans.*;
 import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
@@ -28,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.Formatter;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.quantxt.nlp.search.DctSearhFld.DataField;

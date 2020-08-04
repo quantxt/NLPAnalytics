@@ -89,7 +89,6 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
                 if (found) break;
             }
         } catch (Exception e ){
-            e.printStackTrace();
             logger.error("Error in name search {}: query_string '{}'", e.getMessage() , query_string);
         }
 
