@@ -21,6 +21,8 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
     final private static Logger logger = LoggerFactory.getLogger(QTSearchable.class);
 
     private int minTermLength = 5;
+    private int maxEdits = 2;
+    private int prefixLength = 2;
 
     public QTSearchable(Dictionary dictionary) {
         super(dictionary);
@@ -69,8 +71,9 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
                 String search_fld = dctSearhFld.getSearch_fld();
                 Analyzer searchAnalyzer = dctSearhFld.getSearch_analyzer();
 
-                Query query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, escaped_query, minTermLength) :
-                        getMultimatcheQuery(searchAnalyzer, search_fld, escaped_query);
+                Query query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, query_string,
+                        minTermLength, maxEdits, prefixLength) :
+                        getMultimatcheQuery(searchAnalyzer, search_fld, query_string);
 
                 List<Document> matchedDocs = getMatchedDocs(query);
                 boolean found = false;
@@ -107,4 +110,19 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
         this.minTermLength = minTermLength;
     }
 
+    public int getMaxEdits() {
+        return maxEdits;
+    }
+
+    public void setMaxEdits(int maxEdits) {
+        this.maxEdits = maxEdits;
+    }
+
+    public int getPrefixLength() {
+        return prefixLength;
+    }
+
+    public void setPrefixLength(int prefixLength) {
+        this.prefixLength = prefixLength;
+    }
 }
