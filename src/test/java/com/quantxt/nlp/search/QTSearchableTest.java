@@ -1,6 +1,7 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.ENDocumentInfo;
+import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.types.ExtInterval;
@@ -185,4 +186,102 @@ public class QTSearchableTest {
 
     }
 
+    @Test
+    public void test_str_special_chars() {
+        String srch_str1 = "This is a super \"deal [good deal] ~amzing~ very:special very!very";
+        String srch_str2 = "I need ||rire and || rire  +hrlpe";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("V1", "very:special"));
+        dictItms.add(new DictItm("V2", "super \"deal"));
+        dictItms.add(new DictItm("V3", "||rire"));
+        dictItms.add(new DictItm("V4", "|| rire"));
+        dictItms.add(new DictItm("V5", "[good deal]"));
+        dictItms.add(new DictItm("V6", "~amzing~"));
+        dictItms.add(new DictItm("V7", "very!very"));
+        dictItms.add(new DictItm("V8", "+hrlpe"));
+
+
+        Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
+        List<DictSearch> searchableList = new ArrayList<>();
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.WHITESPACE);
+        searchableList.add(qtSearchable);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
+        helper.extract(doc1, searchableList, false, "");
+
+        ENDocumentInfo doc2 = new ENDocumentInfo("", srch_str2, helper);
+        helper.extract(doc2, searchableList, false, "");
+
+        // THEN
+        assertNotNull(doc1.getValues());
+        assertNotNull(doc2.getValues());
+        assertTrue(doc1.getValues().get(0).getCategory().equals("V2"));
+        assertTrue(doc1.getValues().get(1).getCategory().equals("V5"));
+        assertTrue(doc1.getValues().get(2).getCategory().equals("V6"));
+        assertTrue(doc1.getValues().get(3).getCategory().equals("V1"));
+        assertTrue(doc1.getValues().get(4).getCategory().equals("V7"));
+
+
+        assertTrue(doc2.getValues().get(0).getCategory().equals("V3"));
+        assertTrue(doc2.getValues().get(1).getCategory().equals("V4"));
+        assertTrue(doc2.getValues().get(2).getCategory().equals("V8"));
+
+    }
+
+    @Test
+    public void test_str_unicode() {
+        String srch_str1 = "This is a good \uF06E $100,000,001 - $500 million ";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("V1", "\uF06E $100,000,001"));
+
+
+        Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
+        List<DictSearch> searchableList = new ArrayList<>();
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.WHITESPACE);
+        searchableList.add(qtSearchable);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
+        helper.extract(doc1, searchableList, false, "");
+
+
+        // THEN
+        assertNotNull(doc1.getValues());
+        assertTrue(doc1.getValues().get(0).getCategory().equals("V1"));
+
+    }
+
+    @Test
+    public void test_unicode_str() {
+        String srch_str1 = "☒ $10,000,000,001-$50 billion";
+        String srch_str2 = "we found \uF06E $100,000,001 - $500 million and it `is a lot of money";
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("500M", "\uF06E $100,000,001 - $500 million"));
+        dictItms.add(new DictItm("100M", "\uF06E $50,000,001 - $100 million"));
+        dictItms.add(new DictItm("50K", "\uDBFF\uDC00$0 - $50,000"));
+        dictItms.add(new DictItm("50B", "☒ $10,000,000,001-$50 billion"));
+
+        Dictionary dictionary = new Dictionary(null, "Occupancy", dictItms);
+        List<DictSearch> searchableList = new ArrayList<>();
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.WHITESPACE);
+        searchableList.add(qtSearchable);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
+        helper.extract(doc1, searchableList, false, "");
+
+        ENDocumentInfo doc2 = new ENDocumentInfo("", srch_str2, helper);
+        helper.extract(doc2, searchableList, false, "");
+
+        // THEN
+        assertNotNull(doc1.getValues());
+        assertNotNull(doc2.getValues());
+
+    }
 }

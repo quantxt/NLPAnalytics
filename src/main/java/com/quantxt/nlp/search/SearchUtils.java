@@ -146,8 +146,7 @@ public class SearchUtils {
 
         for (Document matchedDoc : matchedDocs) {
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
-            String query_string = QueryParser.escape(query_string_raw);
-            SpanQuery query = getSpanQuery(keyphrase_analyzer , searchField, query_string,
+            SpanQuery query = getSpanQuery(keyphrase_analyzer , searchField, query_string_raw,
                     slop, isFuzzy, ordered, isMatchAll);
             if (query == null) continue;
 
@@ -320,7 +319,12 @@ public class SearchUtils {
         return spanQuery;
     }
 
-    public static Query getFuzzyQuery(Analyzer analyzer, String fld, String query, int minTermLength) {
+    public static Query getFuzzyQuery(Analyzer analyzer,
+                                      String fld,
+                                      String query,
+                                      int minTermLength,
+                                      int maxEdits,
+                                      int prefixLength) {
         BooleanQuery.Builder bqueryBuilder = new BooleanQuery.Builder();
         TokenStream tokens = analyzer.tokenStream("", query);
         try {
@@ -329,7 +333,7 @@ public class SearchUtils {
             while (tokens.incrementToken()) {
                 String term = cattr.toString();
                 if (term.length() < minTermLength) continue;
-                bqueryBuilder.add(new FuzzyQuery(new Term(fld, term), 2, 2, 50, false), BooleanClause.Occur.SHOULD);
+                bqueryBuilder.add(new FuzzyQuery(new Term(fld, term), maxEdits, prefixLength, 50, false), BooleanClause.Occur.SHOULD);
             }
             tokens.end();
             tokens.close();
@@ -384,6 +388,10 @@ public class SearchUtils {
             idx.incrementAndGet();
             switch (c) {
                 case '+':
+                    int index_of_next_srch_fld = query.indexOf(search_fld, current_idx+1);
+                    if (index_of_next_srch_fld != (current_idx+1)) {// this is the end of the string
+                        str.append(c);
+                    }
                     break;
                 case ' ':
                     //check if this start of a field or continuation of token str
@@ -418,8 +426,12 @@ public class SearchUtils {
                     break;
 
                 case ':':
-                    fld = str.toString();
-                    str = new StringBuilder();
+                    if (str.toString().equals(search_fld)) {
+                        fld = str.toString();
+                        str = new StringBuilder();
+                    } else {
+                        str.append(c);
+                    }
                     break;
                 case '(':
                     SpanQuery spanQuery = parse(query, search_fld, slop, idx, false, is_Fuzzy, ordered);
