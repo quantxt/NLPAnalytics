@@ -243,7 +243,7 @@ public class CommonQTDocumentHelperTest {
         helper.extract(doc, searchableList, true, "");
         String excerpt = helper.extractHtmlExcerpt(content, doc.getValues().get(0));
         int ii = excerpt.indexOf("<b>1982</b>");
-        assertEquals(excerpt.indexOf("<b>1982</b>"), 182);
+        assertEquals(excerpt.indexOf("<b>1982</b>"), 180);
     }
 
     @Test

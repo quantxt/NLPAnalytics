@@ -768,9 +768,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         int horizentalBleed = 20;
         int verticalBleed = 2;
 
-        int start = interval.getStart();
+        int start = interval.getStart() ;
         int end = interval.getEnd();
         if (end < start ) return "";
+        if (start > 0){
+            start -=1;
+        }
         int lineNumber = interval.getLine();
         StringBuilder sb = new StringBuilder();
 
