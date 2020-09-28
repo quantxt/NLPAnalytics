@@ -9,22 +9,17 @@ import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import static com.quantxt.types.Dictionary.ExtractionType.NUMBER;
 import static com.quantxt.types.Dictionary.ExtractionType.REGEX;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
 public class CommonQTDocumentHelperTest {
-    final private static Logger logger = LoggerFactory.getLogger(CommonQTDocumentHelperTest.class);
-
 
     @Test
     public void simpleExtraction() {
@@ -45,8 +40,8 @@ public class CommonQTDocumentHelperTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
-        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), Pattern.compile("^[\\$\\s]*$"), null, null);
+        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", null,
+                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("^(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]+)"), new int [] {1});
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -78,8 +73,8 @@ public class CommonQTDocumentHelperTest {
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
-        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"),  Pattern.compile("^[\\$\\s]*$"), null, null);
+        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", null,
+                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("^(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]+)"), new int [] {1});
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -111,8 +106,8 @@ public class CommonQTDocumentHelperTest {
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
-        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", NUMBER,
-                Pattern.compile("^\\s*(\\([^\\)]+\\))?[\\s,;\"\\'\\:\\.\\?\\/\\/\\)\\(\\#\\@\\!\\-\\*\\%]+$"), Pattern.compile("^[\\$\\s]*$"), null, null);
+        Dictionary dictionary = new Dictionary(dictItms, null, "Expense", REGEX,
+                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("^(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]+)"), new int [] {1});
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -179,9 +174,8 @@ public class CommonQTDocumentHelperTest {
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Orig Year Built", "Orig Year Built"));
 
-        Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,30}\n){0,3}$");
-        Dictionary dictionary = new Dictionary(dictItms, null, "Orig Year Built", NUMBER,
-                skipBetweenKeyValues, Pattern.compile("^ *$"), null, null);
+        Dictionary dictionary = new Dictionary(dictItms, null, "Orig Year Built", REGEX,
+                null, Pattern.compile("^[\\n ]*$"), Pattern.compile("^[ \\n]*(?:[A-Za-z\\(\\) \\n]{0,35})?(\\d{4})"), new int []{1});
 
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -207,9 +201,8 @@ public class CommonQTDocumentHelperTest {
         //YR Built is a valid phrase but an invalid header (label)
         dictItms.add(new DictItm("Year Built", "YR Built"));
 
-        Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,10}\n){0,3}$");
-        Dictionary dictionary = new Dictionary(dictItms, null, "Year Built", NUMBER,
-                skipBetweenKeyValues, null, null, null);
+        Dictionary dictionary = new Dictionary(dictItms, null, "Year Built", REGEX,
+                null, null, Pattern.compile("^[^\n]{0,10}\n{0,3}(\\d{4})$"), new int [] {1});
 
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -232,9 +225,8 @@ public class CommonQTDocumentHelperTest {
         //YR Built is a valid phrase but an invalid header (label)
         dictItms.add(new DictItm("Year Built", "Orig Year Built"));
 
-        Pattern skipBetweenKeyValues = Pattern.compile("^([^\n]{0,20}\n){0,3}$");
-        Dictionary dictionary = new Dictionary(dictItms, null, "Year Built", NUMBER,
-                skipBetweenKeyValues, null, null, null);
+        Dictionary dictionary = new Dictionary(dictItms, null, "Year Built", REGEX,
+                null, null, Pattern.compile("^[^\n]{0,20}\n{0,3}(\\d{4})"), new int []{1});
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
@@ -243,7 +235,7 @@ public class CommonQTDocumentHelperTest {
         helper.extract(doc, searchableList, true, "");
         String excerpt = helper.extractHtmlExcerpt(content, doc.getValues().get(0));
         int ii = excerpt.indexOf("<b>1982</b>");
-        assertEquals(excerpt.indexOf("<b>1982</b>"), 182);
+        assertEquals(excerpt.indexOf("<b>1982</b>"), 180);
     }
 
     @Test

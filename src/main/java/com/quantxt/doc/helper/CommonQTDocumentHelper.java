@@ -271,9 +271,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         Map<String, DictSearch> valueNeededDictionaryMap = new HashMap<>();
 
         for (DictSearch qtSearchable : extractDictionaries) {
-            Dictionary.ExtractionType extractionType = qtSearchable.getDictionary().getValType();
             String dicId = qtSearchable.getDictionary().getId();
-            if ( extractionType != null ) {
+            if ( qtSearchable.getDictionary().getPattern() != null ) {
                 valueNeededDictionaryMap.put(dicId, qtSearchable);
             } else {
                 if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
@@ -307,8 +306,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             if (dictSearch == null) continue;
 
             Dictionary dictionary = dictSearch.getDictionary();
-            Dictionary.ExtractionType extractionType = dictionary.getValType();
-            if (extractionType == null) continue;
+            if (dictionary.getPattern() == null) continue;
 
             List<ExtInterval> dictLabelList = labelEntry.getValue();
 
@@ -393,7 +391,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         if (gapPattern == null) return true;
 
         String gap_between = content.substring(start, end);
-        if (gap_between.length() == 0) return false;
+        if (gap_between.length() == 0) return true;
         //first tokenize the gap
         if (analyzer != null) {
             gap_between = tokenize(analyzer, gap_between);
@@ -417,79 +415,20 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         // list of DctSearhFld is teh same for all fields so we get the first one
 
         int start_search_shift = labelInterval.getEnd();
-        Dictionary.ExtractionType extractionType = dictionary.getValType();
+        int group = (dictionary.getGroups() == null || dictionary.getGroups().length == 0 )  ? 0 : dictionary.getGroups()[0];
+        Pattern pattern = dictionary.getPattern();
+        //field matching. One value for field
+        boolean canContinueSearchForValue = addShiftedValues(content, start_search_shift,
+                pattern, group, analyzer, padding_between_key_value, results);
 
-        switch (extractionType) {
-
-            case DATETIME:
-                int end_search_shift = (int) Math.max(200, .1 * content.length());
-                end_search_shift += start_search_shift;
-                if (end_search_shift > content.length()){
-                    end_search_shift = content.length();
-                }
-                List<ExtIntervalSimple> dateExtIntervalSimples = QTValueNumber.detectDates(content.substring(start_search_shift, end_search_shift));
-                for (ExtIntervalSimple eis : dateExtIntervalSimples){
-                    int s = eis.getStart();
-                    int e = eis.getEnd();
-                    eis.setStart(s + start_search_shift);
-                    eis.setEnd(e + start_search_shift);
-                    results.add(eis);
-                }
-                break;
-            case REGEX:
-                int group = (dictionary.getGroups() == null || dictionary.getGroups().length == 0 )  ? 0 : dictionary.getGroups()[0];
-                Pattern pattern = dictionary.getPattern();
-                //field matching. One value for field
-                boolean canContinueSearchForValue = addShiftedValues(content, start_search_shift,
-                        pattern, group, analyzer, padding_between_key_value, results);
-
-                //Now find more than one value
-                while (canContinueSearchForValue && padding_between_values != null) {
-                    start_search_shift = results.get(results.size() - 1).getEnd();
-                    canContinueSearchForValue = addShiftedValues(content, start_search_shift,
-                            pattern, group, null, padding_between_values, results);
-                }
-                break;
-            case NUMBER:
-                String str_2_search = content.substring(start_search_shift);
-                ExtIntervalSimple numeric = QTValueNumber.findFirstNumeric(str_2_search, start_search_shift);
-                if (numeric == null) return results;
-
-                if ( (numeric.getStart() - start_search_shift) == 0) { // number should not be attached to the label
-                    start_search_shift = numeric.getEnd();
-                    str_2_search = content.substring(start_search_shift);
-                    numeric = QTValueNumber.findFirstNumeric(str_2_search, start_search_shift);
-                    if (numeric == null) return results;
-                }
-
-                canContinueSearchForValue = validateFoundValue(content, start_search_shift,
-                        numeric.getStart() , analyzer, padding_between_key_value);
-
-                if (canContinueSearchForValue) {
-                    results.add(numeric);
-
-                    if (padding_between_values != null) {
-                        while (true) {
-
-                            start_search_shift = results.get(results.size() - 1).getEnd();
-                            //let's find following values
-                            str_2_search = content.substring(start_search_shift);
-                            numeric = QTValueNumber.findFirstNumeric(str_2_search, start_search_shift);
-                            if (numeric == null) break;
-
-                            canContinueSearchForValue = validateFoundValue(content, start_search_shift,
-                                    numeric.getStart(), null, padding_between_values);
-
-                            if (!canContinueSearchForValue) break;
-                            results.add(numeric);
-                        }
-                    }
-                }
-                break;
+        //Now find more than one value
+        while (canContinueSearchForValue && padding_between_values != null) {
+            start_search_shift = results.get(results.size() - 1).getEnd();
+            canContinueSearchForValue = addShiftedValues(content, start_search_shift,
+                    pattern, group, null, padding_between_values, results);
         }
 
         return results;
-
     }
 
     private ArrayList<ExtIntervalSimple> findAllVerticalMatches(String content,
@@ -500,7 +439,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         Dictionary dictionary = dictSearch.getDictionary();
         Pattern padding_between_values = dictionary.getSkip_between_values();
         Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
-        Dictionary.ExtractionType extractionType = dictionary.getValType();
 
         //Best match has closest distance to center of label in X axis
 
@@ -574,56 +512,40 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
               // 1 is the length for \n
 
             ExtIntervalSimple foundValue = null;
-            switch (extractionType) {
-                case DATETIME:
-                    List<ExtIntervalSimple> dateExtIntervalSimples = QTValueNumber.detectDates(string2Search4Value);
-                    if (dateExtIntervalSimples.size() >0){
-                        foundValue = dateExtIntervalSimples.get(0);
-                        int s = foundValue.getStart();
-                        int e = foundValue.getEnd();
-                        foundValue.setStart(s + start_local_interval);
-                        foundValue.setEnd(e + start_local_interval);
-                    }
-                    break;
-                case REGEX:
-                    int group = dictionary.getGroups() != null ? 1 : 0;
-                    Pattern pattern = dictionary.getPattern();
-                    boolean stopSearch = false;
-                    if (verticalGap.size() >0 && pattern.pattern().contains("\\n")){
-                        // if we allow multiline match
-                        String multiLineGap = String.join("\n", verticalGap);
-                        Matcher m = pattern.matcher(multiLineGap);
-                        if (m.find()) {
-                            int start = m.start(group);
-                            int end = m.end(group);
-                            if (start >= 0 && end > start) {
-                                // for multiline - we only capture the last line match
 
-                                // we don't have a way of capturing bounding box of a multiline match!
-                                foundValue = new ExtIntervalSimple(start_local_interval,  end_local_interval);
-                                foundValue.setType(QTField.DataType.KEYWORD);
-                                foundValue.setStr(multiLineGap.substring(start, end));
-                                stopSearch = true;
-                            }
-                            verticalGap.clear();
-                        }
+            int group = dictionary.getGroups() != null ? 1 : 0;
+            Pattern pattern = dictionary.getPattern();
+            boolean stopSearch = false;
+            if (verticalGap.size() >0 && pattern.pattern().contains("\\n")){
+                // if we allow multiline match
+                String multiLineGap = String.join("\n", verticalGap);
+                Matcher m = pattern.matcher(multiLineGap);
+                if (m.find()) {
+                    int start = m.start(group);
+                    int end = m.end(group);
+                    if (start >= 0 && end > start) {
+                        // for multiline - we only capture the last line match
+
+                        // we don't have a way of capturing bounding box of a multiline match!
+                        foundValue = new ExtIntervalSimple(start_local_interval,  end_local_interval);
+                        foundValue.setType(QTField.DataType.KEYWORD);
+                        foundValue.setStr(multiLineGap.substring(start, end));
+                        stopSearch = true;
                     }
-                    if (!stopSearch) {
-                        Matcher m = pattern.matcher(string2Search4Value);
-                        if (m.find()) {
-                            int start = m.start(group);
-                            int end = m.end(group);
-                            foundValue = new ExtIntervalSimple(start + start_local_interval, end + start_local_interval);
-                            foundValue.setType(QTField.DataType.KEYWORD);
-                            String string_to_search = content.substring(start_local_interval);
-                            String extractionStr = string_to_search.substring(start, end);
-                            foundValue.setStr(extractionStr);
-                        }
-                    }
-                    break;
-                case NUMBER:
-                    foundValue = QTValueNumber.findFirstNumeric(string2Search4Value, start_local_interval);
-                    break;
+                    verticalGap.clear();
+                }
+            }
+            if (!stopSearch) {
+                Matcher m = pattern.matcher(string2Search4Value);
+                if (m.find()) {
+                    int start = m.start(group);
+                    int end = m.end(group);
+                    foundValue = new ExtIntervalSimple(start + start_local_interval, end + start_local_interval);
+                    foundValue.setType(QTField.DataType.KEYWORD);
+                    String string_to_search = content.substring(start_local_interval);
+                    String extractionStr = string_to_search.substring(start, end);
+                    foundValue.setStr(extractionStr);
+                }
             }
 
             if (foundValue == null) {
@@ -637,6 +559,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (padding_between_key_value == null){
                     results.add(foundValue);
                     if (padding_between_values == null) break;
+                    verticalGap.clear();
                 } else {
                     String vertical_gap = String.join("", verticalGap);
                     Matcher match_on_gap = padding_between_key_value.matcher(vertical_gap);
@@ -768,9 +691,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         int horizentalBleed = 20;
         int verticalBleed = 2;
 
-        int start = interval.getStart();
+        int start = interval.getStart() ;
         int end = interval.getEnd();
         if (end < start ) return "";
+        if (start > 0){
+            start -=1;
+        }
         int lineNumber = interval.getLine();
         StringBuilder sb = new StringBuilder();
 

@@ -51,7 +51,6 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
 
     @Override
     public List<ExtInterval> search(final String query_string, int slop) {
-        String escaped_query = QueryParser.escape(query_string);
         ArrayList<ExtInterval> res = new ArrayList<>();
         boolean useFuzzyMatching = false;
         for (Mode m : mode){

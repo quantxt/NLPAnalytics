@@ -43,7 +43,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
     final private static Logger logger = LoggerFactory.getLogger(QTSearchableBase.class);
     final public static String HIDDEH_ENTITY = "hidden";
 
-    protected int topN = 100;
+    protected int topN = 2000;
     protected int minFuzzyTermLength = 5;
 
     protected transient IndexSearcher indexSearcher;
