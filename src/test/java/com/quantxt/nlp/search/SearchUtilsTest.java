@@ -9,10 +9,10 @@ import org.apache.lucene.search.spans.SpanQuery;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +22,9 @@ import static com.quantxt.nlp.search.SearchUtils.getSpanQuery;
 import static org.junit.Assert.*;
 
 public class SearchUtilsTest {
+
+    final private static Logger logger = LoggerFactory.getLogger(SearchUtilsTest.class);
+
 
     private static QTSearchable qtSearchable;
     private static QTSearchable qtSearchable_fuzzy;

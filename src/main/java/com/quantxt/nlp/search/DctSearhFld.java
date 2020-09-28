@@ -112,7 +112,6 @@ public class DctSearhFld implements Serializable {
                         StandardTokenizer standardTokenizer = new StandardTokenizer();
                         TokenStream tokenStream = new LowerCaseFilter(standardTokenizer);
                         tokenStream = new StopFilter(tokenStream, stopWords_charArray);
-
                         ShingleFilter shingleFilter = new ShingleFilter(tokenStream, 2, 5);
                         shingleFilter.setTokenSeparator("");
                         tokenStream = shingleFilter;
