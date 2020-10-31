@@ -5,11 +5,9 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
-import com.quantxt.types.ExtIntervalSimple;
+import com.quantxt.types.*;
 import com.quantxt.nlp.entity.QTValueNumber;
 import com.quantxt.nlp.search.QTSearchable;
-import com.quantxt.types.DictItm;
-import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -142,7 +140,7 @@ public class ENDocumentInfoTest {
             // THEN
             assertFalse(doc.getValues() == null);
             assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>TOTAL AREA 1</td><td>2</td><td>5</td><td>2000</td><td>1,590</td></tr></table>");
-            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 355);
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 354);
 
             //Check for vertical match: Total area and 1590
 
@@ -155,7 +153,7 @@ public class ENDocumentInfoTest {
             // THEN
             assertNotNull(doc.getValues());
             assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>TOTAL AREA 1</td><td>1,590</td></tr></table>");
-            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 492);
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 491);
 
         } catch (Exception e){
             e.printStackTrace();
@@ -197,7 +195,7 @@ public class ENDocumentInfoTest {
             // THEN
             assertFalse(doc.getValues() == null);
             assertEquals(doc.getTitle(), "<table width=\"100%\"><tr><td>Area</td><td>1,590</td></tr></table>");
-            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 492);
+            assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 491);
 
 
         } catch (Exception e){
@@ -823,17 +821,21 @@ public class ENDocumentInfoTest {
 
     @Test
     @Ignore
-    public void testSpan(){
-        String str = "The royalties, which vary by country and range from 7% to 13%, are included in Cost of sales.";
+    public void testSpan() throws IOException {
+
+        InputStream is = new FileInputStream(new File("/Users/matin/ddd.txt"));
+
+        String str = convertInputStreamToString(is);
+
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTDocument doc = new ENDocumentInfo("", str, helper);
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
 
-        dictItms.add(new DictItm("Royalty costs" , "royalty costs"));
+        dictItms.add(new DictItm("State" , "st", "state code", "state"));
 
-        Dictionary dictionary = new Dictionary(dictItms, null, "Royalty", null,
-                padding_bet_key_value, padding_bet_values, null, null);
+        Dictionary dictionary = new Dictionary(dictItms, null, "State", null,
+                null, null, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary,
                 QTDocument.Language.ENGLISH,
@@ -842,7 +844,22 @@ public class ENDocumentInfoTest {
 
         List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
-        helper.extract(doc, qtSearchableList, false, "");
+        helper.extract(doc, qtSearchableList, true, "");
+        ArrayList<ExtInterval> extIntervalArrayList = doc.getValues();
+        for (ExtInterval extInterval : extIntervalArrayList){
+            System.out.println(extInterval.getCategory() + " "
+            + extInterval.getLine() +" " +extInterval.getStart() + " "
+            + extInterval.getEnd());
+        }
     }
 
+    private String convertInputStreamToString(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int length;
+        while ((length = inputStream.read(buffer)) != -1) {
+            result.write(buffer, 0, length);
+        }
+        return result.toString("UTF-8");
+    }
 }

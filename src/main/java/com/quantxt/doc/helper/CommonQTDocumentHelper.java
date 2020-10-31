@@ -41,6 +41,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
 
+    private static int max_string_length_for_search = 30000;
     private static Character NewLine = '\n';
     private static Pattern WORD_PTR = Pattern.compile("\\S+");
     private static Pattern TOKEN = Pattern.compile("[A-Za-z0-9]+[^ ]*");
@@ -232,27 +233,53 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return QTValueNumber.detect(str, context, valueInterval);
     }
 
-    private Map<String, List<ExtInterval>> findLabels(List<DictSearch> extractDictionaries,
-                                                      String content,
-                                                      int slop) {
-        Map<String, List<ExtInterval>> labels = new HashMap<>();
+    private void  findLabelsHelper(DictSearch dictSearch,
+                                     String content,
+                                     int shift,
+                                     int slop,
+                                     Map<Integer, ExtInterval> dicLabels){
+        if (content.isEmpty()) return;
+        Dictionary.ExtractionType extractionType = dictSearch.getDictionary().getValType();
+        Collection<ExtInterval> qtMatches = dictSearch.search(content, slop);
+        for (ExtInterval qtMatch : qtMatches) {
+            ExtInterval extInterval = new ExtInterval();
+            extInterval.setDict_name(qtMatch.getDict_name());
+            String dic_id = qtMatch.getDict_id();
+            extInterval.setDict_id(dic_id);
+            extInterval.setCategory(qtMatch.getCategory());
+            extInterval.setStr(qtMatch.getStr());
+            int start = qtMatch.getStart() + shift;
+            int end = qtMatch.getEnd() + shift;
+            extInterval.setStart(start);
+            extInterval.setEnd(end);
+            extInterval.setType(extractionType);
+            dicLabels.put(start ,extInterval);
+        }
+    }
+
+    private Map<String, Collection<ExtInterval>> findLabels(List<DictSearch> extractDictionaries,
+                                                            String content,
+                                                            int slop) {
+        int content_length = content.length();
+        Map<String, Collection<ExtInterval>> labels = new HashMap<>();
+
         for (DictSearch dictSearch : extractDictionaries) {
             String dict_id = dictSearch.getDictionary().getId();
-            Dictionary.ExtractionType extractionType = dictSearch.getDictionary().getValType();
-            Collection<ExtInterval> qtMatches = dictSearch.search(content, slop);
-            ArrayList<ExtInterval> dicLabels = new ArrayList<>();
-            for (ExtInterval qtMatch : qtMatches) {
-                ExtInterval extInterval = new ExtInterval();
-                extInterval.setDict_name(qtMatch.getDict_name());
-                extInterval.setDict_id(qtMatch.getDict_id());
-                extInterval.setCategory(qtMatch.getCategory());
-                extInterval.setStr(qtMatch.getStr());
-                extInterval.setStart(qtMatch.getStart());
-                extInterval.setEnd(qtMatch.getEnd());
-                extInterval.setType(extractionType);
-                dicLabels.add(extInterval);
+            Map<Integer, ExtInterval> dicLabels = new TreeMap<>();
+
+            if (content_length > max_string_length_for_search){
+                int cnt_idx = 0;
+                while (cnt_idx < content_length){
+                    String cnt_chunk = content.substring(cnt_idx, Math.min(cnt_idx + max_string_length_for_search, content_length));
+                    findLabelsHelper(dictSearch, cnt_chunk, cnt_idx, slop, dicLabels);
+                    cnt_idx += max_string_length_for_search - 1000;
+                }
+            } else {
+                findLabelsHelper(dictSearch, content, 0, slop, dicLabels);
             }
-            labels.put(dict_id, dicLabels);
+            if (!dicLabels.isEmpty()) {
+                labels.put(dict_id, dicLabels.values());
+            }
         }
         return labels;
     }
@@ -264,7 +291,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                         String context) {
         long start = System.currentTimeMillis();
         final String content = qtDocument.getTitle();
-        Map<String, List<ExtInterval>> labels = findLabels(extractDictionaries, content, 0);
+        Map<String, Collection<ExtInterval>> labels = findLabels(extractDictionaries, content, 0);
         long took = System.currentTimeMillis() - start;
         logger.debug("Found all labels in {}ms", took);
 
@@ -276,7 +303,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 valueNeededDictionaryMap.put(dicId, qtSearchable);
             } else {
                 if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
-                List<ExtInterval> labelExtIntervalList = labels.get(dicId);
+                Collection<ExtInterval> labelExtIntervalList = labels.get(dicId);
                 if (labelExtIntervalList == null || labelExtIntervalList.isEmpty()) continue;
                 qtDocument.getValues().addAll(labelExtIntervalList);
                 // These labels don't need a value,
@@ -296,7 +323,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
         //Searching for values that are associated with a label
         //This should cover only DATE, DOUBLE and KEYWORD type labels
-        for (Map.Entry<String, List<ExtInterval>> labelEntry : labels.entrySet()){
+        for (Map.Entry<String, Collection<ExtInterval>> labelEntry : labels.entrySet()){
             String dictId = labelEntry.getKey();
 
             long start_dictionary_match = System.currentTimeMillis();
@@ -308,7 +335,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             Dictionary dictionary = dictSearch.getDictionary();
             if (dictionary.getPattern() == null) continue;
 
-            List<ExtInterval> dictLabelList = labelEntry.getValue();
+            Collection<ExtInterval> dictLabelList = labelEntry.getValue();
 
             for (ExtInterval labelInterval : dictLabelList) {
 
@@ -606,8 +633,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             }
         }
 
-        // return 0-based line number
-        return new LineInfo(lineNumber, start - mostRecentNewLineIndex);
+        // return 0-based line number : add 1 to account for the newline character and move
+        //the cursor to the next character
+        return new LineInfo(lineNumber, start - mostRecentNewLineIndex -1);
     }
 
     protected int startNextToken(String str, int start){
