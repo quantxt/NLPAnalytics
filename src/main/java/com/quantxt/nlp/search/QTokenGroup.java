@@ -1,13 +1,11 @@
 package com.quantxt.nlp.search;
 
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 
 public class QTokenGroup {
     private static final int MAX_NUM_TOKENS_PER_GROUP = 50;
 
-    private float[] scores = new float[MAX_NUM_TOKENS_PER_GROUP];
     private int numTokens = 0;
     private int startOffset = 0;
     private int endOffset = 0;
@@ -15,40 +13,36 @@ public class QTokenGroup {
     private int matchStartOffset;
     private int matchEndOffset;
 
-    private OffsetAttribute offsetAtt;
-    private CharTermAttribute termAtt;
+    final private OffsetAttribute offsetAtt;
 
     public QTokenGroup(TokenStream tokenStream) {
         offsetAtt = tokenStream.addAttribute(OffsetAttribute.class);
-        termAtt = tokenStream.addAttribute(CharTermAttribute.class);
     }
 
     void addToken(float score) {
-        if (numTokens < MAX_NUM_TOKENS_PER_GROUP) {
-            final int termStartOffset = offsetAtt.startOffset();
-            final int termEndOffset = offsetAtt.endOffset();
-            if (numTokens == 0) {
-                startOffset = matchStartOffset = termStartOffset;
-                endOffset = matchEndOffset = termEndOffset;
-                tot += score;
-            } else {
-                startOffset = Math.min(startOffset, termStartOffset);
-                endOffset = Math.max(endOffset, termEndOffset);
-                if (score > 0) {
-                    if (tot == 0) {
-                        matchStartOffset = termStartOffset;
-                        matchEndOffset = termEndOffset;
-                    } else {
-                        matchStartOffset = Math.min(matchStartOffset, termStartOffset);
-                        matchEndOffset = Math.max(matchEndOffset, termEndOffset);
-                    }
-                    tot += score;
+        if (numTokens > MAX_NUM_TOKENS_PER_GROUP) return;
+        final int termStartOffset = offsetAtt.startOffset();
+        final int termEndOffset = offsetAtt.endOffset();
+        if (numTokens == 0) {
+            startOffset = matchStartOffset = termStartOffset;
+            endOffset = matchEndOffset = termEndOffset;
+            tot += score;
+        } else {
+            startOffset = Math.min(startOffset, termStartOffset);
+            endOffset = Math.max(endOffset, termEndOffset);
+            if (score > 0) {
+                if (tot == 0) {
+                    matchStartOffset = termStartOffset;
+                    matchEndOffset = termEndOffset;
+                } else {
+                    matchStartOffset = Math.min(matchStartOffset, termStartOffset);
+                    matchEndOffset = Math.max(matchEndOffset, termEndOffset);
                 }
+                tot += score;
             }
-
-            scores[numTokens] = score;
-            numTokens++;
         }
+
+        numTokens++;
     }
 
     boolean isDistinct() {
@@ -58,15 +52,6 @@ public class QTokenGroup {
     void clear() {
         numTokens = 0;
         tot = 0;
-    }
-
-    /**
-     *
-     * @param index a value between 0 and numTokens -1
-     * @return the "n"th score
-     */
-    public float getScore(int index) {
-        return scores[index];
     }
 
     /**

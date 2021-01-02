@@ -5,6 +5,7 @@ import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.spans.SpanQuery;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.quantxt.nlp.search.SearchUtils.getMatchAllQuery;
 import static com.quantxt.nlp.search.SearchUtils.getSpanQuery;
 import static org.junit.Assert.*;
 
@@ -59,6 +61,55 @@ public class SearchUtilsTest {
             e.printStackTrace();
         }
     }
+
+    @Test
+    @Ignore
+    public void testtest() throws IOException {
+        // GIVEN
+   //     String str = "CID132 After any administrative expenses are paid, no fu CID132 $0 - $50,000  CID134 $1,000,001 -";
+
+        InputStream inputStream = new FileInputStream(new File("/Users/matin/fff.txt"));
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int length;
+        while ((length = inputStream.read(buffer)) != -1) {
+            result.write(buffer, 0, length);
+        }
+
+        String str = result.toString("UTF-8");
+
+        result = new ByteArrayOutputStream();
+        buffer = new byte[1024];
+        inputStream = new FileInputStream(new File("/Users/matin/Downloads/2cbdee00-34c8-43c9-a08f-f1bb48bedd2f"));
+        while ((length = inputStream.read(buffer)) != -1) {
+            result.write(buffer, 0, length);
+        }
+
+        String syn_str = result.toString("UTF-8");
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        String [] syn_lines = syn_str.split("\n");
+        for (String s : syn_lines){
+            String [] p = s.split("\t");
+            dictItms.add(new DictItm(p[0], p[1] ));
+        }
+   //     ArrayList<DictItm> dictItms = new ArrayList<>();
+   //     dictItms.add(new DictItm("Check", "☒ $0-$50,000" ));
+
+        // synonyms;
+        ArrayList<String> synonym_pairs = new ArrayList<>();
+        synonym_pairs.add("$0 - $50,000\t$0-$50,000");
+        synonym_pairs.add("CID132\t☒");
+        Dictionary dictionary = new Dictionary(null, "Dict_Test", dictItms);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.WHITESPACE);
+
+        Query q = getMatchAllQuery(qtSearchable.docSearchFldList.get(0).getMirror_synonym_search_analyzer(), "Dict_Test.whitespace", "☒ $0-$50,000");
+        List<ExtInterval> res = qtSearchable.search(str, 0);
+        assertTrue(res.size() == 2);
+        assertTrue(res.get(1).getCategory().equals("Profit"));
+        assertTrue(res.get(1).getStr().equals("profit"));
+    }
+
 
     @Test
     public void parseTermsQuery() {
@@ -260,5 +311,27 @@ public class SearchUtilsTest {
         List<ExtInterval> res = qtSearchable.search(result.toString("UTF-8"));
         assertTrue(res.size() == 1);
         assertTrue(res.get(0).getCategory().equals("Business"));
+    }
+
+    @Test
+    public void stopword_position_gap() {
+        // GIVEN
+        String str = "Amzaon inc reported a very hight profit on his earnings.";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Profit", "reported hight profit" ));
+    //    dictItms.add(new DictItm("Profit", "reported a very hight profit" ));
+        List<String> stopwords = new ArrayList<>();
+        stopwords.add("a");
+        stopwords.add("very");
+
+        Dictionary dictionary = new Dictionary(null, "Amazon_profit", dictItms);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, stopwords,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
+
+
+        List<ExtInterval> res = qtSearchable.search(str, 5);
+        assertTrue(res.size() == 1);
+        assertTrue(res.get(0).getCategory().equals("Profit"));
     }
 }

@@ -4,25 +4,43 @@ import com.quantxt.types.ExtInterval;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.search.spans.SpanQuery;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class QTextFragment {
 
-    private static boolean qtFollows(String str,
-                                     ExtInterval match1,
-                                     ExtInterval match2){
-        if (match2.getStart() < match1.getEnd()) return false;
-        String gap = str.substring(match1.getEnd()+1, match2.getStart());
-
-        if (gap.replaceAll("[^A-Za-z0-9]+", "").trim().length() == 0) return true;
+    //Assumption: Left to Right Text!
+    private static boolean qtFollows(QToken token1,
+                                     QToken token2){
+        if (token2.end < token1.start) return false;
+        if (token1.pos + token1.postInc == token2.pos) return true;
         return false;
+    }
+
+    private static class QToken {
+
+        final public String str;
+        final public int start;
+        final public int end;
+        final public int pos;
+        public int postInc;
+
+
+        public QToken(String text,
+                      OffsetAttribute o,
+                      PositionIncrementAttribute p,
+                      int pos){
+            this.start = o.startOffset();
+            this.end = o.endOffset();
+            this.str = text.substring(start, end);
+            this.postInc = p.getPositionIncrement();
+            this.pos = pos;
+        }
     }
 
     public static List<ExtInterval> getBestTextFragments(TokenStream tokenStream,
@@ -32,12 +50,13 @@ public class QTextFragment {
                                                          String dictionary_name,
                                                          String dictionary_id) throws IOException, InvalidTokenOffsetsException
     {
-        List<ExtInterval> matchList = new ArrayList<>();
+
+        List<QToken> tokenList = new ArrayList<>();
         QueryScorer fragmentScorer = new QueryScorer(query);
         Fragmenter textFragmenter = new SimpleSpanFragmenter(fragmentScorer, Integer.MAX_VALUE);
 
-        CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
         OffsetAttribute offsetAtt = tokenStream.addAttribute(OffsetAttribute.class);
+        PositionIncrementAttribute postIncAtt = tokenStream.addAttribute(PositionIncrementAttribute.class);
         fragmentScorer.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
 
         TokenStream newStream = fragmentScorer.init(tokenStream);
@@ -49,36 +68,23 @@ public class QTextFragment {
 
         try
         {
-            int startOffset;
-            int endOffset;
+
             textFragmenter.start(text, tokenStream);
-
             QTokenGroup tokenGroup = new QTokenGroup(tokenStream);
-
             tokenStream.reset();
+            int cur_pos  = 0;
+            int next_pos = 0;
             for (boolean next = tokenStream.incrementToken(); next; next = tokenStream.incrementToken())
             {
                 if( offsetAtt.endOffset()>text.length() || offsetAtt.startOffset()>text.length() )
                 {
+                    CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
                     throw new InvalidTokenOffsetsException("Token "+ termAtt.toString()
                             +" exceeds length of provided text sized "+text.length());
                 }
                 if( tokenGroup.getNumTokens() >0 && tokenGroup.isDistinct() )
                 {
-                    float score = tokenGroup.getTotalScore();
-                    startOffset = tokenGroup.getStartOffset();
-                    endOffset = tokenGroup.getEndOffset();
-                    if (score >0) {
-                        String keyword = text.substring(startOffset, endOffset);
-                        ExtInterval qtMatch = new ExtInterval(startOffset, endOffset);
-                        qtMatch.setStr(keyword);
-                        qtMatch.setCategory(category);
-                        qtMatch.setDict_name(dictionary_name);
-                        qtMatch.setDict_id(dictionary_id);
-                        matchList.add(qtMatch);
-                    }
                     tokenGroup.clear();
-
                     //check if current token marks the start of a new fragment
                     if(textFragmenter.isNewFragment())
                     {
@@ -86,31 +92,33 @@ public class QTextFragment {
                     }
                 }
 
-                tokenGroup.addToken(fragmentScorer.getTokenScore());
-            }
-
-            if(tokenGroup.getNumTokens() >0)
-            {
-                float score = tokenGroup.getTotalScore();
-                if (score > 0) {
-                    //flush the accumulated text (same code as in above loop)
-                    startOffset = tokenGroup.getStartOffset();
-                    endOffset = tokenGroup.getEndOffset();
-                    String keyword = text.substring(startOffset, endOffset);
-                    ExtInterval qtMatch = new ExtInterval(startOffset, endOffset);
-                    qtMatch.setStr(keyword);
-                    qtMatch.setCategory(category);
-                    qtMatch.setDict_name(dictionary_name);
-                    qtMatch.setDict_id(dictionary_id);
-                    matchList.add(qtMatch);
+                int posInc = postIncAtt.getPositionIncrement();
+                if ( posInc > 0 ) {
+                    cur_pos = next_pos;
+                    next_pos += posInc;
                 }
+                float score = fragmentScorer.getTokenScore();
+                if (score > 0){
+                    QToken qToken = new QToken(text, offsetAtt, postIncAtt, cur_pos);
+                    tokenList.add(qToken);
+                }
+                tokenGroup.addToken(score);
             }
 
-            mergeContiguousFragments(text, matchList);
+            ExtInterval [] matchList = mergeContiguousFragments(tokenList, category,
+                    dictionary_name,
+                    dictionary_id);
 
-            return matchList.stream().filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+            List<ExtInterval> nonNullmatches = new ArrayList<>();
+            for (ExtInterval extInterval : matchList){
+                if (extInterval == null) continue;
+                extInterval.setStr(text.substring(extInterval.getStart(), extInterval.getEnd()));
+                nonNullmatches.add(extInterval);
+            }
+
+            return nonNullmatches;
         }
+
         finally
         {
             if (tokenStream != null)
@@ -127,45 +135,65 @@ public class QTextFragment {
         }
     }
 
-    private static void mergeContiguousFragments(String text,
-                                                 List<ExtInterval> matches)
+    private static ExtInterval[]  mergeContiguousFragments(List<QToken> qTokens,
+                                                           String category,
+                                                           String dictionary_name,
+                                                           String dictionary_id)
     {
-        if (matches.size() < 2) return;
+        ExtInterval [] matches = new ExtInterval[qTokens.size()];
+        for (int i=0; i< qTokens.size(); i++){
+            int startOffset = qTokens.get(i).start;
+            int endOffset = qTokens.get(i).end;
+            String keyword = qTokens.get(i).str;
+            ExtInterval qtMatch = new ExtInterval(startOffset, endOffset);
+            qtMatch.setStr(keyword);
+            qtMatch.setCategory(category);
+            qtMatch.setDict_name(dictionary_name);
+            qtMatch.setDict_id(dictionary_id);
+            matches[i] = qtMatch;
+        }
+        if (qTokens.size() < 2) return matches;
         boolean mergingStillBeingDone;
 
         do
         {
             mergingStillBeingDone = false; //initialise loop control flag
-            for (int i = 0; i < matches.size(); i++)
+            for (int i = 0; i < qTokens.size(); i++)
             {
-                if (matches.get(i) == null) continue;
-
+                if (matches[i] == null) continue;
+                QToken qToken_i = qTokens.get(i);
                 //merge any contiguous blocks
-                for (int x = 0; x < matches.size(); x++)
+                for (int x = 0; x < qTokens.size(); x++)
                 {
-                    if (matches.get(x) == null) continue;
-                    if (matches.get(i) == null) break;
+                    if (i == x) continue;
+                    if (matches[x] == null) continue;
+                    if (matches[i] == null) break;
 
                     //if blocks are contiguous....
-                    if (qtFollows(text, matches.get(x), matches.get(i)))
+                    QToken qToken_x = qTokens.get(x);
+                    if (qtFollows(qToken_x, qToken_i))
                     {
                         // match_x  match_i
-                        matches.get(i).setStart(matches.get(x).getStart());
-                        String new_keyword = text.substring(matches.get(i).getStart(), matches.get(i).getEnd());
-                        matches.get(i).setStr(new_keyword);
-                        matches.set(x, null);
+                        matches[i].setStart(qToken_x.start);
+                        qToken_x.postInc += qToken_i.postInc;
+                        String new_keyword = qToken_i.str;
+                        matches[i].setStr(new_keyword);
+                        matches[x] = null;
                     }
-                    else if ( qtFollows(text, matches.get(i), matches.get(x)))
+                    else if ( qtFollows(qToken_i, qToken_x))
                     {
                         // match_i match_x
-                        matches.get(i).setEnd(matches.get(x).getEnd());
-                        String new_keyword = text.substring(matches.get(i).getStart(), matches.get(i).getEnd());
-                        matches.get(i).setStr(new_keyword);
-                        matches.set(x, null);
+                        matches[i].setEnd(qToken_x.end);
+                        qToken_i.postInc += qToken_x.postInc;
+                        String new_keyword = qToken_i.str;
+                        matches[i].setStr(new_keyword);
+                        matches[x] = null;
                     }
                 }
             }
         }
         while (mergingStillBeingDone);
+
+       return matches;
     }
 }
