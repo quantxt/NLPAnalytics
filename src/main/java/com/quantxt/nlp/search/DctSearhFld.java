@@ -1,6 +1,7 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
+import com.quantxt.nlp.tokenizer.QLetterTokenizer;
 import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
@@ -103,7 +104,7 @@ public class DctSearhFld implements Serializable {
                 this.index_analyzer = new Analyzer() {
                     @Override
                     protected TokenStreamComponents createComponents(String s) {
-                        Tokenizer letterTokenizer = new LetterTokenizer();
+                        QLetterTokenizer letterTokenizer = new QLetterTokenizer();
                         TokenStream letterTokenStream = new LowerCaseFilter(letterTokenizer);
                         if (stopWords_charArray != null && stopWords_charArray.size() >0) {
                             letterTokenStream = new StopFilter(letterTokenStream, stopWords_charArray);
