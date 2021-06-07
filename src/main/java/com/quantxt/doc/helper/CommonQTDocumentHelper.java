@@ -44,7 +44,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private static int max_string_length_for_search = 30000;
     private static Character NewLine = '\n';
     private static Pattern WORD_PTR = Pattern.compile("\\S+");
-    private static Pattern TOKEN = Pattern.compile("[A-Za-z0-9]+[^ ]*");
+    private static Pattern TOKEN = Pattern.compile("[\\p{L}\\p{N}]{2,}");
     private static Pattern SPC_BET_WORDS_PTR = Pattern.compile("\\S(?= \\S)");
     private static Pattern LONG_SPACE = Pattern.compile(" {5,}");
 
@@ -505,7 +505,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
             // This is experimental
             // We look under a very wide range, the end of previous header all the way to the beginning of the next header
-            // If table columns are longer than table headers this can cause problems.
+            // If table cells are longer than table headers this can cause problems.
             // let's move the start_local_interval forward if we find a wide white area. wide white area (aka spaces) means columns!
             Matcher white_space_matcher = LONG_SPACE.matcher(line);
 
@@ -552,9 +552,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                     int end = m.end(group);
                     if (start >= 0 && end > start) {
                         // for multiline - we only capture the last line match
-
+                        LineInfo lineInfo = getLineInfo(content, start + start_local_interval);
                         // we don't have a way of capturing bounding box of a multiline match!
-                        foundValue = new ExtIntervalSimple(start_local_interval,  end_local_interval);
+                        foundValue = new ExtIntervalSimple(start + start_local_interval,  end + end_local_interval);
                         foundValue.setType(QTField.DataType.KEYWORD);
                         foundValue.setStr(multiLineGap.substring(start, end));
                         stopSearch = true;
@@ -577,7 +577,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
             if (foundValue == null) {
                 //trip the search string so we get rid of padding spaces
-                verticalGap.add(string2Search4Value.trim() +"\n");
+            //    verticalGap.add(string2Search4Value.trim() +"\n");
+                verticalGap.add(string2Search4Value);
                 continue;
             }
 
@@ -639,9 +640,22 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     protected int startNextToken(String str, int start){
+        // chec if this is the last token in line
+        int next_new_line = str.substring(start).indexOf("\n");
+        if (next_new_line == -1){
+            next_new_line = str.substring(start).length();
+        }
+
         Matcher m = TOKEN.matcher(str.substring(start));
         if (m.find()){
-            return start + m.start();
+            int start_next_token = m.start();
+            if (start_next_token < next_new_line) {
+                return start + start_next_token;
+            }
+            //else {
+                // this is the last column/header in the line so the items below it can shift to the right as much as possible
+          //      return start + 10000; // no line can be longer than 50000 ???
+        //    }
         }
         return start;
     }
