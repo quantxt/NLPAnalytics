@@ -7,7 +7,7 @@ import java.io.InputStream;
 import java.util.function.Function;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ooxml.extractor.ExtractorFactory;
+import org.apache.poi.extractor.ExtractorFactory;
 import org.apache.poi.ooxml.extractor.POIXMLTextExtractor;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.poifs.filesystem.OfficeXmlFileException;
