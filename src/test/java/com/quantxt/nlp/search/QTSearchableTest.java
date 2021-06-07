@@ -4,23 +4,14 @@ import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.nlp.tokenizer.QLetterTokenizer;
 import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.LowerCaseFilter;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.core.LetterTokenizer;
-import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.io.StringReader;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -314,6 +305,60 @@ public class QTSearchableTest {
         // THEN
         assertNotNull(doc1.getValues());
         assertNotNull(doc2.getValues());
+
+    }
+
+    @Test
+    public void stopword_simple_1() {
+        String srch_str = "MUZAFFAR               N. D.  KHAN,         M.D.,     Individually         and/or     as";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Name", "MUZAFFAR KHAN"));
+
+        Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
+        List<DictSearch> searchableList = new ArrayList<>();
+       List<String> stopwords = new ArrayList<>();
+        stopwords.add("n");
+        stopwords.add("d");
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, stopwords,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
+
+        searchableList.add(qtSearchable);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str, helper);
+        helper.extract(doc1, searchableList, false, "");
+
+        // THEN
+        assertNotNull(doc1.getValues());
+        assertTrue(doc1.getValues().get(0).getCategory().equals("Name"));
+
+    }
+
+    @Test
+    public void stopword_standard_1() {
+        String srch_str = "MUZAFFAR               NN. D.  KHAN,         M.D.,     Individually         and/or     as";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Name", "MUZAFFAR KHAN"));
+
+        Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
+        List<DictSearch> searchableList = new ArrayList<>();
+        List<String> stopwords = new ArrayList<>();
+        stopwords.add("nn");
+        stopwords.add("d");
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, stopwords,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
+
+        searchableList.add(qtSearchable);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str, helper);
+        helper.extract(doc1, searchableList, false, "");
+
+        // THEN
+        assertNotNull(doc1.getValues());
+        assertTrue(doc1.getValues().get(0).getCategory().equals("Name"));
 
     }
 }

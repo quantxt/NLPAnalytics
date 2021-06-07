@@ -1,5 +1,7 @@
 package com.quantxt.nlp.search;
 
+import com.quantxt.nlp.analyzer.QStopFilter;
+import com.quantxt.nlp.tokenizer.QLetterTokenizer;
 import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
@@ -18,6 +20,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
+import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.search.spans.*;
 import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
@@ -29,8 +32,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.quantxt.nlp.search.DctSearhFld.DataField;
-import static com.quantxt.nlp.search.DctSearhFld.SearchFieldType;
+import static com.quantxt.nlp.search.DctSearhFld.*;
 import static com.quantxt.types.DictSearch.Mode.*;
 
 public class SearchUtils {
@@ -112,8 +114,8 @@ public class SearchUtils {
 
 
     private static IndexSearcher getIndexSearcher(Analyzer analyzer,
-                                           String fld,
-                                           String str) throws IOException {
+                                                  String fld,
+                                                  String str) throws IOException {
 
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         Directory mMapDirectory = new ByteBuffersDirectory();
@@ -144,6 +146,7 @@ public class SearchUtils {
         boolean isMatchAll = mode == ORDERED_SPAN || mode == SPAN || mode == FUZZY_ORDERED_SPAN
                 || mode == FUZZY_SPAN;
 
+
         for (Document matchedDoc : matchedDocs) {
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
             SpanQuery query = getSpanQuery(keyphrase_analyzer , searchField, query_string_raw,
@@ -170,7 +173,9 @@ public class SearchUtils {
                 System.out.println(frag);
             }
 
+
              */
+
 
             if (matches.size() == 0) continue;
             allMatches.addAll(matches);
@@ -268,18 +273,20 @@ public class SearchUtils {
                         case WHITESPACE:
                             WhitespaceTokenizer whitespaceTokenizer = new WhitespaceTokenizer();
                             tokenStream = new CachingTokenFilter(whitespaceTokenizer);
+                         //   tokenStream = new QStopFilter(tokenStream, stopWords_charArray);
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
                             tokenStreamComponents = new TokenStreamComponents(whitespaceTokenizer, sysfilter);
                             break;
                         case SIMPLE:
-                            LetterTokenizer letterTokenizer_s = new LetterTokenizer();
+                            QLetterTokenizer letterTokenizer_s = new QLetterTokenizer();
                             tokenStream = new LowerCaseFilter(letterTokenizer_s);
+                            tokenStream = new QStopFilter(tokenStream, stopWords_charArray);
                             tokenStreamComponents = new TokenStreamComponents(letterTokenizer_s, tokenStream);
                             break;
                         case STANDARD:
                             StandardTokenizer standardTokenizer = new StandardTokenizer();
                             tokenStream = new LowerCaseFilter(standardTokenizer);
-                            tokenStream = new StopFilter(tokenStream, stopWords_charArray);
+                            tokenStream = new QStopFilter(tokenStream, stopWords_charArray);
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
                             tokenStreamComponents = new TokenStreamComponents(standardTokenizer, sysfilter);
                             break;
