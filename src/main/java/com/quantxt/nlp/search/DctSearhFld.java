@@ -1,12 +1,14 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
+import com.quantxt.nlp.analyzer.QStopFilter;
 import com.quantxt.nlp.tokenizer.QLetterTokenizer;
 import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.core.LetterTokenizer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
@@ -15,10 +17,14 @@ import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.search.BooleanQuery;
 
+import java.io.IOException;
+import java.io.Reader;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +75,36 @@ public class DctSearhFld implements Serializable {
             case FUZZY_SPAN: priority += 50; break;
         }
     }
+
+    public static Analyzer.TokenStreamComponents getStopWordSkippedTs(CharArraySet stopWords)
+    {
+        QLetterTokenizer letterTokenizer = new QLetterTokenizer();
+        TokenStream ts = new LowerCaseFilter(letterTokenizer);
+        TokenStream res = new TokenStream() {
+            CharTermAttribute termAtt = addAttribute(CharTermAttribute.class);
+            PositionIncrementAttribute posIncrAtt = addAttribute(PositionIncrementAttribute.class);
+
+            public boolean incrementToken() throws IOException {
+                int extraIncrement = 0;
+                while (true) {
+                    boolean hasNext = ts.incrementToken();
+                    if (hasNext) {
+                        if (stopWords.contains(termAtt.toString())) {
+                            extraIncrement += posIncrAtt.getPositionIncrement(); // filter this word
+                            continue;
+                        }
+                        if (extraIncrement > 0) {
+                            posIncrAtt.setPositionIncrement(posIncrAtt.getPositionIncrement()+extraIncrement);
+                        }
+                    }
+                    return hasNext;
+                }
+            }
+        };
+
+        return new Analyzer.TokenStreamComponents(letterTokenizer, res);
+    }
+
     public DctSearhFld(QTDocument.Language lang,
                        List<String> synonymPairs,
                        List<String> stopwords,
@@ -76,7 +112,7 @@ public class DctSearhFld implements Serializable {
                        DictSearch.AnalyzType analyzType,
                        String customPfx)
     {
-        CharArraySet stopWords_charArray = stopwords == null || stopwords.size() == 0?
+        CharArraySet stopWordSet = stopwords == null || stopwords.size() == 0?
                 CharArraySet.EMPTY_SET : new CharArraySet(stopwords, false);
         String pfx = customPfx == null ? searchFieldPfx : customPfx;
         this.analyzType = analyzType;
@@ -96,6 +132,15 @@ public class DctSearhFld implements Serializable {
             case WHITESPACE:
                 this.search_fld = pfx + ".whitespace";
                 this.index_analyzer = new WhitespaceAnalyzer();
+        //        this.index_analyzer = new Analyzer() {
+        //            @Override
+        //            protected TokenStreamComponents createComponents(String fieldName) {
+        //                WhitespaceTokenizer tokenizer = new WhitespaceTokenizer();
+        //                TokenStream tokenStream = new CachingTokenFilter(tokenizer);
+            //            tokenStream = new QStopFilter(tokenStream, stopWordSet);
+        //                return new TokenStreamComponents(tokenizer, tokenStream);
+        //            }
+        //        };
                 this.priority = 8000;
                 addModePriority();
                 break;
@@ -104,12 +149,10 @@ public class DctSearhFld implements Serializable {
                 this.index_analyzer = new Analyzer() {
                     @Override
                     protected TokenStreamComponents createComponents(String s) {
-                        QLetterTokenizer letterTokenizer = new QLetterTokenizer();
-                        TokenStream letterTokenStream = new LowerCaseFilter(letterTokenizer);
-                        if (stopWords_charArray != null && stopWords_charArray.size() >0) {
-                            letterTokenStream = new StopFilter(letterTokenStream, stopWords_charArray);
-                        }
-                        return new TokenStreamComponents(letterTokenizer, letterTokenStream);
+                        QLetterTokenizer tokenizer = new QLetterTokenizer();
+                        TokenStream tokenStream = new LowerCaseFilter(tokenizer);
+                        tokenStream = new QStopFilter(tokenStream, stopWordSet);
+                        return new TokenStreamComponents(tokenizer, tokenStream);
                     }
                 };
                 this.priority = 7000;
@@ -122,7 +165,7 @@ public class DctSearhFld implements Serializable {
                     protected TokenStreamComponents createComponents(String s) {
                         StandardTokenizer standardTokenizer = new StandardTokenizer();
                         TokenStream tokenStream = new LowerCaseFilter(standardTokenizer);
-                        tokenStream = new StopFilter(tokenStream, stopWords_charArray);
+                        tokenStream = new StopFilter(tokenStream, stopWordSet);
                         ShingleFilter shingleFilter = new ShingleFilter(tokenStream, 2, 5);
                         shingleFilter.setTokenSeparator("");
                         tokenStream = shingleFilter;
@@ -134,7 +177,15 @@ public class DctSearhFld implements Serializable {
                 break;
             case STANDARD:
                 this.search_fld = pfx;
-                this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
+                this.index_analyzer = new Analyzer() {
+                    @Override
+                    protected TokenStreamComponents createComponents(String fieldName) {
+                        StandardTokenizer tokenizer = new StandardTokenizer();
+                        TokenStream tokenStream = new LowerCaseFilter(tokenizer);
+                        tokenStream = new QStopFilter(tokenStream, stopWordSet);
+                        return new TokenStreamComponents(tokenizer, tokenStream);
+                    }
+                };
                 this.priority = 5000;
                 addModePriority();
                 break;
@@ -147,19 +198,19 @@ public class DctSearhFld implements Serializable {
                 } else {
                     switch (lang) {
                         case ENGLISH:
-                            this.index_analyzer = new EnglishAnalyzer(stopWords_charArray);
+                            this.index_analyzer = new EnglishAnalyzer(stopWordSet);
                             break;
                         case SPANISH:
-                            this.index_analyzer = new SpanishAnalyzer(stopWords_charArray);
+                            this.index_analyzer = new SpanishAnalyzer(stopWordSet);
                             break;
                         case RUSSIAN:
-                            this.index_analyzer = new RussianAnalyzer(stopWords_charArray);
+                            this.index_analyzer = new RussianAnalyzer(stopWordSet);
                             break;
                         //         case JAPANESE:
                         //             this.index_analyzer = new JapaneseAnalyzer();
                         //             break;
                         case FRENCH:
-                            this.index_analyzer = new FrenchAnalyzer(stopWords_charArray);
+                            this.index_analyzer = new FrenchAnalyzer(stopWordSet);
                             break;
                         default:
                             this.index_analyzer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
@@ -168,7 +219,7 @@ public class DctSearhFld implements Serializable {
             }
             break;
             default:
-                this.index_analyzer = new StandardAnalyzer(stopWords_charArray);
+                this.index_analyzer = new StandardAnalyzer(stopWordSet);
                 this.search_fld = pfx;
                 this.priority = 5000;
                 addModePriority();
