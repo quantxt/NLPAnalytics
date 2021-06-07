@@ -1,10 +1,11 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
+import com.quantxt.nlp.tokenizer.QLetterTokenizer;
 import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
-import org.apache.lucene.analysis.core.SimpleAnalyzer;
+import org.apache.lucene.analysis.core.LetterTokenizer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
@@ -100,7 +101,17 @@ public class DctSearhFld implements Serializable {
                 break;
             case SIMPLE:
                 this.search_fld = pfx + ".simple";
-                this.index_analyzer = new SimpleAnalyzer();
+                this.index_analyzer = new Analyzer() {
+                    @Override
+                    protected TokenStreamComponents createComponents(String s) {
+                        QLetterTokenizer letterTokenizer = new QLetterTokenizer();
+                        TokenStream letterTokenStream = new LowerCaseFilter(letterTokenizer);
+                        if (stopWords_charArray != null && stopWords_charArray.size() >0) {
+                            letterTokenStream = new StopFilter(letterTokenStream, stopWords_charArray);
+                        }
+                        return new TokenStreamComponents(letterTokenizer, letterTokenStream);
+                    }
+                };
                 this.priority = 7000;
                 addModePriority();
                 break;

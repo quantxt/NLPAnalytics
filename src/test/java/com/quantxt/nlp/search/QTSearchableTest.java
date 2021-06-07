@@ -4,14 +4,23 @@ import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.ENDocumentHelper;
+import com.quantxt.nlp.tokenizer.QLetterTokenizer;
 import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
 import com.quantxt.types.Dictionary;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.LowerCaseFilter;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.core.LetterTokenizer;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -249,6 +258,29 @@ public class QTSearchableTest {
         ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
         helper.extract(doc1, searchableList, false, "");
 
+
+        // THEN
+        assertNotNull(doc1.getValues());
+        assertTrue(doc1.getValues().get(0).getCategory().equals("V1"));
+
+    }
+
+    @Test
+    public void test_str_checkbox_simple() {
+        String srch_str1 = "This is a good \u2612 $100,000,001 - $500 Million";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("V1", "\u2612 $100,000,001 $500 million"));
+
+        Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
+        List<DictSearch> searchableList = new ArrayList<>();
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
+        searchableList.add(qtSearchable);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
+        helper.extract(doc1, searchableList, false, "");
 
         // THEN
         assertNotNull(doc1.getValues());
