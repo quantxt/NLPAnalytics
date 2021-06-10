@@ -47,6 +47,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private static Pattern TOKEN = Pattern.compile("[\\p{L}\\p{N}]{2,}");
     private static Pattern SPC_BET_WORDS_PTR = Pattern.compile("\\S(?= \\S)");
     private static Pattern LONG_SPACE = Pattern.compile(" {5,}");
+    private static Pattern START_SPACE = Pattern.compile("^ *");
 
     // Single quotes to normalize
     protected static Pattern r_quote_norm = Pattern.compile("([`‘’])");
@@ -515,6 +516,17 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 int distance_from_label_start = white_space_matcher.end() - local_start_label;
 
                 index_2_space_width.put(white_space_matcher.end(), Math.abs(distance_from_label_start));
+            }
+
+            //account for the case when header starts at the beginning of the row
+            if (local_start_label == 0) {
+                Matcher beginning_white_space_matcher = START_SPACE.matcher(line);
+                if (beginning_white_space_matcher.find()){
+                    int d = beginning_white_space_matcher.end();
+                    index_2_space_width.put(d, d);
+                } else {
+                    index_2_space_width.put(0, 0);
+                }
             }
 
             if (index_2_space_width.size() > 0){

@@ -819,6 +819,49 @@ public class ENDocumentInfoTest {
         ;
     }
 
+
+    @Test
+    public void verticalMatchFirstTokeninRow() {
+        // GIVEN
+        String str = "Date of Service     Provider Name       Provider Licence \n" +
+                "6/7/2021 7:43       Katina Spadoni      22LP00013200";
+
+        String str2 = "Date of Service     Provider Name       Provider Licence \n" +
+                "  6/7/2021 7:43       Katina Spadoni      22LP00013200";
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        QTDocument doc = new ENDocumentInfo("", str, helper);
+        QTDocument doc2 = new ENDocumentInfo("", str2, helper);
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+
+        dictItms.add(new DictItm("Date_Service" , "Date of Service"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Company", REGEX,
+                null, null, Pattern.compile("(^\\S+)"), new int [] {1});
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
+
+        List<DictSearch> qtSearchableList = new ArrayList<>();
+        qtSearchableList.add(qtSearchable);
+        helper.extract(doc, qtSearchableList, true, "");
+        helper.extract(doc2, qtSearchableList, true, "");
+
+        // THEN
+        assertNotNull(doc.getValues());
+        assertEquals(doc.getValues().size(), 1);
+
+        assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 0);
+        assertEquals(doc.getValues().get(0).getExtIntervalSimples().get(0).getStr(), "6/7/2021");
+
+        assertNotNull(doc2.getValues());
+        assertEquals(doc2.getValues().size(), 1);
+
+        assertEquals(doc2.getValues().get(0).getExtIntervalSimples().get(0).getStart(), 2);
+        assertEquals(doc2.getValues().get(0).getExtIntervalSimples().get(0).getStr(), "6/7/2021");
+
+    }
+
     @Test
     @Ignore
     public void testSpan() throws IOException {
