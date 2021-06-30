@@ -73,6 +73,10 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     private POSTaggerME posModel = null;
     private CharArraySet stopwords;
 
+
+    final private static Pattern FormValue = Pattern.compile(" *[;:] *((?:[^\\s;:]+ )*[^:;\\s]+)(?=\n| {2,})");
+    final private static Pattern GenericToken = Pattern.compile("(?:^|  )((?:\\S+ )*\\S+)(?=\n| {2,})");
+
     protected Analyzer analyzer;
     protected Analyzer tokenizer;
 
@@ -248,7 +252,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             String dic_id = qtMatch.getDict_id();
             extInterval.setDict_id(dic_id);
             extInterval.setCategory(qtMatch.getCategory());
-            extInterval.setStr(qtMatch.getStr());
+            String str = qtMatch.getStr();
+            //check if this is in
+            extInterval.setStr(str);
             int start = qtMatch.getStart() + shift;
             int end = qtMatch.getEnd() + shift;
             extInterval.setStart(start);
@@ -262,7 +268,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                                                             String content,
                                                             int slop) {
         int content_length = content.length();
-        Map<String, Collection<ExtInterval>> labels = new HashMap<>();
+        Map<String, Collection<ExtInterval>> labels = new LinkedHashMap<>();
 
         for (DictSearch dictSearch : extractDictionaries) {
             String dict_id = dictSearch.getDictionary().getId();
@@ -297,9 +303,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         logger.debug("Found all labels in {}ms", took);
 
         Map<String, DictSearch> valueNeededDictionaryMap = new HashMap<>();
-
         for (DictSearch qtSearchable : extractDictionaries) {
             String dicId = qtSearchable.getDictionary().getId();
+
             if ( qtSearchable.getDictionary().getPattern() != null ) {
                 valueNeededDictionaryMap.put(dicId, qtSearchable);
             } else {
@@ -324,6 +330,9 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
         //Searching for values that are associated with a label
         //This should cover only DATE, DOUBLE and KEYWORD type labels
+        Map<Integer, List<ExtIntervalSimpleMatcher>> formValues = new HashMap<>();
+        Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues = new HashMap<>();
+
         for (Map.Entry<String, Collection<ExtInterval>> labelEntry : labels.entrySet()){
             String dictId = labelEntry.getKey();
 
@@ -335,42 +344,238 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
             Dictionary dictionary = dictSearch.getDictionary();
             if (dictionary.getPattern() == null) continue;
+            boolean autoDetect = dictionary.getPattern().pattern().toLowerCase().equals("__auto__");
+            if (autoDetect) {
+                if (formValues.isEmpty() || genericValues.isEmpty()) {
+                    String content_copy = getKeyValues(content, formValues);
+                    getGenericValues(content_copy, genericValues);
+                }
+            }
 
             Collection<ExtInterval> dictLabelList = labelEntry.getValue();
 
             for (ExtInterval labelInterval : dictLabelList) {
 
-                ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, dictSearch, labelInterval);
-                if (canSearchVertical && rowValues.size() == 0){
-                    rowValues = findAllVerticalMatches(content, dictSearch, labelInterval);
+                if (autoDetect) {
+                    setLocalPosition(content, labelInterval);
+                    findBestValue(labelInterval, formValues, genericValues);
+                } else {
+                    ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, dictSearch, labelInterval);
+                    if (canSearchVertical && rowValues.size() == 0) {
+                        rowValues = findAllVerticalMatches(content, dictSearch, labelInterval);
+                    }
+                    setFieldValues(content, labelInterval, rowValues);
                 }
 
-                if (rowValues.size() == 0) continue;
-
-                for (ExtIntervalSimple eis : rowValues){
-                    int gstart = eis.getStart();
-                    LineInfo extIntervalLineInfo = getLineInfo(content, gstart);
-                    eis.setEnd(extIntervalLineInfo.localStart + eis.getEnd() - eis.getStart());
-                    eis.setStart(extIntervalLineInfo.localStart);
-                    eis.setLine(extIntervalLineInfo.lineNumber);
+                if (labelInterval.getExtIntervalSimples() != null) {
+                    if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
+                    qtDocument.getValues().add(labelInterval);
+                    qtDocument.addEntity(labelInterval.getDict_id(), labelInterval.getCategory());
                 }
-
-                labelInterval.setExtIntervalSimples(rowValues);
-                int lableStart = labelInterval.getStart();
-                LineInfo lineInfo = getLineInfo(content, lableStart);
-                labelInterval.setStart(lineInfo.localStart);
-                labelInterval.setEnd(lineInfo.localStart + labelInterval.getEnd() - lableStart);
-                labelInterval.setLine(lineInfo.lineNumber);
-
-                if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
-                qtDocument.getValues().add(labelInterval);
-                qtDocument.addEntity(labelInterval.getDict_id(), labelInterval.getCategory());
             }
 
             long took_dictionary_match = System.currentTimeMillis() - start_dictionary_match;
             if (took_dictionary_match > 1000){
                 logger.warn("Matching on [{} - {} - {} - {}] took {}ms", dictionary.getName(), dictionary.getValType()
                         , dictionary.getSkip_between_key_and_value(), dictionary.getSkip_between_values(), took );
+            }
+        }
+    }
+
+    private void setFieldValues(String content,
+                                ExtInterval labelInterval,
+                                ArrayList<ExtIntervalSimple> values){
+        if (values.size() == 0) return;
+
+        for (ExtIntervalSimple eis : values){
+            int gstart = eis.getStart();
+            LineInfo extIntervalLineInfo = getLineInfo(content, gstart);
+            eis.setEnd(extIntervalLineInfo.localStart + eis.getEnd() - eis.getStart());
+            eis.setStart(extIntervalLineInfo.localStart);
+            eis.setLine(extIntervalLineInfo.lineNumber);
+        }
+
+        labelInterval.setExtIntervalSimples(values);
+        setLocalPosition(content, labelInterval);
+
+    }
+
+    private void setLocalPosition(String content,
+                                  ExtInterval labelInterval)
+    {
+        int lableStart = labelInterval.getStart();
+        LineInfo lineInfo = getLineInfo(content, lableStart);
+        labelInterval.setStart(lineInfo.localStart);
+        labelInterval.setEnd(lineInfo.localStart + labelInterval.getEnd() - lableStart);
+        labelInterval.setLine(lineInfo.lineNumber);
+    }
+
+    private String getKeyValues(String content,
+                                Map<Integer, List<ExtIntervalSimpleMatcher>> formValues){
+        Matcher formValueMatcher = FormValue.matcher(content);
+        StringBuilder content_copy = new StringBuilder(content);
+        while (formValueMatcher.find()){
+            int s = formValueMatcher.start(1);
+            int e = formValueMatcher.end(1);
+            String str = formValueMatcher.group(1);
+            ExtIntervalSimple extInterval = new ExtIntervalSimple();
+            LineInfo lineInfo = getLineInfo(content, s);
+            int offset = s - lineInfo.localStart;
+
+            extInterval.setStart(lineInfo.localStart);
+            extInterval.setEnd(e - offset);
+            extInterval.setLine(lineInfo.lineNumber);
+            extInterval.setStr(str);
+            List<ExtIntervalSimpleMatcher> list = formValues.get(lineInfo.lineNumber);
+            if (list == null){
+                list = new ArrayList<>();
+                formValues.put(lineInfo.lineNumber, list);
+            }
+
+            list.add(new ExtIntervalSimpleMatcher(extInterval, formValueMatcher.start() - offset,
+                    formValueMatcher.end() - offset));
+            for (int i=s; i<e; i++){
+                content_copy.setCharAt(i, ' ');
+            }
+        }
+        return content_copy.toString();
+    }
+
+    private static class ExtIntervalSimpleMatcher {
+        public ExtIntervalSimple extIntervalSimple;
+        public int start;
+        public int end;
+        public ExtIntervalSimpleMatcher(ExtIntervalSimple e, int s, int en){
+            this.extIntervalSimple =e;
+            this.start = s;
+            this.end = en;
+        }
+        public int getStart(){
+            return start;
+        }
+    }
+    private void getGenericValues(String content,
+                                  Map<Integer, List<ExtIntervalSimpleMatcher>> values) {
+        Matcher genericValueMatcher = GenericToken.matcher(content);
+        while (genericValueMatcher.find()){
+            int s = genericValueMatcher.start(1);
+            int e = genericValueMatcher.end(1);
+            if (s <0 || e <0) continue;
+            String str = genericValueMatcher.group(1);
+            ExtIntervalSimple extInterval = new ExtIntervalSimple();
+            LineInfo lineInfo = getLineInfo(content, s);
+            int offset = s - lineInfo.localStart;
+            extInterval.setStart(lineInfo.localStart);
+            extInterval.setEnd(e - offset);
+            extInterval.setLine(lineInfo.lineNumber);
+            extInterval.setStr(str);
+            List<ExtIntervalSimpleMatcher> list = values.get(lineInfo.lineNumber);
+            if (list == null){
+                list = new ArrayList<>();
+                values.put(lineInfo.lineNumber, list);
+            }
+            list.add(new ExtIntervalSimpleMatcher(extInterval, genericValueMatcher.start() - offset ,
+                    genericValueMatcher.end() - offset));
+        }
+    }
+
+    private void findBestValue(ExtInterval labelInterval,
+                               Map<Integer, List<ExtIntervalSimpleMatcher>> formValues,
+                               Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues
+                               ){
+        int keyLine = labelInterval.getLine();
+        int keyStart = labelInterval.getStart();
+        int keyEnd = labelInterval.getEnd();
+
+        // check values on the line or one line below or above
+        List<ExtIntervalSimpleMatcher> valuesOnSameLine = formValues.get(keyLine);
+        List<ExtIntervalSimpleMatcher> valuesOnLineBefore = formValues.get(keyLine-1);
+        List<ExtIntervalSimpleMatcher> valuesOnLineAfter = formValues.get(keyLine+1);
+        if (valuesOnSameLine != null) {
+            for (ExtIntervalSimpleMatcher em : valuesOnSameLine) {
+                if (em.start - keyEnd < 2 && keyEnd <= em.start){
+                    ArrayList<ExtIntervalSimple> list = new ArrayList<>();
+                    list.add(em.extIntervalSimple);
+                    labelInterval.setExtIntervalSimples(list);
+                    return;
+                }
+
+            }
+        }
+
+        // so we look up to 4 lines below the header
+
+        List<ExtIntervalSimpleMatcher> header = genericValues.get(keyLine);
+        if (header == null) return;
+        Collections.sort(header, Comparator.comparingInt(ExtIntervalSimpleMatcher::getStart));
+        int b1 = 0;
+        int b2 = 0;
+        for (ExtIntervalSimpleMatcher eem : header) {
+            ExtIntervalSimple ee = eem.extIntervalSimple;
+            if (ee.getEnd() < keyStart) {
+                b2 = ee.getEnd();
+            }
+            if (ee.getStart() > keyEnd && b1 == 0) {
+                b1 = ee.getStart();
+            }
+        }
+
+        for (int l=1; l < 5; l++) {
+            List<ExtIntervalSimpleMatcher> genericValuesOnLineAfter = genericValues.get(keyLine+l);
+            if (genericValuesOnLineAfter == null) continue;
+
+            for (ExtIntervalSimpleMatcher em : genericValuesOnLineAfter) {
+                ExtIntervalSimple e = em.extIntervalSimple;
+                boolean keyValueMatched = checkTableKeyValueAssoc(b1, b2, e);
+                if (keyValueMatched) {
+                    ArrayList<ExtIntervalSimple> list = new ArrayList<>();
+                    list.add(e);
+                    labelInterval.setExtIntervalSimples(list);
+                    return;
+                }
+            }
+        }
+    }
+
+    public void autoExtract(QTDocument qtDocument,
+                            List<DictSearch> extractDictionaries) {
+
+        long start = System.currentTimeMillis();
+        final String content = qtDocument.getTitle();
+        Map<String, Collection<ExtInterval>> labels = findLabels(extractDictionaries, content, 0);
+        long took = System.currentTimeMillis() - start;
+        logger.debug("Found all labels in {}ms", took);
+
+        if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
+
+        for (DictSearch qtSearchable : extractDictionaries) {
+            String dicId = qtSearchable.getDictionary().getId();
+            Collection<ExtInterval> labelExtIntervalList = labels.get(dicId);
+            if (labelExtIntervalList == null) continue;
+            for (ExtInterval labelExtInterval : labelExtIntervalList){
+                int lableStart = labelExtInterval.getStart();
+                LineInfo lineInfo = getLineInfo(content, lableStart);
+                labelExtInterval.setStart(lineInfo.localStart);
+                labelExtInterval.setEnd(lineInfo.localStart + labelExtInterval.getEnd() - lableStart);
+                labelExtInterval.setLine(lineInfo.lineNumber);
+            }
+        }
+
+        Map<Integer, List<ExtIntervalSimpleMatcher>> formValues = new HashMap<>();
+        Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues = new HashMap<>();
+
+        String content_copy = getKeyValues(content, formValues);
+        getGenericValues(content_copy, genericValues);
+
+        for (Map.Entry<String, Collection<ExtInterval>> labelEntry : labels.entrySet()){
+            Collection<ExtInterval> dictLabelList = labelEntry.getValue();
+            for (ExtInterval labelInterval : dictLabelList) {
+
+                findBestValue(labelInterval, formValues, genericValues);
+                if (labelInterval.getExtIntervalSimples() != null) {
+                    qtDocument.getValues().add(labelInterval);
+                    qtDocument.addEntity(labelInterval.getDict_id(), labelInterval.getCategory());
+                }
             }
         }
     }
@@ -440,7 +645,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         Pattern padding_between_values = dictionary.getSkip_between_values();
         Pattern padding_between_key_value = dictionary.getSkip_between_key_and_value();
         // Find the lowest priority analyzer to tokenize the gaps
-        // list of DctSearhFld is teh same for all fields so we get the first one
+        // list of DctSearhFld is the same for all fields so we get the first one
 
         int start_search_shift = labelInterval.getEnd();
         int group = (dictionary.getGroups() == null || dictionary.getGroups().length == 0 )  ? 0 : dictionary.getGroups()[0];
@@ -457,6 +662,18 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         return results;
+    }
+
+    private boolean checkTableKeyValueAssoc(int first_index_after_label1,
+                                            int last_index_before_label1,
+                                            Interval labelInterval2){
+
+        int local_start_label2 = labelInterval2.getStart();
+        int local_end_label2 = labelInterval2.getEnd();
+
+        if (local_end_label2 <= first_index_after_label1 && local_start_label2 >= last_index_before_label1)
+            return true;
+        return false;
     }
 
     private ArrayList<ExtIntervalSimple> findAllVerticalMatches(String content,

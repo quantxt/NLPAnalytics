@@ -1,0 +1,102 @@
+                                                                                                                                                                   DATE (MM/DD/YYYY)
+                                                                     PROPERTY SECTION
+                                                                                                                                                                      6/11/2020
+
+      AGENCY NAME                                                                                CARRIER                                                                  NAIC CODE
+      Private Client Insurance
+
+      POLICY NUMBER                                                            EFFECTIVE DATE    NAMED INSURED(S)
+      CPS3227404                                                                 07/14/20       Notes Drive, LLC
+                                            PREMISES #: 1         STREET ADDRESS:13261 McGregor Blvd. Fort Myers FL 33919
+      PREMISES INFORMATION                  BUILDING #: 2         BLDG DESCRIPTION:Norman Love Bldg
+                                                                          VALU-                      INFLATION                BLKT
+            SUBJECT OF INSURANCE                 AMOUNT          COINS % ATION    CAUSES OF LOSS      GUARD %        DED        #            FORMS AND CONDITIONS TO APPLY
+      BUILDING                                        357,896          80 RC     SPECIAL                               2,500         2% W/H
+
+      BI/EE                                             32,340                                                                      1/6 MO
+
+
+
+
+
+
+
+
+
+
+      ADDITIONAL INFORMATION             BUSINESS INCOME / EXTRA EXPENSE - Attach ACORD 810                    VALUE REPORTING INFORMATION - Attach ACORD 811
+
+      ADDITIONAL COVERAGES, OPTIONS, RESTRICTIONS, ENDORSEMENTS AND RATING INFORMATION
+       SPOILAGE     DESCRIPTION OF PROPERTY COVERED                                                   LIMIT                                    OPTIONS
+                                                                                                                               REFRIG MAINT
+      COVERAGE
+                                                                                                                               AGREEMENT
+         (Y/N)                                                                                        $                                             BREAKDOWN OR CONTAMINATION
+                                                                                                                                   (Y/N)
+                                                                                                                                                                           SELLING
+                                                                                                      DEDUCTIBLE                                    POWER OUTAGE
+                                                                                                                                                                           PRICE
+                                                                                                      $
+
+      SINKHOLE COVERAGE (Required in Florida)            ACCEPT COVERAGE               REJECT COVERAGE         LIMIT: $
+
+           PROPERTY HAS BEEN DESIGNATED AN HISTORICAL LANDMARK                                                                               # OF OPEN SIDES ON STRUCTURE:
+
+
+
+
+
+
+
+
+      CONSTRUCTION TYPE                           DISTANCE TO                 FIRE DISTRICT           CODE NUMBER      PROT CL    # STORIES # BASM'TS     YR BUILT    TOTAL AREA
+                                               HYDRANT    FIRE STAT
+      JM                                          100           3    McGregor                              367             2          1           0        1983            19,817
+                                                        FT        MI
+      BUILDING IMPROVEMENTS                                  BLDG CODE      TAX CODE     ROOF TYPE               OTHER OCCUPANCIES
+                                                                GRADE
+      X    WIRING, YR:18          X  PLUMBING, YR: 18             99                              G
+                                                                                                                     HEATING SOURCE INCL WOODBURNING           DATE
+      X              YR:18           HEATING, YR:             WIND CLASS
+           ROOFING,                                                                 SEMI- RESISTIVE                  STOVE OR FIREPLACE INSERT                 INSTALLED:
+                                                                                X                                MANUFACTURER:
+           OTHER:                           YR:                   RESISTIVE
+
+      PRIMARY HEAT                                                                               SECONDARY HEAT
+
+           BOILER             SOLID FUEL                                                             BOILER             SOLID FUEL
+
+
+           IF BOILER, IS INSURANCE PLACED ELSEWHERE?           Y / N                                 IF BOILER, IS INSURANCE PLACED ELSEWHERE?           Y / N
+
+      RIGHT EXPOSURE & DISTANCE                    LEFT EXPOSURE & DISTANCE                      FRONT EXPOSURE & DISTANCE                    REAR EXPOSURE & DISTANCE
+
+
+
+                                                                                                                                                                 CENTRAL          LOCAL
+      BURGLAR ALARM TYPE                                            CERTIFICATE #                                                        EXPIRATION DATE
+                                                                                                                                                                 STATION          GONG
+
+                                                                                                                                                                 WITH KEYS
+
+      BURGLAR ALARM INSTALLED AND SERVICED BY                                                    EXTENT                    GRADE         # GUARDS / WATCHMEN           CLOCK HOURLY
+
+
+
+
+      PREMISES FIRE PROTECTION (Sprinklers, Standpipes, CO2 / Chemical Systems)           % SPRNK    FIRE ALARM MANUFACTURER                                           CENTRAL STATION
+
+                                                                                                                                                                       LOCAL GONG
+
+      ADDITIONAL INTEREST                   ACORD 45 attached for additional names
+      INTEREST                         NAME AND ADDRESS      RANK:         EVIDENCE:        CERTIFICATE                                               INTEREST IN ITEM NUMBER
+           LOSS PAYEE                                                                                                                         LOCATION:              BUILDING:
+           MORTGAGEE                                                                                                                          ITEMCLASS:             ITEM:
+                                                                                                                                              ITEM DESCRIPTION
+
+
+
+
+                                       REFERENCE / LOAN #:
+
+      REMARKS
