@@ -1,6 +1,9 @@
 package com.quantxt.nlp.search;
 
+import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.helper.CommonQTDocumentHelper;
+import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.types.ExtInterval;
 import com.quantxt.types.DictItm;
 import com.quantxt.types.DictSearch;
@@ -311,6 +314,7 @@ public class SearchUtilsTest {
         List<ExtInterval> res = qtSearchable.search(result.toString("UTF-8"));
         assertTrue(res.size() == 1);
         assertTrue(res.get(0).getCategory().equals("Business"));
+
     }
 
     @Test

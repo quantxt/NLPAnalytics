@@ -12,6 +12,8 @@ import org.junit.Test;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -188,6 +190,42 @@ public class CommonQTDocumentHelperTest {
 
         assertTrue(doc.getTitle().equals(
                 "<table width=\"100%\"><tr><td>Orig Year Built</td><td>1982</td><td>1982</td><td>1982</td><td>1982</td></tr></table>"));
+    }
+
+    @Test
+    public void extractAuto_1() throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("accord140.txt");
+        String content = convertInputStreamToString(is);
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("POLICY_NUMBER", "POLICY NUMBER"));
+        dictItms.add(new DictItm("EFFECTIVE_DATE", "EFFECTIVE DATE"));
+        dictItms.add(new DictItm("STREET_ADDRESS", "STREET ADDRESS"));
+        dictItms.add(new DictItm("PLUMBING","PLUMBING, YR"));
+        dictItms.add(new DictItm("CONSTRUCTION_TYPE","CONSTRUCTION TYPE"));
+        dictItms.add(new DictItm("PROT_CL","PROT CL"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Orig Year Built", REGEX,
+                null, null, Pattern.compile("__auto__"), new int []{1});
+
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
+        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        helper.extract(doc, searchableList, true, null);
+
+        ArrayList<ExtInterval> v = doc.getValues();
+        Collections.sort(v, Comparator.comparingInt(ExtInterval::getLine));
+
+        assertTrue(v.get(0).getExtIntervalSimples().get(0).getStr().equals("CPS3227404"));
+        assertTrue(v.get(1).getExtIntervalSimples().get(0).getStr().equals("07/14/20"));
+        assertTrue(v.get(2).getExtIntervalSimples().get(0).getStr().equals("13261 McGregor Blvd. Fort Myers FL 33919"));
+        assertTrue(v.get(3).getExtIntervalSimples().get(0).getStr().equals("JM"));
+        assertTrue(v.get(4).getExtIntervalSimples().get(0).getStr().equals("2"));
+        assertTrue(v.get(5).getExtIntervalSimples().get(0).getStr().equals("18"));
+
     }
 
     @Test
@@ -386,7 +424,6 @@ public class CommonQTDocumentHelperTest {
         searchableList.add(qtSearchable);
 
         helper.extract(doc, searchableList, true, "");
-        String excerpt = helper.extractHtmlExcerpt(content, doc.getValues().get(0));
     }
 
     private String convertInputStreamToString(InputStream inputStream) throws IOException {
