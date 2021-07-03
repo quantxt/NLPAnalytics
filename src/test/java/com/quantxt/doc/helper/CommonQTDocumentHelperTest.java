@@ -229,6 +229,66 @@ public class CommonQTDocumentHelperTest {
     }
 
     @Test
+    public void extractAuto_3() throws IOException {
+
+        String content = "Member Name:                        Member DOB:\n" +
+                "  JOHN L DOE                          10/04/1945\n" +
+                "  Member ID:                          Group #:\n" +
+                "  ZZZ123456789                        9876543210\n" +
+                "\n" +
+                "  RXBIN:     123456                    Deductible:  $500\n" +
+                "  RXPCN:     ADV                       CÐ¾Ð ay:  $20 Ð Ð¡Ð ";
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("DOB", "Member DOB"));
+        dictItms.add(new DictItm("Group", "Group #"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Insurance_Id", REGEX,
+                null, null, Pattern.compile("__auto__"), new int []{1});
+
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
+        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        helper.extract(doc, searchableList, true, null);
+
+        ArrayList<ExtInterval> v = doc.getValues();
+        Collections.sort(v, Comparator.comparingInt(ExtInterval::getLine));
+
+        assertTrue(v.get(0).getExtIntervalSimples().get(0).getStr().equals("10/04/1945"));
+        assertTrue(v.get(1).getExtIntervalSimples().get(0).getStr().equals("9876543210"));
+
+    }
+
+    @Test
+    public void extractAuto_2() throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("table-v1.txt");
+        String content = convertInputStreamToString(is);
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Status", "Status"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Test", REGEX,
+                null, null, Pattern.compile("__auto__"), new int []{1});
+
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
+        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        helper.extract(doc, searchableList, true, null);
+
+        ArrayList<ExtInterval> v = doc.getValues();
+        Collections.sort(v, Comparator.comparingInt(ExtInterval::getLine));
+
+        assertTrue(v.get(0).getExtIntervalSimples().get(0).getStr().equals("APPROVED"));
+
+    }
+
+    @Test
     public void tableRow_TSV_noFound() throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("tsv_w_space.txt");
 
