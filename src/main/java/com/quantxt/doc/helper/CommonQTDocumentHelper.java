@@ -357,8 +357,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             for (ExtInterval labelInterval : dictLabelList) {
 
                 if (autoDetect) {
-                    setLocalPosition(content, labelInterval);
-                    findBestValue(labelInterval, formValues, genericValues);
+                    boolean isLastLineToken = setLocalPosition(content, labelInterval);
+                    findBestValue(labelInterval, formValues, genericValues, isLastLineToken);
                 } else {
                     ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, dictSearch, labelInterval);
                     if (canSearchVertical && rowValues.size() == 0) {
@@ -400,14 +400,27 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     }
 
-    private void setLocalPosition(String content,
+    private boolean setLocalPosition(String content,
                                   ExtInterval labelInterval)
     {
+        boolean isLastTokenInLine = false;
         int lableStart = labelInterval.getStart();
         LineInfo lineInfo = getLineInfo(content, lableStart);
+        int e = content.indexOf("\n", labelInterval.getEnd());
+        if (e >= labelInterval.getEnd()) {
+            if (e == labelInterval.getEnd()){
+                isLastTokenInLine = true;
+            } else {
+                String p = content.substring(labelInterval.getEnd(), e);
+                if (p.replaceAll("[^\\w]+", "").trim().length() == 0){
+                    isLastTokenInLine = true;
+                }
+            }
+        }
         labelInterval.setStart(lineInfo.localStart);
         labelInterval.setEnd(lineInfo.localStart + labelInterval.getEnd() - lableStart);
         labelInterval.setLine(lineInfo.lineNumber);
+        return isLastTokenInLine;
     }
 
     private String getKeyValues(String content,
@@ -481,7 +494,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private void findBestValue(ExtInterval labelInterval,
                                Map<Integer, List<ExtIntervalSimpleMatcher>> formValues,
-                               Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues
+                               Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues,
+                               boolean isLastInLine
                                ){
         int keyLine = labelInterval.getLine();
         int keyStart = labelInterval.getStart();
@@ -508,15 +522,16 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         List<ExtIntervalSimpleMatcher> header = genericValues.get(keyLine);
         if (header == null) return;
         Collections.sort(header, Comparator.comparingInt(ExtIntervalSimpleMatcher::getStart));
-        int b1 = 0;
-        int b2 = 0;
+        int first_index_after = keyEnd;
+        int last_index_before = keyStart;
         for (ExtIntervalSimpleMatcher eem : header) {
             ExtIntervalSimple ee = eem.extIntervalSimple;
             if (ee.getEnd() < keyStart) {
-                b2 = ee.getEnd();
+                last_index_before = ee.getEnd();
             }
-            if (ee.getStart() > keyEnd && b1 == 0) {
-                b1 = ee.getStart();
+            if (ee.getStart() > keyEnd) {
+                first_index_after = ee.getStart();
+                break;
             }
         }
 
@@ -526,55 +541,12 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
             for (ExtIntervalSimpleMatcher em : genericValuesOnLineAfter) {
                 ExtIntervalSimple e = em.extIntervalSimple;
-                boolean keyValueMatched = checkTableKeyValueAssoc(b1, b2, e);
+                boolean keyValueMatched = checkTableKeyValueAssoc(first_index_after, last_index_before, e, isLastInLine);
                 if (keyValueMatched) {
                     ArrayList<ExtIntervalSimple> list = new ArrayList<>();
                     list.add(e);
                     labelInterval.setExtIntervalSimples(list);
                     return;
-                }
-            }
-        }
-    }
-
-    public void autoExtract(QTDocument qtDocument,
-                            List<DictSearch> extractDictionaries) {
-
-        long start = System.currentTimeMillis();
-        final String content = qtDocument.getTitle();
-        Map<String, Collection<ExtInterval>> labels = findLabels(extractDictionaries, content, 0);
-        long took = System.currentTimeMillis() - start;
-        logger.debug("Found all labels in {}ms", took);
-
-        if (qtDocument.getValues() == null) qtDocument.setValues(new ArrayList<>());
-
-        for (DictSearch qtSearchable : extractDictionaries) {
-            String dicId = qtSearchable.getDictionary().getId();
-            Collection<ExtInterval> labelExtIntervalList = labels.get(dicId);
-            if (labelExtIntervalList == null) continue;
-            for (ExtInterval labelExtInterval : labelExtIntervalList){
-                int lableStart = labelExtInterval.getStart();
-                LineInfo lineInfo = getLineInfo(content, lableStart);
-                labelExtInterval.setStart(lineInfo.localStart);
-                labelExtInterval.setEnd(lineInfo.localStart + labelExtInterval.getEnd() - lableStart);
-                labelExtInterval.setLine(lineInfo.lineNumber);
-            }
-        }
-
-        Map<Integer, List<ExtIntervalSimpleMatcher>> formValues = new HashMap<>();
-        Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues = new HashMap<>();
-
-        String content_copy = getKeyValues(content, formValues);
-        getGenericValues(content_copy, genericValues);
-
-        for (Map.Entry<String, Collection<ExtInterval>> labelEntry : labels.entrySet()){
-            Collection<ExtInterval> dictLabelList = labelEntry.getValue();
-            for (ExtInterval labelInterval : dictLabelList) {
-
-                findBestValue(labelInterval, formValues, genericValues);
-                if (labelInterval.getExtIntervalSimples() != null) {
-                    qtDocument.getValues().add(labelInterval);
-                    qtDocument.addEntity(labelInterval.getDict_id(), labelInterval.getCategory());
                 }
             }
         }
@@ -666,12 +638,13 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private boolean checkTableKeyValueAssoc(int first_index_after_label1,
                                             int last_index_before_label1,
-                                            Interval labelInterval2){
+                                            Interval labelInterval2,
+                                            boolean isLastInLine){
 
         int local_start_label2 = labelInterval2.getStart();
         int local_end_label2 = labelInterval2.getEnd();
 
-        if (local_end_label2 <= first_index_after_label1 && local_start_label2 >= last_index_before_label1)
+        if ((isLastInLine || local_end_label2 <= first_index_after_label1 ) && local_start_label2 >= last_index_before_label1)
             return true;
         return false;
     }
