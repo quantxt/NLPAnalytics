@@ -229,22 +229,28 @@ public class CommonQTDocumentHelperTest {
     }
 
     @Test
-    public void extractAuto_3() throws IOException {
+    public void extractAuto_3() {
 
-        String content = "Member Name:                        Member DOB:\n" +
-                "  JOHN L DOE                          10/04/1945\n" +
-                "  Member ID:                          Group #:\n" +
+        String content = " Member Name:                         Member DOB:\n" +
+                " JOHN L DOE                           10/04/1945\n" +
+                " Member ID:                           Group #:\n" +
                 "  ZZZ123456789                        9876543210\n" +
                 "\n" +
-                "  RXBIN:     123456                    Deductible:  $500\n" +
-                "  RXPCN:     ADV                       CÐ¾Ð ay:  $20 Ð Ð¡Ð ";
+                "  RXBIN:     123456                    Deductible: $500\n" +
+                " RXPCN: ADV                            CÐ¾Ð ay: $20 Ð Ð¡Ð \n" +
+                "  RXGRP:     RX0000\n" +
+                "  Off. CoPay: $20\n" +
+                " Rx: $100+20%";
         CommonQTDocumentHelper helper = new ENDocumentHelper();
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("DOB", "Member DOB"));
         dictItms.add(new DictItm("Group", "Group #"));
+        dictItms.add(new DictItm("RXPCN_ADV_MANUAL", "RXPCN: ADV"));
+        dictItms.add(new DictItm("RXPCN_ADV", "RXPCN"));
+        dictItms.add(new DictItm("NAME", "Member Name"));
 
-        Dictionary dictionary = new Dictionary(dictItms, null, "Insurance_Id", REGEX,
+        Dictionary dictionary = new Dictionary(dictItms, null, "Insurance", REGEX,
                 null, null, Pattern.compile("__auto__"), new int []{1});
 
 
@@ -257,9 +263,10 @@ public class CommonQTDocumentHelperTest {
         ArrayList<ExtInterval> v = doc.getValues();
         Collections.sort(v, Comparator.comparingInt(ExtInterval::getLine));
 
-        assertTrue(v.get(0).getExtIntervalSimples().get(0).getStr().equals("10/04/1945"));
-        assertTrue(v.get(1).getExtIntervalSimples().get(0).getStr().equals("9876543210"));
-
+        assertTrue(v.get(0).getExtIntervalSimples().get(0).getStr().equals("JOHN L DOE"));
+        assertTrue(v.get(1).getExtIntervalSimples().get(0).getStr().equals("10/04/1945"));
+        assertTrue(v.get(2).getExtIntervalSimples().get(0).getStr().equals("9876543210"));
+        assertTrue(v.get(3).getCategory().equals("RXPCN_ADV_MANUAL"));
     }
 
     @Test
