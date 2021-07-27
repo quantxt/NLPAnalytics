@@ -3,6 +3,7 @@ package com.quantxt.io.model;
 import java.math.BigDecimal;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellValue;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
@@ -62,9 +63,16 @@ public class WorkbookFactory {
                     default:
                         break;
                     }
+
+                    // Get CellStyle to set date format
+                    CellStyle cs = srcCell.getCellStyle();
+                    com.quantxt.io.model.CellStyle cellStyle = new com.quantxt.io.model.CellStyle(cs.getDataFormat());
+
                     com.quantxt.io.model.Cell cell = new QTCell(row,
                             srcCell.getColumnIndex(),
                             com.quantxt.io.model.CellType.valueOf(srcCell.getCellType().name()), value);
+                    cell.setCellStyle(cellStyle);
+
                     row.getCells().put(srcCell.getColumnIndex(), cell);
                 }
             }

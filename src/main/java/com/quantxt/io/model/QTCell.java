@@ -9,6 +9,7 @@ public class QTCell implements Cell {
     private final Row row;
     private final int cellIndex;
     private CellType cellType;
+    private CellStyle cellStyle;
     private String value;
 
     public QTCell(Row row, int cellIndex, CellType cellType, String value) {
@@ -83,6 +84,16 @@ public class QTCell implements Cell {
         this.cellType = cellType;
         //TODO Dejan: Check if value should be set on NULL and converted depending on cellType
         this.value = null;
+    }
+
+    @Override
+    public CellStyle getCellStyle() {
+        return cellStyle;
+    }
+
+    @Override
+    public void setCellStyle(CellStyle cellStyle) {
+        this.cellStyle = cellStyle;
     }
 
 }
