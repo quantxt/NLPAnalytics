@@ -26,4 +26,6 @@ public interface Cell {
 
     void setCellType(CellType cellType);
 
+    int getCellIndex();
+
 }
