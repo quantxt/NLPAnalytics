@@ -2,11 +2,11 @@ package com.quantxt.doc.helper;
 
 import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
-import com.quantxt.types.ExtInterval;
+import com.quantxt.model.DictItm;
+import com.quantxt.model.ExtInterval;
 import com.quantxt.nlp.search.QTSearchable;
-import com.quantxt.types.DictItm;
-import com.quantxt.types.DictSearch;
-import com.quantxt.types.Dictionary;
+import com.quantxt.model.DictSearch;
+import com.quantxt.model.Dictionary;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -17,7 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import static com.quantxt.types.Dictionary.ExtractionType.REGEX;
+import static com.quantxt.model.Dictionary.ExtractionType.REGEX;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
@@ -25,7 +25,7 @@ public class CommonQTDocumentHelperTest {
 
     @Test
     public void simpleExtraction() {
-        String str = "Share-based compensation (benefit) expense (in thousands)\n" +
+        String content = "Share-based compensation (benefit) expense (in thousands)\n" +
                 "(54.6 \n" +
                 ") \n" +
                 "102.7 \n" +
@@ -47,22 +47,22 @@ public class CommonQTDocumentHelperTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, false, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
 
-        doc.convertValues2titleTable();
-        // THEN
-        assertNotNull(doc.getValues());
-        assertEquals(doc.getTitle(),
+        assertFalse(values == null);
+
+        String res = helper.convertValues2titleTable(values);
+
+        assertEquals(res,
                 "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
     }
 
     @Test
     public void largeHorizentalSpace() {
-        String str =
+        String content =
                 "Total selling, general and administrative expense(1) \n" +
                 "$ \n" +
                 "177.3 \n" +
@@ -80,22 +80,22 @@ public class CommonQTDocumentHelperTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, false, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
 
-        doc.convertValues2titleTable();
-        // THEN
-        assertNotNull(doc.getValues());
-        assertEquals(doc.getTitle(),
+        assertFalse(values == null);
+
+        String res = helper.convertValues2titleTable(values);
+
+        assertEquals(res,
                 "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
     }
 
     @Test
     public void largeHorizentalSpaceValid() {
-        String str =
+        String content =
                 "Total selling, general and administrative expense(1) \n" +
                 "                                   $ \n" +
                 "177.3 \n" +
@@ -113,15 +113,15 @@ public class CommonQTDocumentHelperTest {
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, false, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
 
-        doc.convertValues2titleTable();
-        // THEN
-        assertNotNull(doc.getValues());
-        assertEquals(doc.getTitle(),
+        assertFalse(values == null);
+
+        String res = helper.convertValues2titleTable(values);
+
+        assertEquals(res,
                 "<table width=\"100%\"><tr><td>Total selling, general and administrative expense</td><td>177.3</td><td>304.0</td><td>41.7</td></tr></table>")
         ;
     }
@@ -181,15 +181,16 @@ public class CommonQTDocumentHelperTest {
 
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
-        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, true, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
 
-        doc.convertValues2titleTable();
+        assertFalse(values == null);
 
-        assertTrue(doc.getTitle().equals(
-                "<table width=\"100%\"><tr><td>Orig Year Built</td><td>1982</td><td>1982</td><td>1982</td><td>1982</td></tr></table>"));
+        String res = helper.convertValues2titleTable(values);
+
+        assertEquals(res,
+                "<table width=\"100%\"><tr><td>Orig Year Built</td><td>1982</td><td>1982</td><td>1982</td><td>1982</td></tr></table>");
     }
 
     @Test
@@ -211,21 +212,102 @@ public class CommonQTDocumentHelperTest {
 
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
+
+        Collections.sort(values, Comparator.comparingInt(ExtInterval::getLine));
+
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("CPS3227404"));
+        assertTrue(values.get(1).getExtIntervalSimples().get(0).getStr().equals("07/14/20"));
+        assertTrue(values.get(2).getExtIntervalSimples().get(0).getStr().equals("13261 McGregor Blvd. Fort Myers FL 33919"));
+        assertTrue(values.get(3).getExtIntervalSimples().get(0).getStr().equals("JM"));
+        assertTrue(values.get(4).getExtIntervalSimples().get(0).getStr().equals("2"));
+        assertTrue(values.get(5).getExtIntervalSimples().get(0).getStr().equals("18"));
+    }
+
+    @Test
+    public void extractAuto_4_key_above_line() {
+
+        String content = "                                               John Dee                                                                                       123459876                                                                                                                           ICD - 10 Code ( REQUIRED TO PROCESS )\n" +
+                "                                                                                                                                                                                                                                                                                          R10.84 Generalized abdominal pain\n" +
+                "                                  Provider Name                                                                                               NPI #";
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Name", "Provider Name"));
+        dictItms.add(new DictItm("NPI", "NPI #"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Insurance", REGEX,
+                null, null, Pattern.compile("__auto__"), new int []{1});
+
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
+
+        Collections.sort(values, Comparator.comparingInt(ExtInterval::getLine));
+
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("John Dee"));
+        assertTrue(values.get(1).getExtIntervalSimples().get(0).getStr().equals("123459876"));
+    }
+
+    @Test
+    public void auto_vertical_indent(){
+        String content = "\n" +
+                "\n" +
+                "       LOC #   STREET                                                           CITY LIMITS    INTEREST             # FULL TIME EMPL ANNUAL REVENUES: $                  1,591,000\n" +
+                "              260 E Merritt Island Causeway\n" +
+                "        23                                                                            INSIDE    X OWNER                     6           OCCUPIED AREA:                        SQ FT\n" +
+                "       BLD # CITY:Merritt Island                             STATE: FL";
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("LOC", "LOC #"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Location", REGEX,
+                null, Pattern.compile("^\\s+$"), Pattern.compile("__auto__"), new int []{1});
+
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
         ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, true, null);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
 
-        ArrayList<ExtInterval> v = doc.getValues();
-        Collections.sort(v, Comparator.comparingInt(ExtInterval::getLine));
+        Collections.sort(values, Comparator.comparingInt(ExtInterval::getLine));
 
-        assertTrue(v.get(0).getExtIntervalSimples().get(0).getStr().equals("CPS3227404"));
-        assertTrue(v.get(1).getExtIntervalSimples().get(0).getStr().equals("07/14/20"));
-        assertTrue(v.get(2).getExtIntervalSimples().get(0).getStr().equals("13261 McGregor Blvd. Fort Myers FL 33919"));
-        assertTrue(v.get(3).getExtIntervalSimples().get(0).getStr().equals("JM"));
-        assertTrue(v.get(4).getExtIntervalSimples().get(0).getStr().equals("2"));
-        assertTrue(v.get(5).getExtIntervalSimples().get(0).getStr().equals("18"));
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("23"));
+    }
 
+
+    @Test
+    public void auto_vertical_number(){
+        String content = "\n" +
+                "\n" +
+                "       LOC #   STREET                                                           CITY LIMITS    INTEREST             # FULL TIME EMPL ANNUAL REVENUES: $                  1,591,000\n" +
+                "              260 E Merritt Island Causeway\n" +
+                "        23                                                                            INSIDE    X OWNER                     6           OCCUPIED AREA:                        SQ FT\n" +
+                "       BLD # CITY:Merritt Island                             STATE: FL";
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("LOC", "LOC #"));
+
+        Dictionary dictionary = new Dictionary(dictItms, null, "Location", REGEX,
+                null, Pattern.compile("^\\s+$"), Pattern.compile("__auto__"), new int []{1});
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary);
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
+
+        Collections.sort(values, Comparator.comparingInt(ExtInterval::getLine));
+
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("23"));
     }
 
     @Test
@@ -253,20 +335,17 @@ public class CommonQTDocumentHelperTest {
         Dictionary dictionary = new Dictionary(dictItms, null, "Insurance", REGEX,
                 null, null, Pattern.compile("__auto__"), new int []{1});
 
-
         QTSearchable qtSearchable = new QTSearchable(dictionary);
-        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, true, null);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
 
-        ArrayList<ExtInterval> v = doc.getValues();
-        Collections.sort(v, Comparator.comparingInt(ExtInterval::getLine));
+        Collections.sort(values, Comparator.comparingInt(ExtInterval::getLine));
 
-        assertTrue(v.get(0).getExtIntervalSimples().get(0).getStr().equals("JOHN L DOE"));
-        assertTrue(v.get(1).getExtIntervalSimples().get(0).getStr().equals("10/04/1945"));
-        assertTrue(v.get(2).getExtIntervalSimples().get(0).getStr().equals("9876543210"));
-        assertTrue(v.get(3).getCategory().equals("RXPCN_ADV_MANUAL"));
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("JOHN L DOE"));
+        assertTrue(values.get(1).getExtIntervalSimples().get(0).getStr().equals("10/04/1945"));
+        assertTrue(values.get(2).getExtIntervalSimples().get(0).getStr().equals("9876543210"));
+        assertTrue(values.get(3).getCategory().equals("RXPCN_ADV_MANUAL"));
     }
 
     @Test
@@ -283,15 +362,13 @@ public class CommonQTDocumentHelperTest {
 
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
-        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, true, null);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
 
-        ArrayList<ExtInterval> v = doc.getValues();
-        Collections.sort(v, Comparator.comparingInt(ExtInterval::getLine));
+        Collections.sort(values, Comparator.comparingInt(ExtInterval::getLine));
 
-        assertTrue(v.get(0).getExtIntervalSimples().get(0).getStr().equals("APPROVED"));
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("APPROVED"));
 
     }
 
@@ -304,43 +381,17 @@ public class CommonQTDocumentHelperTest {
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         //YR Built is a valid phrase but an invalid header (label)
-        dictItms.add(new DictItm("Year Built", "YR Built"));
+        dictItms.add(new DictItm("Year_Built", "Orig Year Built"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Year Built", REGEX,
-                null, null, Pattern.compile("^[^\n]{0,10}\n{0,3}(\\d{4})$"), new int [] {1});
-
-
-        QTSearchable qtSearchable = new QTSearchable(dictionary);
-        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
-        List<DictSearch> searchableList = new ArrayList<>();
-        searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, true, "");
-
-        assertTrue(doc.getValues() == null);
-    }
-
-    @Test
-    public void exceprt_v1() throws IOException {
-        InputStream is = getClass().getClassLoader().getResourceAsStream("tsv_w_space.txt");
-
-        String content = convertInputStreamToString(is);
-        CommonQTDocumentHelper helper = new ENDocumentHelper();
-
-        ArrayList<DictItm> dictItms = new ArrayList<>();
-        //YR Built is a valid phrase but an invalid header (label)
-        dictItms.add(new DictItm("Year Built", "Orig Year Built"));
-
-        Dictionary dictionary = new Dictionary(dictItms, null, "Year Built", REGEX,
-                null, null, Pattern.compile("^[^\n]{0,20}\n{0,3}(\\d{4})"), new int []{1});
+                null, null, Pattern.compile("^[^\n]{0,10}\n{0,3}(\\d{4})"), new int [] {1});
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
-        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, true, "");
-        String excerpt = helper.extractHtmlExcerpt(content, doc.getValues().get(0));
-        int ii = excerpt.indexOf("<b>1982</b>");
-        assertEquals(excerpt.indexOf("<b>1982</b>"), 178);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
+
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("1982"));
     }
 
     @Test
@@ -357,14 +408,13 @@ public class CommonQTDocumentHelperTest {
 
         String content = "may social security  is 123-23-1234";
         QTSearchable qtSearchable = new QTSearchable(dictionary);
-        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, false, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
 
-        assertFalse(doc.getValues() == null);
-        assertTrue(doc.getValues().size() == 1);
-        assertTrue(doc.getValues().get(0).getExtIntervalSimples().get(0).getStr().equals("123-23-1234"));
+        assertFalse(values == null);
+        assertTrue(values.size() == 1);
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("123-23-1234"));
     }
 
     @Test
@@ -407,9 +457,8 @@ public class CommonQTDocumentHelperTest {
         ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, true, "");
-
-        assertTrue(doc.getValues().size() == 0);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
+        assertTrue(values.size() == 0);
     }
 
 
@@ -453,14 +502,13 @@ public class CommonQTDocumentHelperTest {
         dictionary.setPattern(Pattern.compile("(?:\\S+ +){0,4}(?:(?:(?:\\d+|\\d+[ \\-]+\\d+) +[A-Za-z \\-\\n,]+)([A-Z]{2}) {0,20}(\\d{5})(?:\\-\\d{4})?)[ \\n]+"));
         dictionary.setGroups(new int []{1});
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        QTDocument qtDocument = new ENDocumentInfo("", content, helper);
 
-        List<DictSearch> qtSearchableList = new ArrayList<>();
-        qtSearchableList.add(qtSearchable);
-        helper.extract(qtDocument, qtSearchableList, true, null);
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
 
-        assertTrue(qtDocument.getValues().size() == 1);
-        assertTrue(qtDocument.getValues().get(0).getExtIntervalSimples().get(0).getStr().equals("MA"));
+        assertTrue(values.size() == 1);
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("MA"));
 
     }
 
@@ -486,11 +534,10 @@ public class CommonQTDocumentHelperTest {
         new DictSearch.AnalyzType[]{DictSearch.AnalyzType.SIMPLE,
                 DictSearch.AnalyzType.STANDARD});
 
-        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
 
-        helper.extract(doc, searchableList, true, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, true);
     }
 
     private String convertInputStreamToString(InputStream inputStream) throws IOException {

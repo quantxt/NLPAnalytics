@@ -1,12 +1,12 @@
 package com.quantxt.nlp.search;
 
+import com.quantxt.model.DictSearch;
+import com.quantxt.model.ExtInterval;
 import com.quantxt.nlp.analyzer.QStopFilter;
+import com.quantxt.nlp.tokenizer.QLetterOnlyTokenizer;
 import com.quantxt.nlp.tokenizer.QLetterTokenizer;
-import com.quantxt.types.ExtInterval;
-import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
-import org.apache.lucene.analysis.core.LetterTokenizer;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
@@ -20,7 +20,6 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.search.spans.*;
 import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
@@ -32,8 +31,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.quantxt.model.DictSearch.Mode.*;
 import static com.quantxt.nlp.search.DctSearhFld.*;
-import static com.quantxt.types.DictSearch.Mode.*;
 
 public class SearchUtils {
 
@@ -78,6 +77,15 @@ public class SearchUtils {
         QueryParser qp = new QueryParser(fld, analyzer);
         BooleanClause.Occur matching_mode = BooleanClause.Occur.SHOULD;
         Query q = qp.createBooleanQuery(fld, query, matching_mode);
+        return q;
+    }
+
+    public static Query getMultimatcheQuery(Analyzer analyzer,
+                                            String fld,
+                                            String query,
+                                            float fraction)  {
+        QueryParser qp = new QueryParser(fld, analyzer);
+        Query q = qp.createMinShouldMatchQuery(fld, query, fraction);
         return q;
     }
 
@@ -276,6 +284,12 @@ public class SearchUtils {
                          //   tokenStream = new QStopFilter(tokenStream, stopWords_charArray);
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
                             tokenStreamComponents = new TokenStreamComponents(whitespaceTokenizer, sysfilter);
+                            break;
+                        case LETTER:
+                            QLetterOnlyTokenizer letterOnlyTokenizer = new QLetterOnlyTokenizer();
+                            tokenStream = new LowerCaseFilter(letterOnlyTokenizer);
+                            tokenStream = new QStopFilter(tokenStream, stopWords_charArray);
+                            tokenStreamComponents = new TokenStreamComponents(letterOnlyTokenizer, tokenStream);
                             break;
                         case SIMPLE:
                             QLetterTokenizer letterTokenizer_s = new QLetterTokenizer();

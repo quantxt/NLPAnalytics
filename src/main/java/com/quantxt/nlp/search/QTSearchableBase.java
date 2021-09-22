@@ -1,9 +1,9 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.types.DictItm;
-import com.quantxt.types.DictSearch;
-import com.quantxt.types.Dictionary;
+import com.quantxt.model.Dictionary;
+import com.quantxt.model.DictItm;
+import com.quantxt.model.DictSearch;
 import com.quantxt.types.MapSort;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
@@ -31,17 +31,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.quantxt.model.DictSearch.AnalyzType.STANDARD;
+import static com.quantxt.model.DictSearch.Mode.ORDERED_SPAN;
 import static com.quantxt.nlp.search.DctSearhFld.*;
 import static com.quantxt.nlp.search.SearchUtils.*;
-import static com.quantxt.types.DictSearch.AnalyzType.STANDARD;
-import static com.quantxt.types.DictSearch.Mode.ORDERED_SPAN;
 
 public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
     private static final long serialVersionUID = -2557457339416308514L;
 
     final private static Logger logger = LoggerFactory.getLogger(QTSearchableBase.class);
-    final public static String HIDDEH_ENTITY = "hidden";
 
     protected int topN = 2000;
     protected int minFuzzyTermLength = 5;
@@ -53,10 +52,6 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
     protected QTDocument.Language lang;
     protected List<String> synonymPairs;
     protected List<String> stopWords;
-
-
-    public QTSearchableBase(){
-    }
 
     public QTSearchableBase(Dictionary dictionary) {
         this.lang = null;

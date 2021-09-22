@@ -1,45 +1,30 @@
 package com.quantxt.doc.helper;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.quantxt.doc.QTDocument;
+import com.quantxt.model.*;
+import com.quantxt.model.Dictionary;
+import com.quantxt.model.Dictionary.ExtractionType;
 import com.quantxt.types.*;
-import com.quantxt.nlp.entity.QTValueNumber;
-import com.quantxt.types.Dictionary;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.quantxt.doc.QTDocumentHelper;
 
-import opennlp.tools.postag.POSModel;
-import opennlp.tools.postag.POSTaggerME;
-import opennlp.tools.sentdetect.SentenceDetectorME;
-import opennlp.tools.sentdetect.SentenceModel;
-
-import static com.quantxt.types.QTField.*;
-
-import static com.quantxt.util.NLPUtil.isEmpty;
-
 /**
  * Created by dejani on 1/24/18.
  */
 
-public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
+public class CommonQTDocumentHelper implements QTDocumentHelper {
 
     final private static Logger logger = LoggerFactory.getLogger(CommonQTDocumentHelper.class);
 
-    public enum QTPosTags {NOUNN, VERBB, INTJ, X, ADV, AUX, ADP, ADJ, CCONJ, PROPN, PRON, SYM, NUM, PUNCT}
-
-    protected static final String DEFAULT_NLP_MODEL_DIR = "nlp_model_dir";
     private static String AUTO = "__auto__";
 
     private static int max_string_length_for_search = 30000;
@@ -70,83 +55,21 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static Pattern r_white = Pattern.compile("[               　 ]+");
     protected static String s_white = " ";
 
-    private SentenceDetectorME sentenceDetector = null;
-    private POSTaggerME posModel = null;
-    private CharArraySet stopwords;
-
-
     final private static Pattern FormValue = Pattern.compile(" *[;:] *((?:[^\\s;:]+ )*[^:;\\s]+)(?=$|\n| {2,})");
     final private static Pattern GenericToken = Pattern.compile("(?:^ *|  |\n *)((?:\\S+ )*\\S+)(?=$|\n| {2,})");
 
     protected Analyzer analyzer;
-    protected Analyzer tokenizer;
 
     public CommonQTDocumentHelper() {
+        analyzer = new ClassicAnalyzer();
     }
 
-    abstract void preInit();
-
-    public abstract void loadNERModel();
-
-    public abstract CommonQTDocumentHelper init();
-
-    protected void loadPosModel(String posFilePath) throws Exception {
-        String modelBaseDir = getModelBaseDir();
-        if (modelBaseDir == null) {
-            String error = DEFAULT_NLP_MODEL_DIR + " is not set!";
-            logger.error(error);
-            throw new IllegalStateException(error);
-        }
-        // POS
-        if (!isEmpty(posFilePath)) {
-            try (FileInputStream fis = new FileInputStream(modelBaseDir + posFilePath)) {
-                POSModel model = new POSModel(fis);
-                posModel = new POSTaggerME(model);
-            }
-        }
-    }
-
-    protected void init(String sentencesFilePath,
-                        String stoplistFilePath,
-                        Set<String> pronouns) throws IOException {
-
-
-        preInit();
-
-        String modelBaseDir = getModelBaseDir();
-        if (modelBaseDir == null) {
-            String error = DEFAULT_NLP_MODEL_DIR + " is not set!";
-            logger.error(error);
-            throw new IllegalStateException(error);
-        }
-
-        // Sentences
-        if (!isEmpty(sentencesFilePath)) {
-            try (FileInputStream fis = new FileInputStream(modelBaseDir + sentencesFilePath)) {
-                SentenceModel sentenceModel = new SentenceModel(fis);
-                sentenceDetector = new SentenceDetectorME(sentenceModel);
-            }
-        }
-
-        // Stoplist
-        if (!isEmpty(stoplistFilePath)) {
-            stopwords = new CharArraySet(800, true);
-            try {
-                List<String> sl = Files.readAllLines(Paths.get(modelBaseDir + stoplistFilePath));
-                for (String s : sl) {
-                    stopwords.add(s);
-                }
-            } catch (IOException e) {
-                logger.error("Error on reading stoplist with message {}", e.getMessage());
-            }
-        }
-    }
 
     @Override
     public List<String> tokenize(String str) {
         List<String> tokens = new ArrayList<>();
         try {
-            TokenStream result = tokenizer.tokenStream(null, str);
+            TokenStream result = analyzer.tokenStream(null, str);
             CharTermAttribute resultAttr = result.addAttribute(CharTermAttribute.class);
             result.reset();
 
@@ -197,7 +120,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 normParts.add(m.group());
             }
         }
-        //    workingLine = workingLine.replaceAll("^([{\\p{L}\\p{N}]+[\\.\\&]*[{\\p{L}\\p{N}]+[\\.]*)" , "");
         return String.join(" ", normParts);
     }
 
@@ -205,47 +127,13 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return normBasic(workingLine).toLowerCase();
     }
 
-    //sentence detc is NOT thread safe  :-/
-    public String[] getSentences(String text) {
-        synchronized (sentenceDetector) {
-            String[] sentences = sentenceDetector.sentDetect(text);
-            ArrayList<String> sentence_arr = new ArrayList<>();
-            for (String str : sentences) {
-                String[] bullet_points = str.split(UTF8_BULLETS);
-                for (String b : bullet_points) {
-                    b = b.trim();
-                    if (b.isEmpty()) continue;
-                    sentence_arr.add(b);
-                }
-            }
-            return sentence_arr.toArray(new String[sentence_arr.size()]);
-        }
-    }
-
-    //pos tagger is NOT thread safe  :-/
-    @Override
-    public String[] getPosTags(String[] text) {
-        synchronized (posModel) {
-            return posModel.tag(text);
-        }
-    }
-
-    public static String getModelBaseDir() {
-        return System.getenv(DEFAULT_NLP_MODEL_DIR);
-    }
-
-    @Override
-    public String getValues(String str, String context, List<ExtIntervalSimple> valueInterval) {
-        return QTValueNumber.detect(str, context, valueInterval);
-    }
-
     private void  findLabelsHelper(DictSearch dictSearch,
-                                     String content,
-                                     int shift,
-                                     int slop,
-                                     Map<Integer, ExtInterval> dicLabels){
+                                   String content,
+                                   int shift,
+                                   int slop,
+                                   Map<Integer, ExtInterval> dicLabels){
         if (content.isEmpty()) return;
-        Dictionary.ExtractionType extractionType = dictSearch.getDictionary().getValType();
+        ExtractionType extractionType = dictSearch.getDictionary().getValType();
         Collection<ExtInterval> qtMatches = dictSearch.search(content, slop);
         for (ExtInterval qtMatch : qtMatches) {
             ExtInterval extInterval = new ExtInterval();
@@ -293,12 +181,10 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     @Override
-    public void extract(QTDocument qtDocument,
-                        List<DictSearch> extractDictionaries,
-                        boolean canSearchVertical,
-                        String context) {
+    public List<ExtInterval> extract(final String content,
+                                     List<DictSearch> extractDictionaries,
+                                     boolean canSearchVertical) {
         long start = System.currentTimeMillis();
-        final String content = qtDocument.getTitle();
         Map<String, Collection<ExtInterval>> labels = findLabels(extractDictionaries, content, 0);
         long took = System.currentTimeMillis() - start;
         logger.debug("Found all labels in {}ms", took);
@@ -325,17 +211,13 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                     labelExtInterval.setStart(lineInfo.localStart);
                     labelExtInterval.setEnd(lineInfo.localStart + labelExtInterval.getEnd() - lableStart);
                     labelExtInterval.setLine(lineInfo.lineNumber);
-                    qtDocument.addEntity(labelExtInterval.getDict_id(), labelExtInterval.getCategory());
                     foundValues.add(labelExtInterval);
                 }
             }
         }
 
         if (valueNeededDictionaryMap.isEmpty()) {
-            if (foundValues.size() > 0){
-                qtDocument.setValues(foundValues);
-            }
-            return;
+            return foundValues;
         }
 
         //Searching for values that are associated with a label
@@ -370,7 +252,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                         findBestValue(labelInterval, formValues, genericValues, isLastLineToken);
                     } else {
                         foundValues.add(labelInterval);
-                        qtDocument.addEntity(labelInterval.getDict_id(), labelInterval.getCategory());
                     }
                 } else {
                     ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, dictSearch, labelInterval);
@@ -382,7 +263,6 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
                 if (labelInterval.getExtIntervalSimples() != null) {
                     foundValues.add(labelInterval);
-                    qtDocument.addEntity(labelInterval.getDict_id(), labelInterval.getCategory());
                 }
             }
 
@@ -393,9 +273,8 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
             }
         }
 
-        if (foundValues.size() > 0){
-            qtDocument.setValues(foundValues);
-        }
+        return foundValues;
+
     }
 
     private void setFieldValues(String content,
@@ -423,11 +302,13 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         int lableStart = labelInterval.getStart();
         LineInfo lineInfo = getLineInfo(content, lableStart);
         int e = content.indexOf("\n", labelInterval.getEnd());
-        if (e >= labelInterval.getEnd()) {
+        /// e == -1 : This is the last line of the content
+        if (e >= labelInterval.getEnd() || e == -1) {
             if (e == labelInterval.getEnd()){
                 isLastTokenInLine = true;
             } else {
-                String p = content.substring(labelInterval.getEnd(), e);
+                int end_of_line = e == -1 ?content.length() : e;
+                String p = content.substring(labelInterval.getEnd(), end_of_line);
                 if (p.replaceAll("[^\\w]+", "").trim().length() == 0){
                     isLastTokenInLine = true;
                 }
@@ -550,14 +431,32 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
                 break;
             }
         }
-
-        for (int l=1; l < 5; l++) {
+        // search up to 2 lines below, if not found search up to two lines above
+        for (int l=1; l < 3; l++) {
             List<ExtIntervalSimpleMatcher> genericValuesOnLineAfter = genericValues.get(keyLine+l);
             if (genericValuesOnLineAfter == null) continue;
 
             for (ExtIntervalSimpleMatcher em : genericValuesOnLineAfter) {
                 ExtIntervalSimple e = em.extIntervalSimple;
-                boolean keyValueMatched = checkTableKeyValueAssoc(first_index_after, last_index_before, e, isLastInLine);
+                boolean keyValueMatched = checkTableKeyValueAssoc(first_index_after, last_index_before, labelInterval, e, isLastInLine);
+                if (keyValueMatched) {
+                    ArrayList<ExtIntervalSimple> list = new ArrayList<>();
+                    list.add(e);
+                    labelInterval.setExtIntervalSimples(list);
+                    return;
+                }
+            }
+        }
+
+        // check up to two lines above the header -- for forms where values are return above a line
+
+        for (int l=1; l < 3; l++) {
+            List<ExtIntervalSimpleMatcher> genericValuesOnLineAfter = genericValues.get(keyLine-l);
+            if (genericValuesOnLineAfter == null) continue;
+
+            for (ExtIntervalSimpleMatcher em : genericValuesOnLineAfter) {
+                ExtIntervalSimple e = em.extIntervalSimple;
+                boolean keyValueMatched = checkTableKeyValueAssoc(first_index_after, last_index_before, labelInterval, e, isLastInLine);
                 if (keyValueMatched) {
                     ArrayList<ExtIntervalSimple> list = new ArrayList<>();
                     list.add(e);
@@ -595,7 +494,7 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         int start_match = m.start(group);
         int end_match = m.end(group);
         ExtIntervalSimple ext = new ExtIntervalSimple(start_match + start_search_shift, end_match + start_search_shift);
-        ext.setType(DataType.STRING);
+        ext.setType(QTField.DataType.STRING);
         String extractionStr = string_to_search.substring(start_match, end_match);
         ext.setStr(extractionStr);
 
@@ -654,14 +553,23 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private boolean checkTableKeyValueAssoc(int first_index_after_label1,
                                             int last_index_before_label1,
-                                            Interval labelInterval2,
+                                            Interval labelInterval1, // header
+                                            Interval labelInterval2, // value
                                             boolean isLastInLine){
 
         int local_start_label2 = labelInterval2.getStart();
         int local_end_label2 = labelInterval2.getEnd();
 
-        if ((isLastInLine || local_end_label2 <= first_index_after_label1 ) && local_start_label2 >= last_index_before_label1)
+        if ((isLastInLine || local_end_label2 <= first_index_after_label1 ) && local_start_label2 >= last_index_before_label1){
+            if ( (labelInterval2.getStart() - labelInterval1.getEnd() ) > 20) { // table header and cell should not be too far from each other
+                return false;
+            }
+            if ( (labelInterval1.getStart() - labelInterval2.getEnd() ) > 20) { // table header and cell should not be too far from each other
+                return false;
+            }
             return true;
+        }
+
         return false;
     }
 
@@ -933,81 +841,37 @@ public abstract class CommonQTDocumentHelper implements QTDocumentHelper {
         return index_start_line;
     }
 
-    public String extractHtmlExcerptForDocument(QTDocument qtDocument){
-        StringBuilder sb = new StringBuilder();
-        ArrayList<ExtInterval> values = qtDocument.getValues();
-        if (values == null || values.size() == 0) return sb.toString();
+    public String convertValues2titleTable(List<ExtInterval> values) {
+        if (values == null) return null;
+        Collections.sort(values, Comparator.comparingInt(ExtInterval::getStart));
+        String result = "";
+        LinkedHashSet<String> rows = new LinkedHashSet<>();
+        for (ExtInterval ext : values) {
 
-        for (ExtInterval extInterval : values){
-            String excerpt = extractHtmlExcerpt(qtDocument.getTitle(), extInterval);
-            sb.append("<p>").append(excerpt).append("</p>");
+            StringBuilder sb = new StringBuilder();
+            sb.append("<tr>");
+            sb.append("<td>").append(ext.getCategory()).append("</td>");
+            for (ExtIntervalSimple extvStr : ext.getExtIntervalSimples()) {
+                String customData = extvStr.getStr();
+                if (customData == null) continue;
+                sb.append("<td>").append(customData).append("</td>");
+            }
+            sb.append("</tr>");
+            String row2add = sb.toString();
+            rows.add(row2add);
         }
-        return sb.toString();
-    }
 
-    private String getExcerpt(String[] lines,
-                              Interval interval)
-    {
-        int horizentalBleed = 20;
-        int verticalBleed = 2;
-
-        int start = interval.getStart() ;
-        int end = interval.getEnd();
-        if (end < start ) return "";
-        if (start > 0){
-            start -=1;
-        }
-        int lineNumber = interval.getLine();
-        StringBuilder sb = new StringBuilder();
-
-
-        int left = Math.max(0, start - horizentalBleed);
-        int right = end + horizentalBleed;
-        int top = Math.max(0, lineNumber - verticalBleed);
-        int bottom = Math.min(lines.length, lineNumber + verticalBleed);
-        bottom = Math.min(bottom, lines.length);
-
-        for (int l=top; l<bottom; l++) {
-            String line_str = lines[l];
-            int line_length = line_str.length();
-            if (l == lineNumber) {
-                sb.append(line_str, left, start)
-                        .append("<b>")
-                        .append(interval.getStr())
-                        .append("</b>");
-                int post_fix_start = Math.min(end, line_length);
-                int post_fix_end   = Math.min(line_length, right);
-                if (post_fix_end > post_fix_start){
-                    sb.append(line_str, post_fix_start, post_fix_end);
-                }
-                sb.append("<br>");
-            } else {
-                int end_chop = Math.min(line_length, right);
-                if (left >= end_chop) continue;
-                sb.append(line_str, left, Math.min(line_length, right))
-                        .append("<br>");
+        if (!rows.isEmpty()) {
+            if (!result.startsWith("<table ")) {
+                result = "";
+            }
+            result += "<table width=\"100%\">" + String.join("", rows) + "</table>";
+        } else {
+            if (!result.startsWith("<table ")) {
+                result = "";
             }
         }
 
-        return "<p>" + sb.toString() +"</p>";
-    }
-
-    public String extractHtmlExcerpt(String content,
-                                     ExtInterval extInterval)
-    {
-        String [] lines = content.split("\n");
-        ArrayList<String> block = new ArrayList<>();
-        block.add(getExcerpt(lines, extInterval));
-
-        if (extInterval.getExtIntervalSimples() != null){
-            for (ExtIntervalSimple eis : extInterval.getExtIntervalSimples()){
-                block.add(getExcerpt(lines, eis));
-            }
-        }
-
-        String out_str =  String.join("", block);
-        //remove empty lines
-        out_str = out_str.replaceAll(" {2,}", "  ");
-        return out_str;
+        return result;
     }
 }
