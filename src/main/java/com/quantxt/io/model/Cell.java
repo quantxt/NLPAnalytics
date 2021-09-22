@@ -6,6 +6,10 @@ public interface Cell {
 
     CellType getCellType();
 
+    CellStyle getCellStyle();
+
+    void setCellStyle(CellStyle cellStyle);
+
     String getStringCellValue();
 
     String getFormulaCellValue();
@@ -21,5 +25,7 @@ public interface Cell {
     void setCellValue(double value);
 
     void setCellType(CellType cellType);
+
+    int getCellIndex();
 
 }
