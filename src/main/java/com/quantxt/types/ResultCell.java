@@ -4,11 +4,10 @@ import java.math.BigDecimal;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.quantxt.util.NLPUtil;
-
 public class ResultCell {
 
     static final Pattern POS_DOUBLE_PATTERN  = Pattern.compile("^\\s*\\d{1,15}|\\.\\d+|\\d{1,15}\\.\\d+\\s*$");
+    private static final String EMPTY_STRING  = "";
 
     private final Attribute attribute;
     private final int index;
@@ -77,7 +76,11 @@ public class ResultCell {
     }
 
     public boolean isEmpty() {
-        return NLPUtil.isEmpty(value);
+        return isEmpty(value);
+    }
+
+    public static boolean isEmpty(String value) {
+        return value == null || value.replaceAll("\\s*", EMPTY_STRING).equals(EMPTY_STRING);
     }
 
     @Override

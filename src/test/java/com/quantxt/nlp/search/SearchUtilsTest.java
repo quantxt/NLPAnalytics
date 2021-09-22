@@ -1,13 +1,10 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
-import com.quantxt.doc.helper.CommonQTDocumentHelper;
-import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.types.ExtInterval;
-import com.quantxt.types.DictItm;
-import com.quantxt.types.DictSearch;
-import com.quantxt.types.Dictionary;
+import com.quantxt.model.ExtInterval;
+import com.quantxt.model.DictItm;
+import com.quantxt.model.DictSearch;
+import com.quantxt.model.Dictionary;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.spans.SpanQuery;
 import org.junit.BeforeClass;
@@ -29,7 +26,6 @@ import static org.junit.Assert.*;
 public class SearchUtilsTest {
 
     final private static Logger logger = LoggerFactory.getLogger(SearchUtilsTest.class);
-
 
     private static QTSearchable qtSearchable;
     private static QTSearchable qtSearchable_fuzzy;
@@ -146,11 +142,11 @@ public class SearchUtilsTest {
     @Test
     public void parseTermsFuzzy1EditQuery() {
         // GIVEN
-        String str = "AmazonInc. reported a profit on his earnings.";
+        String str = "Amazon Inc. reported a profit on his earnings.";
         List<ExtInterval> res = qtSearchable_fuzzy.search(str);
         assertTrue(res.size() == 2);
         assertTrue(res.get(0).getCategory().equals("Amazon Inc"));
-        assertTrue(res.get(0).getStr().equals("AmazonInc"));
+        assertTrue(res.get(0).getStr().equals("Amazon Inc"));
     }
 
     @Test
@@ -259,19 +255,19 @@ public class SearchUtilsTest {
     @Test
     public void Letter_Tokenizer_v1() {
         // GIVEN
-        String str = "AmazonInc. reported a profit on his earnings.";
+        String str = "Amazon1 reported a profit on his earnings.";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
-        dictItms.add(new DictItm("Amazon", "Amazon Inc." ));
+        dictItms.add(new DictItm("Amazon1", "Amazon" ));
 
-        Dictionary dictionary = new Dictionary(null, "Amazon_typo", dictItms);
+        Dictionary dictionary = new Dictionary(null, "Amazon1", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
                 DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
 
         List<ExtInterval> res = qtSearchable.search(str);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCategory().equals("Amazon"));
+        assertTrue(res.get(0).getCategory().equals("Amazon1"));
     }
 
     @Test
@@ -280,7 +276,7 @@ public class SearchUtilsTest {
         String str = "AmzaonInc. reported a profit on his earnings.";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
-        dictItms.add(new DictItm("Amazon", "Amazon Inc" ));
+        dictItms.add(new DictItm("Amazon", "Amazoninc" ));
 
         Dictionary dictionary = new Dictionary(null, "Amazon_typo", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,

@@ -1,19 +1,17 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
+import com.quantxt.model.DictSearch;
 import com.quantxt.nlp.analyzer.QStopFilter;
+import com.quantxt.nlp.tokenizer.QLetterOnlyTokenizer;
 import com.quantxt.nlp.tokenizer.QLetterTokenizer;
-import com.quantxt.types.DictSearch;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
-import org.apache.lucene.analysis.core.LetterTokenizer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
-import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
-import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
@@ -24,7 +22,6 @@ import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.search.BooleanQuery;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -163,13 +160,10 @@ public class DctSearhFld implements Serializable {
                 this.index_analyzer = new Analyzer() {
                     @Override
                     protected TokenStreamComponents createComponents(String s) {
-                        StandardTokenizer standardTokenizer = new StandardTokenizer();
-                        TokenStream tokenStream = new LowerCaseFilter(standardTokenizer);
-                        tokenStream = new StopFilter(tokenStream, stopWordSet);
-                        ShingleFilter shingleFilter = new ShingleFilter(tokenStream, 2, 5);
-                        shingleFilter.setTokenSeparator("");
-                        tokenStream = shingleFilter;
-                        return new TokenStreamComponents(standardTokenizer, tokenStream);
+                        QLetterOnlyTokenizer tokenizer = new QLetterOnlyTokenizer();
+                        TokenStream tokenStream = new LowerCaseFilter(tokenizer);
+                        tokenStream = new QStopFilter(tokenStream, stopWordSet);
+                        return new TokenStreamComponents(tokenizer, tokenStream);
                     }
                 };
                 this.priority = 6000;

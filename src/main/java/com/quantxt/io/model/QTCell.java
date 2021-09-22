@@ -2,7 +2,7 @@ package com.quantxt.io.model;
 
 import java.math.BigDecimal;
 
-import static com.quantxt.util.NLPUtil.isEmpty;
+import static com.quantxt.types.ResultCell.isEmpty;
 
 public class QTCell implements Cell {
 

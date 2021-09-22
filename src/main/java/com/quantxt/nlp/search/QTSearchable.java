@@ -1,12 +1,11 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocument;
-import com.quantxt.types.ExtInterval;
-import com.quantxt.types.DictSearch;
-import com.quantxt.types.Dictionary;
+import com.quantxt.model.ExtInterval;
+import com.quantxt.model.DictSearch;
+import com.quantxt.model.Dictionary;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 import static com.quantxt.nlp.search.SearchUtils.*;
-
 
 public class QTSearchable extends QTSearchableBase<ExtInterval> {
 

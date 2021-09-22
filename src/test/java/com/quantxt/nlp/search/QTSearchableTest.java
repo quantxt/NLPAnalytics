@@ -1,13 +1,12 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.doc.ENDocumentInfo;
 import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.types.ExtInterval;
-import com.quantxt.types.DictItm;
-import com.quantxt.types.DictSearch;
-import com.quantxt.types.Dictionary;
+import com.quantxt.model.ExtInterval;
+import com.quantxt.model.DictItm;
+import com.quantxt.model.DictSearch;
+import com.quantxt.model.Dictionary;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -164,7 +163,7 @@ public class QTSearchableTest {
     @Test
     public void test_weather()  {
         // GIVEN
-        String str = "Accordingly, we are subject to risks, including labor disputes, inclement weather, natural disasters, cybersecurity attacks, possible acts of terrorism, availability of shipping containers, and increased security restrictions associated with such carriers’ ability to provide delivery services to meet our shipping needs.";
+        String content = "Accordingly, we are subject to risks, including labor disputes, inclement weather, natural disasters, cybersecurity attacks, possible acts of terrorism, availability of shipping containers, and increased security restrictions associated with such carriers’ ability to provide delivery services to meet our shipping needs.";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("weather conditions","Weather"));
@@ -176,20 +175,18 @@ public class QTSearchableTest {
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.STANDARD);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc = new ENDocumentInfo(str, str, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        helper.extract(doc, searchableList, false, "");
-
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
         // THEN
-        assertNotNull(doc.getValues());
+        assertNotNull(values);
 
     }
 
     @Test
     public void test_str_special_chars() {
-        String srch_str1 = "This is a super \"deal [good deal] ~amzing~ very:special very!very";
-        String srch_str2 = "I need ||rire and || rire  +hrlpe";
+        String content1 = "This is a super \"deal [good deal] ~amzing~ very:special very!very";
+        String content2 = "I need ||rire and || rire  +hrlpe";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("V1", "very:special"));
@@ -209,31 +206,28 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
-        helper.extract(doc1, searchableList, false, "");
+        List<ExtInterval> values1 = helper.extract(content1, searchableList, false);
+        List<ExtInterval> values2 = helper.extract(content2, searchableList, false);
 
-        ENDocumentInfo doc2 = new ENDocumentInfo("", srch_str2, helper);
-        helper.extract(doc2, searchableList, false, "");
 
         // THEN
-        assertNotNull(doc1.getValues());
-        assertNotNull(doc2.getValues());
-        assertTrue(doc1.getValues().get(0).getCategory().equals("V2"));
-        assertTrue(doc1.getValues().get(1).getCategory().equals("V5"));
-        assertTrue(doc1.getValues().get(2).getCategory().equals("V6"));
-        assertTrue(doc1.getValues().get(3).getCategory().equals("V1"));
-        assertTrue(doc1.getValues().get(4).getCategory().equals("V7"));
+        assertNotNull(values1);
+        assertNotNull(values2);
+        assertTrue(values1.get(0).getCategory().equals("V2"));
+        assertTrue(values1.get(1).getCategory().equals("V5"));
+        assertTrue(values1.get(2).getCategory().equals("V6"));
+        assertTrue(values1.get(3).getCategory().equals("V1"));
+        assertTrue(values1.get(4).getCategory().equals("V7"));
 
-
-        assertTrue(doc2.getValues().get(0).getCategory().equals("V3"));
-        assertTrue(doc2.getValues().get(1).getCategory().equals("V4"));
-        assertTrue(doc2.getValues().get(2).getCategory().equals("V8"));
+        assertTrue(values2.get(0).getCategory().equals("V3"));
+        assertTrue(values2.get(1).getCategory().equals("V4"));
+        assertTrue(values2.get(2).getCategory().equals("V8"));
 
     }
 
     @Test
     public void test_str_unicode() {
-        String srch_str1 = "This is a good \uF06E $100,000,001 - $500 million ";
+        String content = "This is a good \uF06E $100,000,001 - $500 million ";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("V1", "\uF06E $100,000,001"));
@@ -246,19 +240,17 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
-        helper.extract(doc1, searchableList, false, "");
-
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
 
         // THEN
-        assertNotNull(doc1.getValues());
-        assertTrue(doc1.getValues().get(0).getCategory().equals("V1"));
+        assertNotNull(values);
+        assertTrue(values.get(0).getCategory().equals("V1"));
 
     }
 
     @Test
     public void test_str_checkbox_simple() {
-        String srch_str1 = "This is a good \u2612 $100,000,001 - $500 Million";
+        String content = "This is a good \u2612 $100,000,001 - $500 Million";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("V1", "\u2612 $100,000,001 $500 million"));
@@ -270,19 +262,18 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
-        helper.extract(doc1, searchableList, false, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
 
         // THEN
-        assertNotNull(doc1.getValues());
-        assertTrue(doc1.getValues().get(0).getCategory().equals("V1"));
+        assertNotNull(values);
+        assertTrue(values.get(0).getCategory().equals("V1"));
 
     }
 
     @Test
     public void test_unicode_str() {
-        String srch_str1 = "☒ $10,000,000,001-$50 billion";
-        String srch_str2 = "we found \uF06E $100,000,001 - $500 million and it `is a lot of money";
+        String content1 = "☒ $10,000,000,001-$50 billion";
+        String content2 = "we found \uF06E $100,000,001 - $500 million and it `is a lot of money";
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("500M", "\uF06E $100,000,001 - $500 million"));
         dictItms.add(new DictItm("100M", "\uF06E $50,000,001 - $100 million"));
@@ -296,21 +287,18 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str1, helper);
-        helper.extract(doc1, searchableList, false, "");
-
-        ENDocumentInfo doc2 = new ENDocumentInfo("", srch_str2, helper);
-        helper.extract(doc2, searchableList, false, "");
+        List<ExtInterval> values1 = helper.extract(content1, searchableList, false);
+        List<ExtInterval> values2 = helper.extract(content2, searchableList, false);
 
         // THEN
-        assertNotNull(doc1.getValues());
-        assertNotNull(doc2.getValues());
+        assertNotNull(values1);
+        assertNotNull(values2);
 
     }
 
     @Test
     public void stopword_simple_1() {
-        String srch_str = "MUZAFFAR               N. D.  KHAN,         M.D.,     Individually         and/or     as";
+        String content = "MUZAFFAR               N. D.  KHAN,         M.D.,     Individually         and/or     as";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Name", "MUZAFFAR KHAN"));
@@ -326,18 +314,18 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str, helper);
-        helper.extract(doc1, searchableList, false, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
+
 
         // THEN
-        assertNotNull(doc1.getValues());
-        assertTrue(doc1.getValues().get(0).getCategory().equals("Name"));
+        assertNotNull(values);
+        assertTrue(values.get(0).getCategory().equals("Name"));
 
     }
 
     @Test
     public void stopword_standard_1() {
-        String srch_str = "MUZAFFAR               NN. D.  KHAN,         M.D.,     Individually         and/or     as";
+        String content = "MUZAFFAR               NN. D.  KHAN,         M.D.,     Individually         and/or     as";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Name", "MUZAFFAR KHAN"));
@@ -353,12 +341,11 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc1 = new ENDocumentInfo("", srch_str, helper);
-        helper.extract(doc1, searchableList, false, "");
+        List<ExtInterval> values = helper.extract(content, searchableList, false);
 
         // THEN
-        assertNotNull(doc1.getValues());
-        assertTrue(doc1.getValues().get(0).getCategory().equals("Name"));
+        assertNotNull(values);
+        assertTrue(values.get(0).getCategory().equals("Name"));
 
     }
 }
