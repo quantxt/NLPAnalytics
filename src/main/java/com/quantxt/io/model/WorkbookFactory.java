@@ -66,8 +66,7 @@ public class WorkbookFactory {
 
                     // Get CellStyle to set date format
                     CellStyle cs = srcCell.getCellStyle();
-                    com.quantxt.io.model.CellStyle cellStyle = new com.quantxt.io.model.CellStyle(cs.getDataFormat());
-
+                    com.quantxt.io.model.CellStyle cellStyle = new com.quantxt.io.model.CellStyle(cs.getDataFormatString());
                     com.quantxt.io.model.Cell cell = new QTCell(row,
                             srcCell.getColumnIndex(),
                             com.quantxt.io.model.CellType.valueOf(srcCell.getCellType().name()), value);

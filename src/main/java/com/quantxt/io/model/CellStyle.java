@@ -2,21 +2,21 @@ package com.quantxt.io.model;
 
 public class CellStyle {
 
-    short dataFormat;
+    private String dataFormatString;
 
     public CellStyle() {
     }
 
-    public CellStyle(short dataFormat) {
-        this.dataFormat = dataFormat;
+    public CellStyle(String dataFormatString) {
+        this.dataFormatString = dataFormatString;
     }
 
-    public short getDataFormat() {
-        return dataFormat;
+    public String getDataFormatString() {
+        return dataFormatString;
     }
 
-    public void setDataFormat(short dataFormat) {
-        this.dataFormat = dataFormat;
+    public void setDataFormatString(String dataFormatString) {
+        this.dataFormatString = dataFormatString;
     }
 
 }
