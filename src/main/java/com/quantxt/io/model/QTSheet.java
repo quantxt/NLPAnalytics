@@ -1,12 +1,14 @@
 package com.quantxt.io.model;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
 public abstract class QTSheet implements Sheet {
 
     private final SortedMap<Integer, Row> rows = new TreeMap<>();
+    private List<MergeRegion> mergeRegions;
     private final String sheetName;
     private final Workbook workbook;
 
@@ -47,6 +49,14 @@ public abstract class QTSheet implements Sheet {
 
     public SortedMap<Integer, Row> getRows() {
         return rows;
+    }
+
+    public List<MergeRegion> getMergeRegions() {
+        return mergeRegions;
+    }
+
+    public void setMergeRegions(List<MergeRegion> mergeRegions) {
+        this.mergeRegions = mergeRegions;
     }
 
     @Override
