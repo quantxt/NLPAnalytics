@@ -1,6 +1,8 @@
 package com.quantxt.io.model;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -38,6 +40,13 @@ public class WorkbookFactory {
                     return srcSheet.isColumnHidden(columnIndex);
                 }
             };
+            if (srcSheet.getMergedRegions() != null) {
+                List<MergeRegion> mergeRegions = srcSheet.getMergedRegions()
+                        .stream()
+                        .map(r -> new MergeRegion(r.getFirstRow(), r.getLastRow(), r.getFirstColumn(), r.getLastColumn()))
+                        .collect(Collectors.toList());
+                sheet.setMergeRegions(mergeRegions);
+            }
             resWb.getSheets().add(sheet); // Add
 
             for (org.apache.poi.ss.usermodel.Row srcRow : srcSheet) {

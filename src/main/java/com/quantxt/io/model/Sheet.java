@@ -1,6 +1,7 @@
 package com.quantxt.io.model;
 
 import java.util.Iterator;
+import java.util.List;
 
 public interface Sheet extends Iterable<Row> {
 
@@ -19,5 +20,9 @@ public interface Sheet extends Iterable<Row> {
     Workbook getWorkbook();
 
     Row createRow(int rownum);
+
+    List<MergeRegion> getMergeRegions();
+
+    void setMergeRegions(List<MergeRegion> mergeRegions);
 
 }
