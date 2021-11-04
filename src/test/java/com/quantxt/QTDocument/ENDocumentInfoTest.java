@@ -79,7 +79,7 @@ public class ENDocumentInfoTest {
 
             List<DictSearch> qtSearchableList = new ArrayList<>();
             qtSearchableList.add(qtSearchable);
-            List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+            List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
             assertFalse(values == null);
 
@@ -124,7 +124,7 @@ public class ENDocumentInfoTest {
             String content = result.toString("UTF-8");
             List<DictSearch> qtSearchableList1 = new ArrayList<>();
             qtSearchableList1.add(qtSearchable);
-            List<ExtInterval> values = helper.extract(content, qtSearchableList1, false);
+            List<ExtInterval> values = helper.extract(content, qtSearchableList1, null, false);
 
             String res = helper.convertValues2titleTable(values);
 
@@ -137,7 +137,7 @@ public class ENDocumentInfoTest {
 
             List<DictSearch> qtSearchableList2 = new ArrayList<>();
             qtSearchableList2.add(qtSearchableVertical);
-            List<ExtInterval> values_v = helper.extract(content, qtSearchableList2, true);
+            List<ExtInterval> values_v = helper.extract(content, qtSearchableList2, null, true);
 
             String res_v = helper.convertValues2titleTable(values_v);
             // THEN
@@ -179,7 +179,7 @@ public class ENDocumentInfoTest {
             qtSearchableList.add(qtSearchable);
 
             CommonQTDocumentHelper helper = new ENDocumentHelper();
-            List<ExtInterval> values = helper.extract(content, qtSearchableList, true);
+            List<ExtInterval> values = helper.extract(content, qtSearchableList, null, true);
 
             assertFalse(values == null);
 
@@ -206,7 +206,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -227,7 +227,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -248,7 +248,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -270,7 +270,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -290,7 +290,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -311,7 +311,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -338,7 +338,7 @@ public class ENDocumentInfoTest {
 
         List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         String res = helper.convertValues2titleTable(values);
         // THEN
@@ -368,7 +368,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -391,7 +391,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -424,7 +424,7 @@ public class ENDocumentInfoTest {
         qtSearchableList.add(qtSearchable_1);
         qtSearchableList.add(qtSearchable_2);
 
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
         String res = helper.convertValues2titleTable(values);
         assertEquals(res,
                 "<table width=\"100%\"><tr><td>Net market value</td><td>10/31/18</td></tr><tr><td>Returns</td><td>-2.67</td></tr></table>");
@@ -444,7 +444,7 @@ public class ENDocumentInfoTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -469,7 +469,7 @@ public class ENDocumentInfoTest {
 
         List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable_1);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         // THEN
         assertFalse(values == null);
@@ -494,7 +494,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -532,7 +532,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -570,7 +570,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -607,7 +607,7 @@ public class ENDocumentInfoTest {
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, false);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, false);
 
         assertFalse(values == null);
 
@@ -640,8 +640,8 @@ public class ENDocumentInfoTest {
 
         List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values1 = helper.extract(content1, qtSearchableList, true);
-        List<ExtInterval> values2 = helper.extract(content2, qtSearchableList, true);
+        List<ExtInterval> values1 = helper.extract(content1, qtSearchableList, null, true);
+        List<ExtInterval> values2 = helper.extract(content2, qtSearchableList, null, true);
 
         // THEN
         assertNotNull(values1);
@@ -682,7 +682,7 @@ public class ENDocumentInfoTest {
 
         List<DictSearch> qtSearchableList = new ArrayList<>();
         qtSearchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, qtSearchableList, true);
+        List<ExtInterval> values = helper.extract(content, qtSearchableList, null, true);
 
         for (ExtInterval extInterval : values){
             System.out.println(extInterval.getCategory() + " "

@@ -177,7 +177,7 @@ public class QTSearchableTest {
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
-        List<ExtInterval> values = helper.extract(content, searchableList, false);
+        List<ExtInterval> values = helper.extract(content, searchableList, null, false);
         // THEN
         assertNotNull(values);
 
@@ -206,8 +206,8 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        List<ExtInterval> values1 = helper.extract(content1, searchableList, false);
-        List<ExtInterval> values2 = helper.extract(content2, searchableList, false);
+        List<ExtInterval> values1 = helper.extract(content1, searchableList, null, false);
+        List<ExtInterval> values2 = helper.extract(content2, searchableList, null, false);
 
 
         // THEN
@@ -240,7 +240,7 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        List<ExtInterval> values = helper.extract(content, searchableList, false);
+        List<ExtInterval> values = helper.extract(content, searchableList, null, false);
 
         // THEN
         assertNotNull(values);
@@ -262,7 +262,7 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        List<ExtInterval> values = helper.extract(content, searchableList, false);
+        List<ExtInterval> values = helper.extract(content, searchableList, null, false);
 
         // THEN
         assertNotNull(values);
@@ -287,8 +287,8 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        List<ExtInterval> values1 = helper.extract(content1, searchableList, false);
-        List<ExtInterval> values2 = helper.extract(content2, searchableList, false);
+        List<ExtInterval> values1 = helper.extract(content1, searchableList, null, false);
+        List<ExtInterval> values2 = helper.extract(content2, searchableList, null, false);
 
         // THEN
         assertNotNull(values1);
@@ -314,7 +314,7 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        List<ExtInterval> values = helper.extract(content, searchableList, false);
+        List<ExtInterval> values = helper.extract(content, searchableList, null, false);
 
 
         // THEN
@@ -341,7 +341,7 @@ public class QTSearchableTest {
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        List<ExtInterval> values = helper.extract(content, searchableList, false);
+        List<ExtInterval> values = helper.extract(content, searchableList, null, false);
 
         // THEN
         assertNotNull(values);

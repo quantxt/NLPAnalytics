@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 import com.quantxt.model.*;
 import com.quantxt.model.Dictionary;
 import com.quantxt.model.Dictionary.ExtractionType;
+import com.quantxt.model.document.TextBox;
 import com.quantxt.types.*;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -17,6 +18,8 @@ import org.slf4j.LoggerFactory;
 
 import com.quantxt.doc.QTDocumentHelper;
 
+import static com.quantxt.model.DictItm.DONT_CARE;
+
 /**
  * Created by dejani on 1/24/18.
  */
@@ -26,6 +29,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     final private static Logger logger = LoggerFactory.getLogger(CommonQTDocumentHelper.class);
 
     private static String AUTO = "__auto__";
+    private static String MULTI = "__multi__";
 
     private static int max_string_length_for_search = 30000;
     private static Character NewLine = '\n';
@@ -55,8 +59,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static Pattern r_white = Pattern.compile("[               　 ]+");
     protected static String s_white = " ";
 
-    final private static Pattern FormValue = Pattern.compile(" *[;:] *((?:[^\\s;:]+ )*[^:;\\s]+)(?=$|\n| {2,})");
-    final private static Pattern GenericToken = Pattern.compile("(?:^ *|  |\n *)((?:\\S+ )*\\S+)(?=$|\n| {2,})");
+    final private static Pattern GenericToken = Pattern.compile("(?:^ *|[^\\p{Sc}\\p{L}\\d]{2,})((?:[\\p{Sc}À-ÿ\\p{L}\\d]+(?: ?[-_,.\\/\\\\] ?| )){0,4}[\\p{Sc}À-ÿ\\p{L}\\d]+)(?=$|\\n| {2,})");
+    final private static String GenericSuffixRegexStr = "[^\\p{Sc}\\p{L}\\d]+$";
 
     protected Analyzer analyzer;
 
@@ -180,10 +184,131 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return labels;
     }
 
+    private boolean isWhiteSpace(String str, int s, int e){
+        if (s == e) return true;
+        if (s > e) return false;
+        if (str.substring(s, e).replaceAll(GenericSuffixRegexStr, "").length() == 0) return true;
+        return false;
+    }
+
+    private TextBox findAssociatedTextBox(TextBox line_text_boxes,
+                                          Interval interval)
+    {
+        if (line_text_boxes == null) return null;
+
+        String str = interval.getStr();
+        String line_str = line_text_boxes.getLine_str();
+
+        int str_start_1 = line_str.indexOf(str);
+        if (str_start_1 < 0)  {
+            logger.warn("{} was not found in line_str {}", str, line_str);
+            return null;
+        }
+        int str_start_2 = line_str.lastIndexOf(str);
+        if (str_start_1 == str_start_2){
+            List<TextBox> associated_tbs = new ArrayList<>();
+            int index = 0;
+            for (TextBox cltb : line_text_boxes.getChilds()) {
+                String ctb_str = cltb.getStr();
+                String stripped_ctb_str = ctb_str.replaceAll(GenericSuffixRegexStr, "");
+                int f = str.indexOf(stripped_ctb_str, index);
+                if (f >= 0 && isWhiteSpace(str, index, f)){
+                    associated_tbs.add(cltb);
+                    index = f + ctb_str.length();
+                    if (Math.abs(str.length() - index) < 2) {
+                        float best_top = associated_tbs.get(0).getTop();
+                        float best_bot = associated_tbs.get(0).getBase();
+                        float best_left = associated_tbs.get(0).getLeft();
+                        float best_right = associated_tbs.get(associated_tbs.size()-1).getRight();
+
+                        TextBox surronding_bos = new TextBox(best_top, best_bot, best_left, best_right, str);
+                        return surronding_bos;
+                    }
+                } else {
+                    // check if it is partial match
+                    associated_tbs = new ArrayList<>();
+                    index = 0;
+                    f = str.indexOf(stripped_ctb_str, index);
+                    if (f >= 0 && isWhiteSpace(str, index, f)){
+                        associated_tbs.add(cltb);
+                        index = f + ctb_str.length();
+                    }
+                }
+            }
+        }
+        // case 1: one word str and unique in line_str
+        StringBuilder sb = new StringBuilder();
+
+        //estimate spacing
+        float start_first_box = line_text_boxes.getChilds().get(0).getLeft();
+        float start_last_box = line_text_boxes.getChilds().get(line_text_boxes.getChilds().size()-1).getLeft();
+
+        int index_first_box = line_text_boxes.getLine_str().indexOf(line_text_boxes.getChilds().get(0).getStr());
+        int index_last_box = line_text_boxes.getLine_str().lastIndexOf(line_text_boxes.getChilds().get(line_text_boxes.getChilds().size()-1).getStr());
+
+        float space_estimate = .5f * (start_first_box/index_first_box + start_last_box/index_last_box);
+
+        float interval_box_start = interval.getStart() * space_estimate;
+        float interval_box_end = interval.getEnd() * space_estimate;
+
+        TextBox intervalSpan = new TextBox();
+        intervalSpan.setLeft(interval_box_start);
+        intervalSpan.setRight(interval_box_end);
+
+
+        TreeMap<Float, Integer> bestStartBox = new TreeMap<>();
+        List<TextBox> associated_tbs = new ArrayList<>();
+        for (int i=0; i<line_text_boxes.getChilds().size(); i++ ) {
+            TextBox cltb = line_text_boxes.getChilds().get(i);
+            String cltb_str = cltb.getStr();
+            String stripped_ctb_str = cltb_str.replaceAll(GenericSuffixRegexStr, "");
+            if (str.indexOf(stripped_ctb_str) < 0) continue;
+            float d = Math.abs(cltb.getLeft() - interval_box_start);
+            bestStartBox.put(d, i);
+        }
+        if (bestStartBox.size() == 0) return null;
+        int best_index = bestStartBox.entrySet().iterator().next().getValue();
+        for (int i=best_index; i<line_text_boxes.getChilds().size(); i++ ) {
+            TextBox cltb = line_text_boxes.getChilds().get(i);
+            String cltb_str = cltb.getStr();
+            String stripped_ctb_str = cltb_str.replaceAll(GenericSuffixRegexStr, "");
+            if (str.indexOf(stripped_ctb_str) >= 0) {
+                associated_tbs.add(cltb);
+                sb.append(cltb_str);
+                if (sb.toString().contains(str)) break;
+            }
+        }
+
+        if (associated_tbs.size() == 0) {
+            logger.warn("'{}' did not match to a textbox", interval.getStr());
+            return null;
+        }
+
+        float best_top = associated_tbs.get(0).getTop();
+        float best_bot = associated_tbs.get(0).getBase();
+        float best_left = associated_tbs.get(0).getLeft();
+        float best_right = associated_tbs.get(associated_tbs.size()-1).getRight();
+
+        TextBox surronding_bos = new TextBox(best_top, best_bot, best_left, best_right, str);
+        return surronding_bos;
+    }
+
+
+    private Map<Integer, TextBox> getLineTextBoxMap(List<TextBox> textBoxes){
+        Map<Integer, TextBox> lineTextBoxes = new HashMap<>();
+        if (textBoxes == null) return lineTextBoxes;
+        for (TextBox tb : textBoxes){
+            int l = tb.getLine();
+            lineTextBoxes.put(l, tb);
+        }
+        return lineTextBoxes;
+    }
+
     @Override
     public List<ExtInterval> extract(final String content,
                                      List<DictSearch> extractDictionaries,
-                                     boolean canSearchVertical) {
+                                     List<TextBox> textBoxes,
+                                     boolean searchVertical) {
         long start = System.currentTimeMillis();
         Map<String, Collection<ExtInterval>> labels = findLabels(extractDictionaries, content, 0);
         long took = System.currentTimeMillis() - start;
@@ -221,15 +346,14 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         //Searching for values that are associated with a label
-        //This should cover only DATE, DOUBLE and KEYWORD type labels
-        Map<Integer, List<ExtIntervalSimpleMatcher>> formValues = new HashMap<>();
         Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues = new HashMap<>();
+        Map<Integer, TextBox> lineTextBoxMap = getLineTextBoxMap(textBoxes);
 
         if (autoDetect) {
-            String content_copy = getKeyValues(content, formValues);
-            getGenericValues(content_copy, genericValues);
+            getGenericValues(content, GenericToken, genericValues, lineTextBoxMap);
         }
 
+        String [] content_lines = content.split("\n");
         for (Map.Entry<String, Collection<ExtInterval>> labelEntry : labels.entrySet()){
             String dictId = labelEntry.getKey();
 
@@ -244,19 +368,26 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             for (ExtInterval labelInterval : dictLabelList) {
 
                 if (dictSearch.getDictionary().getPattern().pattern().toLowerCase().equals(AUTO)) {
-                    boolean isLastLineToken = setLocalPosition(content, labelInterval);
-                    // check if we have already handled it via mapping
-                    String str = labelInterval.getStr();
-                    Matcher p = FormValue.matcher(str);
-                    if (!p.find()) {
-                        findBestValue(labelInterval, formValues, genericValues, isLastLineToken);
-                    } else {
-                        foundValues.add(labelInterval);
+                    String category = labelInterval.getCategory();
+                    if (category.equals(DONT_CARE)) continue;
+
+                    int lableStart = labelInterval.getStart();
+                    LineInfo lineInfo = getLineInfo(content, lableStart);
+                    labelInterval.setStart(lineInfo.localStart);
+                    labelInterval.setEnd(lineInfo.localStart + labelInterval.getEnd() - lableStart);
+                    labelInterval.setLine(lineInfo.lineNumber);
+
+                    TextBox tb = findAssociatedTextBox(lineTextBoxMap.get(labelInterval.getLine()), labelInterval);
+                    if (tb == null){
+                        logger.warn("Didn't find tb got {}", labelInterval.getStr());
+                        continue;
                     }
+
+                    findBestValue(content_lines, labelInterval, tb, genericValues);
                 } else {
                     ArrayList<ExtIntervalSimple> rowValues = findAllHorizentalMatches(content, dictSearch, labelInterval);
-                    if (canSearchVertical && rowValues.size() == 0) {
-                        rowValues = findAllVerticalMatches(content, dictSearch, labelInterval);
+                    if (searchVertical && rowValues.size() == 0) {
+                        rowValues = findAllVerticalMatches(content, lineTextBoxMap, dictSearch, labelInterval);
                     }
                     setFieldValues(content, labelInterval, rowValues);
                 }
@@ -274,7 +405,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         return foundValues;
-
     }
 
     private void setFieldValues(String content,
@@ -296,7 +426,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     private boolean setLocalPosition(String content,
-                                  ExtInterval labelInterval)
+                                     ExtInterval labelInterval)
     {
         boolean isLastTokenInLine = false;
         int lableStart = labelInterval.getStart();
@@ -320,58 +450,30 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return isLastTokenInLine;
     }
 
-    private String getKeyValues(String content,
-                                Map<Integer, List<ExtIntervalSimpleMatcher>> formValues){
-        Matcher formValueMatcher = FormValue.matcher(content);
-        StringBuilder content_copy = new StringBuilder(content);
-        while (formValueMatcher.find()){
-            int s = formValueMatcher.start(1);
-            int e = formValueMatcher.end(1);
-            String str = formValueMatcher.group(1);
-            ExtIntervalSimple extInterval = new ExtIntervalSimple();
-            LineInfo lineInfo = getLineInfo(content, s);
-            int offset = s - lineInfo.localStart;
-
-            extInterval.setStart(lineInfo.localStart);
-            extInterval.setEnd(e - offset);
-            extInterval.setLine(lineInfo.lineNumber);
-            extInterval.setStr(str);
-            List<ExtIntervalSimpleMatcher> list = formValues.get(lineInfo.lineNumber);
-            if (list == null){
-                list = new ArrayList<>();
-                formValues.put(lineInfo.lineNumber, list);
-            }
-
-            list.add(new ExtIntervalSimpleMatcher(extInterval, formValueMatcher.start() - offset,
-                    formValueMatcher.end() - offset));
-            for (int i=s; i<e; i++){
-                content_copy.setCharAt(i, ' ');
-            }
-        }
-        return content_copy.toString();
-    }
-
     private static class ExtIntervalSimpleMatcher {
         public ExtIntervalSimple extIntervalSimple;
+        public TextBox textBox;
         public int start;
         public int end;
-        public ExtIntervalSimpleMatcher(ExtIntervalSimple e, int s, int en){
-            this.extIntervalSimple =e;
+        public ExtIntervalSimpleMatcher(ExtIntervalSimple e, TextBox tb, int s, int en){
+            this.extIntervalSimple = e;
             this.start = s;
             this.end = en;
-        }
-        public int getStart(){
-            return start;
+            this.textBox = tb;
         }
     }
+
     private void getGenericValues(String content,
-                                  Map<Integer, List<ExtIntervalSimpleMatcher>> values) {
-        Matcher genericValueMatcher = GenericToken.matcher(content);
+                                  Pattern regex,
+                                  Map<Integer, List<ExtIntervalSimpleMatcher>> values,
+                                  Map<Integer, TextBox> lineTextBoxMap) {
+        Matcher genericValueMatcher = regex.matcher(content);
         while (genericValueMatcher.find()){
             int s = genericValueMatcher.start(1);
             int e = genericValueMatcher.end(1);
             if (s <0 || e <0) continue;
             String str = genericValueMatcher.group(1);
+
             ExtIntervalSimple extInterval = new ExtIntervalSimple();
             LineInfo lineInfo = getLineInfo(content, s);
             int offset = s - lineInfo.localStart;
@@ -379,91 +481,90 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             extInterval.setEnd(e - offset);
             extInterval.setLine(lineInfo.lineNumber);
             extInterval.setStr(str);
+            TextBox textBox = findAssociatedTextBox(lineTextBoxMap.get(extInterval.getLine()), extInterval);
+            if (textBox == null) {
+                logger.warn("{} wasn't matched to any textbox", str);
+                continue;
+            }
             List<ExtIntervalSimpleMatcher> list = values.get(lineInfo.lineNumber);
             if (list == null){
                 list = new ArrayList<>();
                 values.put(lineInfo.lineNumber, list);
             }
-            list.add(new ExtIntervalSimpleMatcher(extInterval, genericValueMatcher.start() - offset ,
+            list.add(new ExtIntervalSimpleMatcher(extInterval, textBox, genericValueMatcher.start() - offset ,
                     genericValueMatcher.end() - offset));
         }
     }
 
-    private void findBestValue(ExtInterval labelInterval,
-                               Map<Integer, List<ExtIntervalSimpleMatcher>> formValues,
-                               Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues,
-                               boolean isLastInLine
-                               ){
-        int keyLine = labelInterval.getLine();
-        int keyStart = labelInterval.getStart();
-        int keyEnd = labelInterval.getEnd();
+    private void findBestValue(String [] content_lines,
+                               ExtInterval labelInterval,
+                               TextBox tb,
+                               Map<Integer, List<ExtIntervalSimpleMatcher>> genericValues)
+    {
+        // check for simple form values
+        Map<Float, ExtIntervalSimpleMatcher> first_prioritie = new TreeMap<>();
+        Map<Float, ExtIntervalSimpleMatcher> second_prioritie = new TreeMap<>();
 
-        // check values on the line or one line below or above
-        List<ExtIntervalSimpleMatcher> valuesOnSameLine = formValues.get(keyLine);
-        List<ExtIntervalSimpleMatcher> valuesOnLineBefore = formValues.get(keyLine-1);
-        List<ExtIntervalSimpleMatcher> valuesOnLineAfter = formValues.get(keyLine+1);
-        if (valuesOnSameLine != null) {
-            for (ExtIntervalSimpleMatcher em : valuesOnSameLine) {
-                if (em.start - keyEnd < 2 && keyEnd <= em.start){
-                    ArrayList<ExtIntervalSimple> list = new ArrayList<>();
-                    list.add(em.extIntervalSimple);
-                    labelInterval.setExtIntervalSimples(list);
-                    return;
+        for (int keyLine = labelInterval.getLine() - 1; keyLine < labelInterval.getLine() + 2; keyLine++) {
+            List<ExtIntervalSimpleMatcher> lineValues = genericValues.get(keyLine);
+            if (lineValues == null) continue;
+            TreeMap<Float, ExtIntervalSimpleMatcher> allSameLineValues = new TreeMap<>();
+            for (ExtIntervalSimpleMatcher em : lineValues) {
+                TextBox vtb = em.textBox;
+                if (vtb == null) {
+                    logger.warn("NO textbox {}", em.extIntervalSimple.getStr());
+                    continue;
                 }
+                float hOverlap = getVerticalOverlap(tb, vtb);
+                if (hOverlap > .3) {
+                    float d = vtb.getLeft() - tb.getRight();
+                    if (d < 0) continue;
+                    float tb_w = tb.getRight() - tb.getLeft();
+                    if (d > tb_w) continue;
+                    float score = (vtb.getLeft() - tb.getRight());
+                    first_prioritie.put(score, em);
+                    // check gap
 
-            }
-        }
-
-        // so we look up to 4 lines below the header
-
-        List<ExtIntervalSimpleMatcher> header = genericValues.get(keyLine);
-        if (header == null) return;
-        Collections.sort(header, Comparator.comparingInt(ExtIntervalSimpleMatcher::getStart));
-        int first_index_after = keyEnd;
-        int last_index_before = keyStart;
-        for (ExtIntervalSimpleMatcher eem : header) {
-            ExtIntervalSimple ee = eem.extIntervalSimple;
-            if (ee.getEnd() < keyStart) {
-                last_index_before = ee.getEnd();
-            }
-            if (ee.getStart() > keyEnd) {
-                first_index_after = ee.getStart();
-                break;
-            }
-        }
-        // search up to 2 lines below, if not found search up to two lines above
-        for (int l=1; l < 3; l++) {
-            List<ExtIntervalSimpleMatcher> genericValuesOnLineAfter = genericValues.get(keyLine+l);
-            if (genericValuesOnLineAfter == null) continue;
-
-            for (ExtIntervalSimpleMatcher em : genericValuesOnLineAfter) {
-                ExtIntervalSimple e = em.extIntervalSimple;
-                boolean keyValueMatched = checkTableKeyValueAssoc(first_index_after, last_index_before, labelInterval, e, isLastInLine);
-                if (keyValueMatched) {
-                    ArrayList<ExtIntervalSimple> list = new ArrayList<>();
-                    list.add(e);
-                    labelInterval.setExtIntervalSimples(list);
-                    return;
+                    if (keyLine == labelInterval.getLine()){
+                        if (content_lines[keyLine].length() > em.start && em.start > labelInterval.getEnd()) {
+                            String gap = content_lines[keyLine].substring(labelInterval.getEnd(), em.start);
+                            List<String> tokens = tokenize(gap);
+                            if (tokens.size() != 0) continue;
+                        }
+                    }
+                    allSameLineValues.put(d, em);
                 }
             }
         }
 
-        // check up to two lines above the header -- for forms where values are return above a line
-
-        for (int l=1; l < 3; l++) {
-            List<ExtIntervalSimpleMatcher> genericValuesOnLineAfter = genericValues.get(keyLine-l);
-            if (genericValuesOnLineAfter == null) continue;
-
-            for (ExtIntervalSimpleMatcher em : genericValuesOnLineAfter) {
-                ExtIntervalSimple e = em.extIntervalSimple;
-                boolean keyValueMatched = checkTableKeyValueAssoc(first_index_after, last_index_before, labelInterval, e, isLastInLine);
-                if (keyValueMatched) {
-                    ArrayList<ExtIntervalSimple> list = new ArrayList<>();
-                    list.add(e);
-                    labelInterval.setExtIntervalSimples(list);
-                    return;
+        for (int keyLine = labelInterval.getLine()+1 ; keyLine < labelInterval.getLine() + 6; keyLine++) {
+            List<ExtIntervalSimpleMatcher> lineValues = genericValues.get(keyLine);
+            if (lineValues == null) continue;
+            TreeMap<Float, ExtIntervalSimpleMatcher> allSameLineValues = new TreeMap<>();
+            for (ExtIntervalSimpleMatcher em : lineValues) {
+                TextBox vtb = em.textBox;
+                if (vtb == null) {
+                    logger.warn("NO textbox {}", em.extIntervalSimple.getStr());
+                    continue;
+                }
+                float dhrz = vtb.getLeft() - tb.getLeft();
+                if (dhrz < -10) continue;
+                float vOverlap = getHorizentalOverlap(tb, vtb);
+                if (vOverlap > .6) {
+                    float dvtc = vtb.getTop() - tb.getBase();
+                    if (dvtc < 0) continue;
+                    allSameLineValues.put(dvtc, em);
+                    float score = (float)Math.sqrt(dhrz*dhrz +  dvtc*dvtc);
+                    first_prioritie.put(score, em);
                 }
             }
+        }
+
+        if (first_prioritie.size() > 0){
+            ArrayList<ExtIntervalSimple> list = new ArrayList<>();
+            ExtIntervalSimpleMatcher em = first_prioritie.entrySet().iterator().next().getValue();
+            list.add(em.extIntervalSimple);
+            labelInterval.setExtIntervalSimples(list);
         }
     }
 
@@ -551,29 +652,97 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return results;
     }
 
-    private boolean checkTableKeyValueAssoc(int first_index_after_label1,
-                                            int last_index_before_label1,
-                                            Interval labelInterval1, // header
-                                            Interval labelInterval2, // value
-                                            boolean isLastInLine){
+    private float getHorizentalOverlap(TextBox textBox1,
+                                       TextBox textBox2){
+        float l1 = textBox1.getLeft();
+        float r1 = textBox1.getRight();
 
-        int local_start_label2 = labelInterval2.getStart();
-        int local_end_label2 = labelInterval2.getEnd();
+        float l2 = textBox2.getLeft();
+        float r2 = textBox2.getRight();
 
-        if ((isLastInLine || local_end_label2 <= first_index_after_label1 ) && local_start_label2 >= last_index_before_label1){
-            if ( (labelInterval2.getStart() - labelInterval1.getEnd() ) > 20) { // table header and cell should not be too far from each other
-                return false;
-            }
-            if ( (labelInterval1.getStart() - labelInterval2.getEnd() ) > 20) { // table header and cell should not be too far from each other
-                return false;
-            }
-            return true;
+        float w1 = r1 - l1;
+        float w2 = r2 - l2;
+
+
+        if (w1 == 0 || w2 == 0) return 0;
+
+        // h1 100% covers h2
+        if (l2 >= l1 && r2 <= r1) {
+            return 1;
         }
 
-        return false;
+        // h2 100% covers h1
+        if (l2 <= l1 && r2 >= r1) {
+            return 1;
+        }
+
+        float overlap = 0;
+
+        if (l1 <= r2 && l1 >= l2) {
+            overlap = (r2 - l1 );
+        }
+
+        if (r1 <= r2 && r1 >= l2) {
+            overlap = (r1 - l2);
+        }
+        return overlap / Math.min(w1, w2);
+    }
+
+    private float getVerticalOverlap(TextBox textBox1, TextBox textBox2)
+    {
+        // case 1:
+        //     ---     |     ---
+        //         --- | ---
+        //         --- | ---
+        //     ---     |     ---
+
+
+        //                    2
+        //     ---     |     ---
+        //         --- |  1  ---
+        //         --- | ---
+        //     ---     | ---
+
+        float t1 = textBox1.getTop();
+        float b1 = textBox1.getBase();
+
+        float t2 = textBox2.getTop();
+        float b2 = textBox2.getBase();
+
+        float h1 = b1 - t1;
+        float h2 = b2 - t2;
+        if (h2 == 0 || h1 == 0) return 0;
+
+        // h1 100% covers h2
+        if (t2 >= t1 && b2 <= b1) {
+            return 1;
+        }
+
+        // h2 100% covers h1
+        if (t2 <= t1 && b2 >= b1) {
+            return 1;
+        }
+
+        // case 2:
+
+        float overlap = 0;
+        if (t2 <= t1 && b2 <= b1) {
+            overlap = b2 - t1;
+        }
+        if (t2 >= t1 && b2 >= b1) {
+            overlap = b1 - t2;
+        }
+
+        //       ---  |   ---
+        //   ---      |       ---
+        //       ---  |   ---
+        //   ---      |       ---
+
+        return overlap / Math.min(h1, h2);
     }
 
     private ArrayList<ExtIntervalSimple> findAllVerticalMatches(String content,
+                                                                Map<Integer, TextBox> lineTextBoxMap,
                                                                 DictSearch dictSearch,
                                                                 Interval labelInterval)
     {
