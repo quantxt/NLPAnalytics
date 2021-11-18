@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.model.DictSearch;
 import com.quantxt.nlp.analyzer.QStopFilter;
 import com.quantxt.nlp.tokenizer.QLetterOnlyTokenizer;
@@ -102,7 +102,7 @@ public class DctSearhFld implements Serializable {
         return new Analyzer.TokenStreamComponents(letterTokenizer, res);
     }
 
-    public DctSearhFld(QTDocument.Language lang,
+    public DctSearhFld(QTDocumentHelper.Language lang,
                        List<String> synonymPairs,
                        List<String> stopwords,
                        DictSearch.Mode mode,

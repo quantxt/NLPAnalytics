@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.model.Dictionary;
 import com.quantxt.model.DictItm;
 import com.quantxt.model.DictSearch;
@@ -47,14 +47,13 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
     protected transient IndexSearcher indexSearcher;
     protected String index_path;
+    protected QTDocumentHelper.Language lang = QTDocumentHelper.Language.ENGLISH;
 
     protected List<DctSearhFld> docSearchFldList = new ArrayList<>();
-    protected QTDocument.Language lang;
     protected List<String> synonymPairs;
     protected List<String> stopWords;
 
     public QTSearchableBase(Dictionary dictionary) {
-        this.lang = null;
         this.synonymPairs = null;
         this.mode = new DictSearch.Mode[]{ORDERED_SPAN};
         this.analyzType = new DictSearch.AnalyzType[]{STANDARD};
@@ -66,7 +65,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
     public QTSearchableBase(Dictionary dictionary,
                             String index_path,
-                            QTDocument.Language lang,
+                            QTDocumentHelper.Language lang,
                             List<String> synonymPairs,
                             List<String> stopWords,
                             DictSearch.Mode mode,
@@ -83,7 +82,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
     public QTSearchableBase(Dictionary dictionary,
                             String index_path,
-                            QTDocument.Language lang,
+                            QTDocumentHelper.Language lang,
                             List<String> synonymPairs,
                             List<String> stopWords,
                             DictSearch.Mode[] mode,
@@ -302,7 +301,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         this.topN = topN;
     }
 
-    public QTDocument.Language getLang() {
+    public QTDocumentHelper.Language getLang() {
         return lang;
     }
 
@@ -338,7 +337,7 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
         this.index_path = index_path;
     }
 
-    public void setLang(QTDocument.Language lang) {
+    public void setLang(QTDocumentHelper.Language lang) {
         this.lang = lang;
     }
 

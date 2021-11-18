@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.model.ExtInterval;
 import com.quantxt.model.DictItm;
 import com.quantxt.model.DictSearch;
@@ -49,10 +49,10 @@ public class SearchUtilsTest {
             synonym_pairs.add("ert\tearning");
             synonym_pairs.add("gain\tprofit");
             Dictionary dictionary = new Dictionary(null, "Dict_Test", dictItms);
-            qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
+            qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, synonym_pairs, null,
                     DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STEM);
 
-            qtSearchable_fuzzy = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+            qtSearchable_fuzzy = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                     DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
             setUpIsDone = true;
@@ -99,7 +99,7 @@ public class SearchUtilsTest {
         synonym_pairs.add("$0 - $50,000\t$0-$50,000");
         synonym_pairs.add("CID132\t☒");
         Dictionary dictionary = new Dictionary(null, "Dict_Test", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, synonym_pairs, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, synonym_pairs, null,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.WHITESPACE);
 
         Query q = getMatchAllQuery(qtSearchable.docSearchFldList.get(0).getMirror_synonym_search_analyzer(), "Dict_Test.whitespace", "☒ $0-$50,000");
@@ -223,7 +223,7 @@ public class SearchUtilsTest {
         dictItms.add(new DictItm("Amazon", "Amazon Inc." ));
 
         Dictionary dictionary = new Dictionary(null, "Amazon_typo", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
 
 
@@ -242,7 +242,7 @@ public class SearchUtilsTest {
         dictItms.add(new DictItm("Amazon", "Amazon Inc." ));
 
         Dictionary dictionary = new Dictionary(null, "Amazon_unordered", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.SIMPLE);
 
 
@@ -261,7 +261,7 @@ public class SearchUtilsTest {
         dictItms.add(new DictItm("Amazon1", "Amazon" ));
 
         Dictionary dictionary = new Dictionary(null, "Amazon1", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
 
@@ -279,7 +279,7 @@ public class SearchUtilsTest {
         dictItms.add(new DictItm("Amazon", "Amazoninc" ));
 
         Dictionary dictionary = new Dictionary(null, "Amazon_typo", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.FUZZY_SPAN, DictSearch.AnalyzType.LETTER);
 
 
@@ -304,7 +304,7 @@ public class SearchUtilsTest {
         dictItms.add(new DictItm("Business", "Item 1. Business" ));
 
         Dictionary dictionary = new Dictionary(null, "Business", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.STEM);
 
         List<ExtInterval> res = qtSearchable.search(result.toString("UTF-8"));
@@ -326,7 +326,7 @@ public class SearchUtilsTest {
         stopwords.add("very");
 
         Dictionary dictionary = new Dictionary(null, "Amazon_profit", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, stopwords,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, stopwords,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
 
 
