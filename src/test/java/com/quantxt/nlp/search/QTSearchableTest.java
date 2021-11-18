@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.model.ExtInterval;
@@ -201,7 +201,7 @@ public class QTSearchableTest {
 
         Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
         List<DictSearch> searchableList = new ArrayList<>();
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.WHITESPACE);
         searchableList.add(qtSearchable);
 
@@ -235,7 +235,7 @@ public class QTSearchableTest {
 
         Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
         List<DictSearch> searchableList = new ArrayList<>();
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.WHITESPACE);
         searchableList.add(qtSearchable);
 
@@ -257,7 +257,7 @@ public class QTSearchableTest {
 
         Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
         List<DictSearch> searchableList = new ArrayList<>();
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
         searchableList.add(qtSearchable);
 
@@ -282,7 +282,7 @@ public class QTSearchableTest {
 
         Dictionary dictionary = new Dictionary(null, "Occupancy", dictItms);
         List<DictSearch> searchableList = new ArrayList<>();
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.WHITESPACE);
         searchableList.add(qtSearchable);
 
@@ -308,7 +308,7 @@ public class QTSearchableTest {
        List<String> stopwords = new ArrayList<>();
         stopwords.add("n");
         stopwords.add("d");
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, stopwords,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, stopwords,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
 
         searchableList.add(qtSearchable);
@@ -335,7 +335,7 @@ public class QTSearchableTest {
         List<String> stopwords = new ArrayList<>();
         stopwords.add("nn");
         stopwords.add("d");
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, stopwords,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, stopwords,
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STANDARD);
 
         searchableList.add(qtSearchable);

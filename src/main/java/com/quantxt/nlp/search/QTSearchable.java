@@ -1,6 +1,6 @@
 package com.quantxt.nlp.search;
 
-import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.model.ExtInterval;
 import com.quantxt.model.DictSearch;
 import com.quantxt.model.Dictionary;
@@ -28,17 +28,17 @@ public class QTSearchable extends QTSearchableBase<ExtInterval> {
     }
 
     public QTSearchable(Dictionary dictionary,
-                        QTDocument.Language lang,
+                        QTDocumentHelper.Language language,
                         List<String> synonymPairs,
                         List<String> stopWords,
                         DictSearch.Mode mode,
                         DictSearch.AnalyzType analyzType) {
-        super(dictionary, null, lang, synonymPairs, stopWords, mode, analyzType);
+        super(dictionary, null, language, synonymPairs, stopWords, mode, analyzType);
         this.create();
     }
 
     public QTSearchable(Dictionary dictionary,
-                        QTDocument.Language lang,
+                        QTDocumentHelper.Language lang,
                         List<String> synonymPairs,
                         List<String> stopWords,
                         DictSearch.Mode[] mode,

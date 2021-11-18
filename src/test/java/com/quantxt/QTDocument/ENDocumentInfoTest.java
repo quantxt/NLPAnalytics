@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.model.DictItm;
 import com.quantxt.model.Dictionary;
@@ -14,7 +15,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.quantxt.doc.QTDocument;
 import com.quantxt.doc.helper.ENDocumentHelper;
 
 import static com.quantxt.model.DictSearch.AnalyzType.STEM;
@@ -676,7 +676,7 @@ public class ENDocumentInfoTest {
                 null, null, null, null);
 
         QTSearchable qtSearchable = new QTSearchable(dictionary,
-                QTDocument.Language.ENGLISH,
+                QTDocumentHelper.Language.ENGLISH,
                 null, null,
                 DictSearch.Mode.SPAN, STEM);
 

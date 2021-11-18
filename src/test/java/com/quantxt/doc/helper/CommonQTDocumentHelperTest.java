@@ -1,7 +1,6 @@
 package com.quantxt.doc.helper;
 
-import com.quantxt.doc.ENDocumentInfo;
-import com.quantxt.doc.QTDocument;
+import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.model.DictItm;
 import com.quantxt.model.ExtInterval;
 import com.quantxt.nlp.search.QTSearchable;
@@ -456,10 +455,9 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Business", "Item 1. Business" ));
 
         Dictionary dictionary = new Dictionary(null, "Business", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 DictSearch.Mode.SPAN, DictSearch.AnalyzType.STEM);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
-        ENDocumentInfo doc = new ENDocumentInfo("", content, helper);
         List<DictSearch> searchableList = new ArrayList<>();
         searchableList.add(qtSearchable);
         List<ExtInterval> values = helper.extract(content, searchableList, null, true);
@@ -478,7 +476,7 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Item2", "Search 2 has rock and ga" ));
 
         Dictionary dictionary = new Dictionary(null, "Test", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 new DictSearch.Mode[] {DictSearch.Mode.PARTIAL_SPAN}, new DictSearch.AnalyzType[] {DictSearch.AnalyzType.STANDARD, DictSearch.AnalyzType.STEM});
 
         List<ExtInterval> matches = qtSearchable.search(query);
@@ -500,7 +498,7 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Address", "PROPERTY LOCATION" ));
 
         Dictionary dictionary = new Dictionary(null, "Address", dictItms);
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH, null, null,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
                 new DictSearch.Mode[] {DictSearch.Mode.SPAN}, new DictSearch.AnalyzType[] {DictSearch.AnalyzType.STEM});
 
         dictionary.setValType(REGEX);
@@ -532,7 +530,7 @@ public class CommonQTDocumentHelperTest {
         Dictionary dictionary = new Dictionary(dictItms, null, "Zone", null,
                 null, null, null, null);
 
-        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocument.Language.ENGLISH,
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH,
                 null,
                 null,
                 new DictSearch.Mode[] {DictSearch.Mode.ORDERED_SPAN},
