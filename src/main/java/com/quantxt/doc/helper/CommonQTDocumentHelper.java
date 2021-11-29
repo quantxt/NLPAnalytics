@@ -364,6 +364,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (ptr_str.startsWith(AUTO)){
                     patterns_needed.add(ptr_str);
                     Collection<ExtIntervalTextBox> extIntervalTextBoxes = labels.get(dicId);
+                    if (extIntervalTextBoxes == null) continue;
                     for (ExtIntervalTextBox eitb : extIntervalTextBoxes){
                         if (eitb.interval.getLine() == null) {
                             LineInfo lineInfo = getLineInfo(content, eitb.interval.getStart());
@@ -374,7 +375,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
                         TextBox tb = findAssociatedTextBox(lineTextBoxMap, eitb.interval, true, true);
                         if (tb == null){
-                            logger.warn("Didn't find tb got {}", eitb.interval.getStr());
+                            logger.debug("Didn't find tb got {}", eitb.interval.getStr());
                             continue;
                         }
                         eitb.textBox = tb;
