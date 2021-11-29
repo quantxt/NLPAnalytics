@@ -59,21 +59,17 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static Pattern r_white = Pattern.compile("[               　 ]+");
     protected static String s_white = " ";
 
-//    final private static String begin_pad = "(?:^| {2,})";
     final private static String end_pad   = "(?=$|\\s)";
     final private static String alpha_num = "(\\d+[A-Z]+[A-Z\\d\\-_]*|[A-Z]+\\d+[A-Z\\d\\-_]*|\\d+)";
     final private static String begin_pad = "(?:^|[:\\s])";
 //    final private static String end_pad   = "(?=\\s)";
 
- //   final private static Pattern SingleField = Pattern.compile("  ([\\p{L}\\-#\\/\\)\\(]+ ){[\\:\\.] ");
     final private static Pattern GenericDate1  = Pattern.compile(begin_pad + "((?:[1-9]|[01]\\d)[ -\\/](?:[1-9]|[0123]\\d)[ -\\/](?:19\\d{2}|20\\d{2}|\\d{2}))" + end_pad);  // mm dd yyyy
     final private static Pattern GenericDate2  = Pattern.compile(begin_pad + "/([12]\\d{3}[ -\\/](?:0[1-9]|1[0-2])[ -\\/](?:0[1-9]|[12]\\d|3[01]))/" + end_pad);  // YYYY-mm-dd
     final private static Pattern Numbers       = Pattern.compile(begin_pad + "((?:\\p{Sc} {0,6})?[+\\-]{0,1}[0-9]{1,3}(?:[\\.,]?[0-9]{3})*(?:\\.[0-9]{2})?%?)" + end_pad);  // mm dd yyyy
-//    final private static Pattern AlphaNumerics = Pattern.compile(begin_pad + "(\\d{6,}|\\d{5,}[ \\-]\\d{5,}|[A-Z\\-]+\\d{3,}|\\d{3,}[A-Z\\-][A-Z\\d]+)" + end_pad);  // mm dd yyyy
     final private static Pattern AlphaNumerics = Pattern.compile(begin_pad + "((?:"+ alpha_num+" )*" + alpha_num + ")"  + end_pad);
     final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, Numbers, AlphaNumerics};
 //    final private static Pattern GenericToken = Pattern.compile("(?:^ *|[^\\p{Sc}\\p{L}\\d]{2,})((?:[\\p{Sc}À-ÿ\\p{L}\\d]+(?: ?[-_,.\\/\\\\@;+%] ?| )){0,4}[\\p{Sc}À-ÿ\\p{L}\\d]+)(?=$|\\n| {2,})");
-//    final private static String GenericSuffixRegexStr = "[^\\p{Sc}\\p{L}\\d]+$";
 
     protected Analyzer analyzer;
 
@@ -525,7 +521,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     private static class ExtIntervalTextBox {
         public ExtInterval interval;
         public TextBox textBox;
-        public ExtIntervalTextBox(){}
         public ExtIntervalTextBox(ExtInterval e, TextBox tb){
             this.interval = e;
             this.textBox = tb;
@@ -631,9 +626,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (hOverlap > .3) {
                     float d = vtb.getLeft() - extIntervalTextBox.textBox.getChilds().get(extIntervalTextBox.textBox.getChilds().size() -1).getRight();
                     if (d < 0) continue;
-        //            float tb_w = header.getRight() - header.getLeft();
-        //            if (d > tb_w) continue;
-                    // check gap
 
                     if (content_lines[keyLine].length() > em.interval.getStart() && em.interval.getStart() > extIntervalTextBox.interval.getEnd()) {
                         String gap = content_lines[keyLine].substring(extIntervalTextBox.interval.getEnd(), em.interval.getStart());
@@ -705,7 +697,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     }
                 }
             }
-
 
             if (line_items.size() == 0){
                 continue;
@@ -1005,8 +996,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             }
 
             if (foundValue == null) {
-                //trip the search string so we get rid of padding spaces
-            //    verticalGap.add(string2Search4Value.trim() +"\n");
                 verticalGap.add(string2Search4Value);
                 continue;
             }
