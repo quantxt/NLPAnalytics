@@ -548,7 +548,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             extInterval.setEnd(e - offset);
             extInterval.setLine(lineInfo.lineNumber);
             extInterval.setStr(str);
-            TextBox textBox = findAssociatedTextBox(lineTextBoxMap, extInterval, false, true);
+            TextBox textBox = findAssociatedTextBox(lineTextBoxMap, extInterval, false, false);
             if (textBox == null) {
                 logger.warn("{} wasn't matched to any textbox", str);
                 continue;
@@ -645,7 +645,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         float header_h = extIntervalTextBox.textBox.getBase() - extIntervalTextBox.textBox.getTop();
         int last_matched_vertical_cell = extIntervalTextBox.interval.getLine()+1;
 
-        int max_key_value_distance_in_lines =  15;
+        int max_key_value_distance_in_lines =  20;
 
         BaseTextBox header_first = lastMatchedTextBox.getChilds().get(0);
         BaseTextBox header_last = lastMatchedTextBox.getChilds().get(extIntervalTextBox.textBox.getChilds().size()-1);
@@ -686,6 +686,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         float s = (float) Math.sqrt(min_horizental_d * min_horizental_d + dvtc * dvtc);
                         if (s < vertical_1.v_score ){
                             vertical_1.v_score = s;
+                            max_key_value_distance_in_lines =  15;
                             line_items.add(em);
                         }
                     } else {
