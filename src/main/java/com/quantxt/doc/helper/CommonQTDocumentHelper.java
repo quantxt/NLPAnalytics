@@ -284,38 +284,40 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             int line_before = interval.getLine() - 1;
             int line_after = interval.getLine() + 1;
 
-            float min_gap_right = 10000;
-            float min_gap_left = 10000;
-
-            for (int i = line_before; i <= line_after; i++){
+            // find all boxes that have overlap
+            List<BaseTextBox> overlappingBoxes = new ArrayList<>();
+            overlappingBoxes.addAll(components);
+            for (int i = line_before; i <= line_after; i++) {
                 TextBox line_boxes = lineTextBoxMap.get(i);
                 if (line_boxes == null || line_boxes.getChilds().size() == 0) continue;
-
                 for (BaseTextBox bt : line_boxes.getChilds()) {
+                    TextBox temp_tb = new TextBox();
+                    temp_tb.setLeft(bt.getLeft());
+                    temp_tb.setRight(bt.getRight());
+                    float horizentalOverlap = getHorizentalOverlap(temp_tb, surronding_box, false);
+                    if (horizentalOverlap > 0 ) continue;
                     float verticalOverlap = getVerticalOverlap(bt, surronding_box);
-
-                    if (verticalOverlap > -.1 ) {
+                    if (verticalOverlap > -.1) {
                         String bt_str = bt.getStr();
                         if (tokenize(bt_str).size() == 0) continue;
-                        float bt_right = bt.getRight();
-                        float bt_left = bt.getLeft();
-                        float gap_right = bt_left - surronding_box.getRight();
-                        if (gap_right > .5 && gap_right < min_gap_right){
-                            min_gap_right = gap_right;
-                        }
-                        float gap_left = surronding_box.getLeft() - bt_right;
-                        if (gap_left > .5 && gap_left < min_gap_left){
-                            min_gap_left = gap_left;
-                        }
+                        overlappingBoxes.add(bt);
                     }
                 }
             }
 
-            float surronding_left = min_gap_left < 10000f ? surronding_box.getLeft() - min_gap_left : 0;
-            float surronding_right = min_gap_right < 10000f ? surronding_box.getRight() + min_gap_right : 10000;
+            overlappingBoxes.sort((o1, o2) -> Float.compare(o1.getLeft(), o2.getLeft()));
+            //now we extend left and right of surronding_box
 
-            surronding_box.setLeft(surronding_left);
-            surronding_box.setRight(surronding_right);
+            int num_overlapping_boxes = overlappingBoxes.size();
+            for (int i = 0; i < num_overlapping_boxes; i++) {
+                BaseTextBox bt = overlappingBoxes.get(i);
+                if (bt.getLeft() == surronding_box.getLeft()) { // this is our left most  box
+                    surronding_box.setLeft(i==0 ? 0 : overlappingBoxes.get(i - 1).getRight());
+                }
+                if (bt.getRight() == surronding_box.getRight()) { // this is our right most  box
+                    surronding_box.setRight(i==num_overlapping_boxes-1 ? 10000 : overlappingBoxes.get(i+1).getLeft());
+                }
+            }
         }
         return surronding_box;
     }
