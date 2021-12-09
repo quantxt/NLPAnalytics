@@ -60,16 +60,14 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static String s_white = " ";
 
     final private static String end_pad   = "(?=$|\\s)";
-    final private static String alpha_num = "(\\d+[A-Z]+[A-Z\\d\\-_]*|[A-Z]+\\d+[A-Z\\d\\-_]*|\\d+)";
+    final private static String alpha_num = "(\\d+[A-Z]+[A-Z\\d]*|[A-Z]+\\d+[A-Z\\d]*|\\d+)";
     final private static String begin_pad = "(?:^|[:\\s])";
-//    final private static String end_pad   = "(?=\\s)";
 
     final private static Pattern GenericDate1  = Pattern.compile(begin_pad + "((?:[1-9]|[01]\\d)[ -\\/](?:[1-9]|[0123]\\d)[ -\\/](?:19\\d{2}|20\\d{2}|\\d{2}))" + end_pad);  // mm dd yyyy
     final private static Pattern GenericDate2  = Pattern.compile(begin_pad + "/([12]\\d{3}[ -\\/](?:0[1-9]|1[0-2])[ -\\/](?:0[1-9]|[12]\\d|3[01]))/" + end_pad);  // YYYY-mm-dd
     final private static Pattern Numbers       = Pattern.compile(begin_pad + "((?:\\p{Sc} {0,6})?[+\\-]{0,1}[0-9]{1,3}(?:[\\.,]?[0-9]{3})*(?:\\.[0-9]{2})?%?)" + end_pad);  // mm dd yyyy
-    final private static Pattern AlphaNumerics = Pattern.compile(begin_pad + "((?:"+ alpha_num+" )*" + alpha_num + ")"  + end_pad);
+    final private static Pattern AlphaNumerics = Pattern.compile(begin_pad + "((?:"+ alpha_num+"[ \\-_\\/\\)\\(\\.])*" + alpha_num + ")"  + end_pad);
     final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, Numbers, AlphaNumerics};
-//    final private static Pattern GenericToken = Pattern.compile("(?:^ *|[^\\p{Sc}\\p{L}\\d]{2,})((?:[\\p{Sc}À-ÿ\\p{L}\\d]+(?: ?[-_,.\\/\\\\@;+%] ?| )){0,4}[\\p{Sc}À-ÿ\\p{L}\\d]+)(?=$|\\n| {2,})");
 
     protected Analyzer analyzer;
 
@@ -334,6 +332,40 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return lineTextBoxes;
     }
 
+    private void combineStackedTextBoxes(Collection<ExtIntervalTextBox> extIntervalTextBoxes){
+        HashSet<String> partialStrings = new HashSet<>();
+        for (ExtIntervalTextBox e1 : extIntervalTextBoxes){
+            if (e1.textBox == null) continue;
+            float e1_b = e1.textBox.getBase();
+            float e1_t = e1.textBox.getTop();
+            float h1 = e1_b - e1_t;
+            for (ExtIntervalTextBox e2 : extIntervalTextBoxes){
+                if (e2.textBox == null) continue;
+                float e2_t = e2.textBox.getTop();
+                if ( (e1_b + h1*1.2 ) > e2_t && (e2_t > e1_t) ){
+                    float overlap = getHorizentalOverlap(e1.textBox, e2.textBox, true);
+                    if (overlap >.9){
+                        logger.info("Combining {} and {}", e1.interval.getStr(), e2.interval.getStr());
+                        // find the union - only the extend that is common
+                        e1.textBox.setRight(Math.min(e1.textBox.getRight(), e2.textBox.getRight()));
+                        e1.textBox.setLeft(Math.max(e1.textBox.getLeft(), e2.textBox.getLeft()));
+                        e1.textBox.setBase(e2.textBox.getBase());
+                        e1.interval.setStr(e1.interval.getStr() + " " + e2.interval.getStr());
+                        e2.textBox = null;
+                        partialStrings.add(e2.interval.getStr());
+                    }
+                }
+            }
+        }
+
+        Iterator<ExtIntervalTextBox> iter = extIntervalTextBoxes.iterator();
+        while (iter.hasNext()){
+            ExtIntervalTextBox e = iter.next();
+            if (e.textBox == null || partialStrings.contains(e.interval.getStr())){
+                iter.remove();
+            }
+        }
+    }
     @Override
     public List<ExtInterval> extract(final String content,
                                      List<DictSearch> extractDictionaries,
@@ -356,21 +388,19 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         Map<String, DictSearch> valueNeededDictionaryMap = new HashMap<>();
         for (DictSearch qtSearchable : extractDictionaries) {
             String dicId = qtSearchable.getDictionary().getId();
+            Collection<ExtIntervalTextBox> extIntervalTextBoxes = labels.get(dicId);
+            if (extIntervalTextBoxes == null) continue;
+
             Pattern ptr = qtSearchable.getDictionary().getPattern();
             String ptr_str = ptr == null ? "" : ptr.pattern();
             if (! ptr_str.isEmpty()) {
                 if (ptr_str.startsWith(AUTO)){
                     patterns_needed.add(ptr_str);
-                    Collection<ExtIntervalTextBox> extIntervalTextBoxes = labels.get(dicId);
-                    if (extIntervalTextBoxes == null) continue;
                     for (ExtIntervalTextBox eitb : extIntervalTextBoxes){
-                        if (eitb.interval.getLine() == null) {
-                            LineInfo lineInfo = getLineInfo(content, eitb.interval.getStart());
-                            eitb.interval.setEnd(lineInfo.localStart + eitb.interval.getEnd() - eitb.interval.getStart());
-                            eitb.interval.setStart(lineInfo.localStart);
-                            eitb.interval.setLine(lineInfo.lineNumber);
-                        }
-
+                        LineInfo lineInfo = getLineInfo(content, eitb.interval.getStart());
+                        eitb.interval.setEnd(lineInfo.localStart + eitb.interval.getEnd() - eitb.interval.getStart());
+                        eitb.interval.setStart(lineInfo.localStart);
+                        eitb.interval.setLine(lineInfo.lineNumber);
                         TextBox tb = findAssociatedTextBox(lineTextBoxMap, eitb.interval, true, true);
                         if (tb == null){
                             logger.debug("Didn't find tb got {}", eitb.interval.getStr());
@@ -379,19 +409,17 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         eitb.textBox = tb;
                         tb.setLine(eitb.interval.getLine());
                     }
+                    combineStackedTextBoxes(extIntervalTextBoxes);
                 }
                 valueNeededDictionaryMap.put(dicId, qtSearchable);
             } else {
-                Collection<ExtIntervalTextBox> labelExtIntervalList = labels.get(dicId);
-                if (labelExtIntervalList == null || labelExtIntervalList.isEmpty()) continue;
                 // These labels don't need a value,
-                for (ExtIntervalTextBox labelExtInterval : labelExtIntervalList){
-                    int lableStart = labelExtInterval.interval.getStart();
-                    LineInfo lineInfo = getLineInfo(content, lableStart);
-                    labelExtInterval.interval.setStart(lineInfo.localStart);
-                    labelExtInterval.interval.setEnd(lineInfo.localStart + labelExtInterval.interval.getEnd() - lableStart);
-                    labelExtInterval.interval.setLine(lineInfo.lineNumber);
-                    foundValues.add(labelExtInterval.interval);
+                for (ExtIntervalTextBox eitb : extIntervalTextBoxes){
+                    LineInfo lineInfo = getLineInfo(content, eitb.interval.getStart());
+                    eitb.interval.setEnd(lineInfo.localStart + eitb.interval.getEnd() - eitb.interval.getStart());
+                    eitb.interval.setStart(lineInfo.localStart);
+                    eitb.interval.setLine(lineInfo.lineNumber);
+                    foundValues.add(eitb.interval);
                 }
             }
         }
