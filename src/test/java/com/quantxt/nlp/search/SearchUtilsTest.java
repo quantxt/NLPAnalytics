@@ -334,4 +334,22 @@ public class SearchUtilsTest {
         assertTrue(res.size() == 1);
         assertTrue(res.get(0).getCategory().equals("Profit"));
     }
+
+    @Test
+    public void exactMatch_especialChar_v1() {
+        // GIVEN
+        String str = ": WMG 5152   Total Excl.   GST Amt @              Total Incl.";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("GST", "GST amt @" ));
+
+        Dictionary dictionary = new Dictionary(null, "GST", dictItms);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.EXACT_CI);
+
+
+        List<ExtInterval> res = qtSearchable.search(str, 0);
+        assertTrue(res.size() == 1);
+        assertTrue(res.get(0).getCategory().equals("GST"));
+    }
 }
