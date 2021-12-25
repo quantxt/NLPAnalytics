@@ -706,30 +706,32 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 float c1 = (r1 + l1 ) / 2;
                 float char_width = (r1 - l1) * 0.5f / etb1.interval.getStr().length();
                 boolean column_scan_ended = false;
+
                 for (int line2 = line1+1; line2 <= last_line; line2++){
                     if (column_scan_ended) break;
                     List<ExtIntervalTextBox> etbList2 = values.get(line2);
                     if (etbList2 == null) {
-                        int numv = etb1.associates.size();
                         // if we find an overlapping value that is not the same pattern as previous one, we exit
-            //            if (numv > 0){
-                            TextBox lineTextBox = lineTextBoxMap.get(line2);
-                            if (lineTextBox != null){
-                                boolean tabelColumnEnds = false;
-                                for (BaseTextBox btb : lineTextBox.getChilds()){
-                                    TextBox fakeTb = new TextBox();
-                                    fakeTb.setLeft(btb.getLeft());
-                                    fakeTb.setRight(btb.getRight());
-                                    float overlap = getHorizentalOverlap(fakeTb, tb1, false);
-                                    if (overlap > 0) {
-                                        tabelColumnEnds = true;
-                                        break;
-                                    }
+                        /*
+                        TextBox lineTextBox = lineTextBoxMap.get(line2);
+                        if (lineTextBox != null){
+                            boolean tabelColumnEnds = false;
+                            for (BaseTextBox btb : lineTextBox.getChilds()){
+                                TextBox fakeTb = new TextBox();
+                                fakeTb.setLeft(btb.getLeft());
+                                fakeTb.setRight(btb.getRight());
+                                float overlap = getHorizentalOverlap(fakeTb, tb1, false);
+                                if (overlap > 0) {
+                                    tabelColumnEnds = true;
+                                    break;
                                 }
-                                if (tabelColumnEnds) break;
                             }
-            //            }
+                            if (tabelColumnEnds) break;
+                        }
+
+                         */
                         continue;
+
                     }
                     ListIterator<ExtIntervalTextBox> iter2 = etbList2.listIterator();
                     while (iter2.hasNext()) {
@@ -749,6 +751,34 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                             // check if the vertical values are not well spaces
                             int numv = etb1.associates.size();
                             if (numv > 1){
+                                String line_before = etb1.associates.get(numv-1).textBox.getLine_str();
+                                String line_curr = etb2.textBox.getLine_str();
+                                // find correlation
+                                float bw1 = 0;
+                                float bw2 = 0;
+                                float bw12 = 0;
+
+                                /*
+                                for (int i=0; i< Math.min(line_before.length(), line_curr.length()); i++){
+                                    char char1 = line_before.charAt(i);
+                                    char char2 = line_curr.charAt(i);
+                                    boolean char1IsBlack = false;
+                                    if (char1 != ' '){
+                                        bw1 +=1;
+                                        char1IsBlack = true;
+                                    }
+                                    if (char2 != ' '){
+                                        bw2 +=1;
+                                        if (char1IsBlack){
+                                            bw12+=1;
+                                        }
+                                    }
+                                }
+                                double corr = 2 * bw12 / Math.sqrt(bw1*bw1 + bw2*bw2);
+
+                                 */
+
+
                                 float d1 = etb1.associates.get(numv-1).textBox.getTop() - etb1.associates.get(numv-2).textBox.getBase();
                                 if (d1 < 0){
                                     logger.error("Distance is negative!!!");
@@ -759,13 +789,12 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                         break;
                                     }
                                 }
+
                             }
                             etb1.associates.add(etb2);
-                //            iter2.remove();
                             break;
                         }
                     }
-
                 }
             }
         }
