@@ -8,6 +8,7 @@ import com.quantxt.nlp.tokenizer.QLetterTokenizer;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
@@ -128,16 +129,17 @@ public class DctSearhFld implements Serializable {
                 break;
             case WHITESPACE:
                 this.search_fld = pfx + ".whitespace";
-                this.index_analyzer = new WhitespaceAnalyzer();
-        //        this.index_analyzer = new Analyzer() {
-        //            @Override
-        //            protected TokenStreamComponents createComponents(String fieldName) {
-        //                WhitespaceTokenizer tokenizer = new WhitespaceTokenizer();
-        //                TokenStream tokenStream = new CachingTokenFilter(tokenizer);
+           //     this.index_analyzer = new WhitespaceAnalyzer();
+                this.index_analyzer = new Analyzer() {
+                    @Override
+                    protected TokenStreamComponents createComponents(String fieldName) {
+                        WhitespaceTokenizer tokenizer = new WhitespaceTokenizer();
+                        TokenStream tokenStream = new LowerCaseFilter(tokenizer);
+             //           TokenStream tokenStream = new CachingTokenFilter(tokenizer);
             //            tokenStream = new QStopFilter(tokenStream, stopWordSet);
-        //                return new TokenStreamComponents(tokenizer, tokenStream);
-        //            }
-        //        };
+                        return new TokenStreamComponents(tokenizer, tokenStream);
+                    }
+                };
                 this.priority = 8000;
                 addModePriority();
                 break;
