@@ -36,8 +36,8 @@ import static com.quantxt.nlp.search.DctSearhFld.*;
 
 public class SearchUtils {
 
-
     final private static Logger logger = LoggerFactory.getLogger(SearchUtils.class);
+    final private static String [] especialChars = new String []{ "+", "-", "&&", "||", "!" ,"(", ")", "{", "}", "[", "]", "^", "\"", "~", "*", "?", ":", "\\"};
 
     public static Analyzer getNgramAnalyzer(CharArraySet stopWords_charArray) {
         Analyzer analyzer = new Analyzer() {
@@ -57,8 +57,9 @@ public class SearchUtils {
         Analyzer analyzer = new Analyzer() {
             @Override
             protected TokenStreamComponents createComponents(String fieldName) {
-                final Tokenizer source = new KeywordTokenizer();
-                final TokenStream tokenStream = new LowerCaseFilter(source);
+                final Tokenizer source = new WhitespaceTokenizer();
+                final TokenStream tokenStream1 = new CachingTokenFilter(source);
+                final TokenStream tokenStream = new LowerCaseFilter(tokenStream1);
                 return new Analyzer.TokenStreamComponents(source, tokenStream);
             }
         };
@@ -157,6 +158,8 @@ public class SearchUtils {
 
         for (Document matchedDoc : matchedDocs) {
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
+        //    String query_string_escaped = QueryParserUtil.escape(query_string_raw);
+
             SpanQuery query = getSpanQuery(keyphrase_analyzer , searchField, query_string_raw,
                     slop, isFuzzy, ordered, isMatchAll);
             if (query == null) continue;
@@ -273,14 +276,16 @@ public class SearchUtils {
                             tokenStreamComponents = new TokenStreamComponents(keywordTokenizer, sysfilter);
                             break;
                         case EXACT_CI:
-                            KeywordTokenizer keywordLcTokenizer = new KeywordTokenizer();
-                            tokenStream = new LowerCaseFilter(keywordLcTokenizer);
+                            WhitespaceTokenizer wst = new WhitespaceTokenizer();
+                            tokenStream = new CachingTokenFilter(wst);
+                            tokenStream = new LowerCaseFilter(tokenStream);
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
-                            tokenStreamComponents = new TokenStreamComponents(keywordLcTokenizer, sysfilter);
+                            tokenStreamComponents = new TokenStreamComponents(wst, sysfilter);
                             break;
                         case WHITESPACE:
                             WhitespaceTokenizer whitespaceTokenizer = new WhitespaceTokenizer();
-                            tokenStream = new CachingTokenFilter(whitespaceTokenizer);
+                       //     tokenStream = new CachingTokenFilter(whitespaceTokenizer);
+                            tokenStream = new LowerCaseFilter(whitespaceTokenizer);
                          //   tokenStream = new QStopFilter(tokenStream, stopWords_charArray);
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
                             tokenStreamComponents = new TokenStreamComponents(whitespaceTokenizer, sysfilter);
@@ -403,11 +408,25 @@ public class SearchUtils {
         String fld = "";
         StringBuilder str = new StringBuilder();
 
+
         while (idx.get() < query.length()){
             int current_idx = idx.get();
             char c = query.charAt(current_idx);
             idx.incrementAndGet();
+
             switch (c) {
+                // check if this is a escaped character
+                /*
+                case '\\' :
+                    str.append(c);
+                    current_idx = idx.get();
+                    if (current_idx >= query.length()) break;
+
+                    c = query.charAt(current_idx);
+                    str.append(c);
+                    idx.incrementAndGet();
+                    break;
+                 */
                 case '+':
                     int index_of_next_srch_fld = query.indexOf(search_fld, current_idx+1);
                     if (index_of_next_srch_fld != (current_idx+1)) {// this is the end of the string

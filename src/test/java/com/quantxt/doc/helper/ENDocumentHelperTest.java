@@ -53,39 +53,4 @@ public class ENDocumentHelperTest {
         // Fails
         // assertFalse(tokens.contains("off"));
     }
-
-
-    @Test
-    public void testNormalize1() {
-        // GIVEN
-        String str = "Some light sources, such as neon lights, "
-                + "give off only certain frequencies of light.";
-
-        // WHEN
-        String normalized = helper.normalize(str);
-
-        // THEN
-        assertNotNull(normalized);
-        assertFalse(normalized.isEmpty());
-        assertFalse(normalized.contains(","));
-        assertFalse(normalized.contains("."));
-        assertFalse(normalized.contains("Some"));
-    //    assertFalse(normalized.contains("off"));
-    }
-
-    @Test
-    public void testNormalize2() {
-        // GIVEN
-        String str = "AT&T and Johsnson & Johnson are biggest U.S. companaies";
-
-        // WHEN
-        String normalized = helper.normalize(str);
-
-        // THEN
-        assertNotNull(normalized);
-        assertFalse(normalized.isEmpty());
-        assertTrue(normalized.contains("at&t"));
-        assertTrue(normalized.contains("u.s."));
-        //    assertFalse(normalized.contains("off"));
-    }
 }
