@@ -89,6 +89,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
 
     private static String [] getLinesfromLineBoxes(List<TextBox> textBoxes, float avg_w)
     {
+        float limit = .1f;
         List<String> lines = new ArrayList<>();
         if (textBoxes.size() == 0) return new String []{};
         textBoxes.sort(new SortByBaseLine());
@@ -102,28 +103,32 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             float start_pad = 0;
 
             StringBuilder sb = new StringBuilder();
-            float space_estimate = getSpaceEstimate(lineBox);
+        //    float space_estimate = getSpaceEstimate(lineBox);
             for (int i = 0; i < total_textboxes_per_line; i++) {
                 BaseTextBox textBox = lineTextBoxList.get(i);
                 textBox.setPage(lineBox.getPage());
                 float end_pad = textBox.getLeft();
                 boolean isCloseToNext = i > 0 ? isNeighbour(lineTextBoxList.get(i-1), textBox) : false;
+
+                String str = textBox.getStr();
+                float space_estimate = (getSingleSpaceEstimate(textBox) / str.length() ) / 50;
+
                 float dist_to_prev = Math.abs(end_pad - start_pad) / space_estimate;
                 String white_pad = "";
-                if (dist_to_prev < .1) {
+                if (dist_to_prev < limit) {
                     white_pad = "";
-                } else if (isCloseToNext || (dist_to_prev >= .1 && dist_to_prev < adj_distance_mult)){
+                } else if (isCloseToNext || (dist_to_prev >= limit && dist_to_prev < adj_distance_mult)){
                     white_pad = " ";
                 } else {
                     int pad_length_int = (int) (end_pad / avg_w) - sb.length();
-                    if (pad_length_int < 1){
+                    if (pad_length_int < 2){
                         //               log.debug("Squished text {}", textBox.getStr());
-                        pad_length_int = 1;
+                        pad_length_int = 2;
                     }
                     white_pad = String.format("%1$" + pad_length_int + "s", "");
                 }
 
-                sb.append(white_pad).append(textBox.getStr());
+                sb.append(white_pad).append(str);
                 start_pad = textBox.getRight();
             }
 
@@ -498,19 +503,25 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         return 0;
     }
 
+    private static float getSingleSpaceEstimate(BaseTextBox tb){
+        String str = tb.getStr();
+        if (str.length() == 0) return 0;
+        float length = 0;
+        for (int i=0; i< str.length(); i++){
+            Character c = str.charAt(i);
+            Float f = ratios.get(c);
+            float s = f == null ? 50 : f;
+            length += s;
+        }
+        return length;
+    }
+
     private static float getSpaceEstimate(TextBox textBox){
         float total_pixel_length = 0;
         float total_char_length = 0;
         List<BaseTextBox> textBoxList = textBox.getChilds();
         for (BaseTextBox tb : textBoxList) {
-            String str = tb.getStr();
-            if (str.length() == 0) continue;
-            for (int i=0; i< str.length(); i++){
-                Character c = str.charAt(i);
-                Float f = ratios.get(c);
-                float s = f == null ? 50 : f;
-                total_char_length += s;
-            }
+            total_char_length += getSingleSpaceEstimate(tb);
             total_pixel_length += (tb.getRight() - tb.getLeft());
         }
 
