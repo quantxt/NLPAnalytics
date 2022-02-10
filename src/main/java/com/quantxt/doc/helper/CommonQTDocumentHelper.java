@@ -48,7 +48,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     final private static Pattern simple_form_val   = Pattern.compile("[^\\:]*: *((?:\\S([^\\:\\s]+ )*[^\\:\\s]+))(?=$|\\s{2,})");
 
     final private static String begin_pad = "(?<=^|[:\\s])";
-    final private static String end_pad   = "(?=$|\\n| {1,})";
+    final private static String end_pad   = "(?=$|\\n| {2,})";
     final private static String genricPharse =  "\\S+";
     final private static String numAlphabet =  "\\p{N}[\\p{L}\\p{N}]+|[\\p{L}]|[\\p{L}]+\\p{N}[\\p{L}\\p{N}]*";
 
@@ -63,7 +63,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     final private static Pattern Alphabets =  Pattern.compile("((?:[#\\p{L}]+[ \\-_\\/\\.%])*[#\\p{L}]+[\\/\\.%]*(?=$| ))");
     final private static Pattern inParentheses =  Pattern.compile("\\([^\\)]+\\)");
 
-    final private static Pattern Generic = Pattern.compile(begin_pad + "((?:"+ genricPharse+" )*" + genricPharse + ")"  + "(?=$|\\s{2,})");
+    final private static Pattern Generic = Pattern.compile("(?<=^|  )" + "((?:"+ genricPharse+" )*" + genricPharse + ")"  + "(?=$|\\s{2,})");
     final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, Numbers, Id1, Generic};
 
     protected Analyzer analyzer;
@@ -365,6 +365,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         e1.textBox.setLeft(Math.max(e1.textBox.getLeft(), e2.textBox.getLeft()));
                         e1.textBox.setBase(e2.textBox.getBase());
                         e1.interval.setStr(e1.interval.getStr() + " " + e2.interval.getStr());
+                        e1.interval.setLine(e2.interval.getLine());
                         e1.interval.setCategory(e1.interval.getDict_name());
                         e2.textBox = null;
                     }
@@ -559,15 +560,29 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                 AutoValue autoValue = findBestValue(lineTextBoxMap, lineLabelMap, extIntervalTextBox, c_vals, isPotentialTableHeader, true);
                                 bestAutoValue.merge(autoValue);
                             }
-                            if (bestAutoValue.hValue == null && bestAutoValue.vValue.size() == 0){
-                                bestAutoValue = findBestValue(lineTextBoxMap, lineLabelMap, extIntervalTextBox, generic_vals, isPotentialTableHeader, true);
-                                if (bestAutoValue.hValue != null){
-                                    for (TreeMap<Integer, List<ExtIntervalTextBox>> c_vals : new TreeMap [] {g1_vals, g2_vals, n1_vals, id_vals}) {
-                                        AutoValue v_vals = findBestVerticalValues(lineTextBoxMap, lineLabelMap, bestAutoValue.hValue, c_vals, false);
-                                        if (v_vals.vValue.size() > 0) {
+                            if (bestAutoValue.hValue == null){
+                                AutoValue genericMatches = findBestValue(lineTextBoxMap, lineLabelMap, extIntervalTextBox, generic_vals, isPotentialTableHeader, true);
+                                if( bestAutoValue.vValue.size() != 0){
+                                    if (genericMatches.vValue.size() != 0){
+                                        ExtIntervalTextBox firstAutoValue = bestAutoValue.vValue.get(0);
+                                        ExtIntervalTextBox firstGenericMatch = genericMatches.vValue.get(0);
+                                        // generic match is higher, then bestAutoValue is not related to the key -- ignore it
+                                        if (firstGenericMatch.textBox.getTop() < firstAutoValue.textBox.getTop()){
                                             bestAutoValue.hValue = null;
                                             bestAutoValue.h_score = 10000f;
                                             break;
+                                        }
+                                    }
+                                } else {
+                                    bestAutoValue = genericMatches;
+                                    if (bestAutoValue.hValue != null) {
+                                        for (TreeMap<Integer, List<ExtIntervalTextBox>> c_vals : new TreeMap[]{g1_vals, g2_vals, n1_vals, id_vals}) {
+                                            AutoValue v_vals = findBestVerticalValues(lineTextBoxMap, lineLabelMap, bestAutoValue.hValue, c_vals, false);
+                                            if (v_vals.vValue.size() > 0) {
+                                                bestAutoValue.hValue = null;
+                                                bestAutoValue.h_score = 10000f;
+                                                break;
+                                            }
                                         }
                                     }
                                 }
