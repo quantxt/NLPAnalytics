@@ -1,12 +1,18 @@
 package com.quantxt.doc.helper.textbox;
 
 import com.quantxt.model.document.BaseTextBox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public class TextBox extends BaseTextBox implements Comparable<TextBox> {
+    final private static Logger logger = LoggerFactory.getLogger(BaseTextBox.class);
 
-    final private static float adj_distance_mult = 1.5f;
+
+    final private static float spc_lower = 2.0f;
+    final private static float spc_upper = 4.0f;
+    final private static float avg_char_width_unit = 50f; // this is the width for an `e`
 
     List<BaseTextBox> childs;
     private int line;
@@ -87,7 +93,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         }
     }
 
-    private static String [] getLinesfromLineBoxes(List<TextBox> textBoxes, float avg_w)
+    private static String [] getLinesfromLineBoxes(List<TextBox> textBoxes, float avg_w, float avg_h)
     {
         float limit = .1f;
         List<String> lines = new ArrayList<>();
@@ -100,35 +106,75 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             List<BaseTextBox> lineTextBoxList = lineBox.getChilds();
             lineTextBoxList.sort(new SortByStartWord());
             int total_textboxes_per_line = lineTextBoxList.size();
-            float start_pad = 0;
 
             StringBuilder sb = new StringBuilder();
-        //    float space_estimate = getSpaceEstimate(lineBox);
+            float num_units_in_line = 0;
+            float covered_area_in_pxl = 0;
+    //        float first_box_height = lineTextBoxList.get(0).getBase() - lineTextBoxList.get(0).getTop();;
+            for (int i = 0; i < total_textboxes_per_line; i++) {
+                BaseTextBox textBox = lineTextBoxList.get(i);
+                float tb_h = textBox.getBase() - textBox.getTop();
+                float r = tb_h/avg_h;
+                num_units_in_line += getSingleSpaceEstimate(textBox) / avg_char_width_unit;
+                covered_area_in_pxl += (textBox.getRight() - textBox.getLeft() ) / r;
+            }
+
+            float avg_char_unit_length_in_pxl = (covered_area_in_pxl / num_units_in_line);
+
+            float start_pad = 0;
             for (int i = 0; i < total_textboxes_per_line; i++) {
                 BaseTextBox textBox = lineTextBoxList.get(i);
                 textBox.setPage(lineBox.getPage());
-                float end_pad = textBox.getLeft();
-                boolean isCloseToNext = i > 0 ? isNeighbour(lineTextBoxList.get(i-1), textBox) : false;
-
                 String str = textBox.getStr();
-                float space_estimate = (getSingleSpaceEstimate(textBox) / str.length() ) / 50;
+                float end_pad = textBox.getLeft();
+                boolean isCloseToNext = false;
+                float dist_to_prev = Math.abs(end_pad - start_pad);
+                float tb_h = textBox.getBase() - textBox.getTop();
+                float r = tb_h/avg_h;
+                float norm_dist_to_prev = Math.abs(end_pad - start_pad) / r;
 
-                float dist_to_prev = Math.abs(end_pad - start_pad) / space_estimate;
-                String white_pad = "";
-                if (dist_to_prev < limit) {
-                    white_pad = "";
-                } else if (isCloseToNext || (dist_to_prev >= limit && dist_to_prev < adj_distance_mult)){
-                    white_pad = " ";
-                } else {
-                    int pad_length_int = (int) (end_pad / avg_w) - sb.length();
-                    if (pad_length_int < 2){
-                        //               log.debug("Squished text {}", textBox.getStr());
-                        pad_length_int = 2;
-                    }
-                    white_pad = String.format("%1$" + pad_length_int + "s", "");
+                float local_avg_char_unit_lngth_in_pxl = avg_char_unit_length_in_pxl;
+                if (str.length() > 1){
+                    float local_num_units = getSingleSpaceEstimate(textBox) / avg_char_width_unit;
+                    float local_w = (textBox.getRight() - textBox.getLeft() );
+                    local_avg_char_unit_lngth_in_pxl = local_w/local_num_units;
+                    norm_dist_to_prev = Math.abs(end_pad - start_pad);
+                }
+                float estimated_num_space = norm_dist_to_prev / local_avg_char_unit_lngth_in_pxl;
+                if (estimated_num_space < spc_lower){
+                    isCloseToNext = true;
                 }
 
-                sb.append(white_pad).append(str);
+                if (dist_to_prev < limit) {
+                    sb.append(str);
+                } else if (isCloseToNext){
+                    sb.append(" ").append(str);
+                } else {
+                    if (estimated_num_space < spc_upper){
+
+                        int left_pad_length =  (int) estimated_num_space;
+
+                        if (left_pad_length > 0){
+                            String left_pad = String.format("%1$" + left_pad_length + "s", "");
+                            sb.append(left_pad);
+                        }
+
+                        sb.append(str);
+                        int right_pad_length = (int) (end_pad / avg_w) - sb.length() - left_pad_length;
+
+                        if (right_pad_length > 0) {
+                            String right_pad = String.format("%1$" + right_pad_length + "s", "");
+                            sb.append(right_pad);
+                        }
+                    } else {
+                        int pad_length_int = (int) (end_pad / avg_w) - sb.length();
+                        if (pad_length_int < 2) {
+                            pad_length_int = 2;
+                        }
+                        String white_pad = String.format("%1$" + pad_length_int + "s", "");
+                        sb.append(white_pad).append(str);
+                    }
+                }
                 start_pad = textBox.getRight();
             }
 
@@ -170,7 +216,9 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
 
         MeanVar meanVar = new MeanVar(textBoxes);
         meanVar.calc(true);
-        float sigma = meanVar.sigma();
+    //    float sigma = meanVar.sigma();
+        float avg_w = meanVar.avg_w;
+        float avg_h = meanVar.avg_h;
 
         List<TextBox> processedTextBoxes = mergeNeighbors(textBoxes);
         List<TextBox> leftOvers = new ArrayList<>();
@@ -180,7 +228,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         }
 
         addToClosest(processedTextBoxes, leftOvers);
-        getLinesfromLineBoxes(processedTextBoxes, sigma);
+        getLinesfromLineBoxes(processedTextBoxes, avg_w, avg_h);
         return processedTextBoxes;
     }
 
@@ -510,7 +558,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         for (int i=0; i< str.length(); i++){
             Character c = str.charAt(i);
             Float f = ratios.get(c);
-            float s = f == null ? 50 : f;
+            float s = f == null ? avg_char_width_unit : f;
             length += s;
         }
         return length;
@@ -534,20 +582,26 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
     }
 
     private static class MeanVar{
-        float avg;
-        float std;
-        List<BaseTextBox> textBoxes;
+        public float avg_w;
+        public float avg_h;
+        public float std_w;
+        public float std_h;
+        public List<BaseTextBox> textBoxes;
 
         public MeanVar(List<BaseTextBox> textBoxes){
             this.textBoxes = textBoxes;
         }
 
         public void calc(boolean removeEmptyStr){
-            double powerSum1 = 0;
-            double powerSum2 = 0;
+            double powerSumW1 = 0;
+            double powerSumW2 = 0;
 
+            double powerSumH1 = 0;
+            double powerSumH2 = 0;
+
+            List<Float> heights = new ArrayList<>();
             Iterator<BaseTextBox> it = textBoxes.listIterator();
-            while (it.hasNext()){
+            while (it.hasNext()) {
                 BaseTextBox textBox = it.next();
                 if (removeEmptyStr) {
                     String str = textBox.getStr();
@@ -556,19 +610,42 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                         continue;
                     }
                 }
+                float tb_h = textBox.getBase() - textBox.getTop();
+                powerSumH1 += tb_h;
+                powerSumW2 += Math.pow(tb_h, 2);
+                heights.add(tb_h);
+            }
+            // tkae 90th perc to account for 90th tallest box
+            Collections.sort(heights);
 
+            int nintith_perc = (int)( .2f * (float)heights.size());
+            float ref_height = heights.get(nintith_perc);
+
+            it = textBoxes.listIterator();
+            while (it.hasNext()){
+                BaseTextBox textBox = it.next();
+                float tb_h = textBox.getBase() - textBox.getTop();
+                float r = tb_h/ref_height;
+                float num_units_in_line = getSingleSpaceEstimate(textBox) / avg_char_width_unit;
+                double w = ((textBox.getRight() - textBox.getLeft() ) / r ) / num_units_in_line;
+
+                /*
                 double w = (textBox.getRight() - textBox.getLeft() ) / textBox.getStr().length();
-                powerSum1 += w;
-                powerSum2 += Math.pow(w, 2);
+
+                 */
+                powerSumW1 += w;
+                powerSumW2 += Math.pow(w, 2);
             }
 
             float n = textBoxes.size();
-            avg = (float) powerSum1 / n;
-            std = (float) Math.sqrt(n * powerSum2 - Math.pow(powerSum1, 2)) / n;
+            avg_w = (float) powerSumW1 / n;
+            avg_h = (float) powerSumH1 / n;
+            std_w = (float) Math.sqrt(n * powerSumW2 - Math.pow(powerSumW1, 2)) / n;
+            std_h = (float) Math.sqrt(n * powerSumH2 - Math.pow(powerSumH1, 2)) / n;
         }
 
         public float sigma(){
-            float ww = avg - std;
+            float ww = avg_w - std_w;
             if (ww < 1f) ww = 1f;
             return ww;
         }
