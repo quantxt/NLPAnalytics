@@ -320,7 +320,6 @@ public class SearchUtilsTest {
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
         dictItms.add(new DictItm("Profit", "reported hight profit" ));
-    //    dictItms.add(new DictItm("Profit", "reported a very hight profit" ));
         List<String> stopwords = new ArrayList<>();
         stopwords.add("a");
         stopwords.add("very");
@@ -351,5 +350,24 @@ public class SearchUtilsTest {
         List<ExtInterval> res = qtSearchable.search(str, 0);
         assertTrue(res.size() == 1);
         assertTrue(res.get(0).getCategory().equals("GST"));
+    }
+
+    @Test
+    public void stem_search_1() {
+        // GIVEN
+        String str = "Amzaon inc report high profit on his earnings.";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Profit", "reported high profit" ));
+
+
+        Dictionary dictionary = new Dictionary(null, "Amazon_profit", dictItms);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.STEM);
+
+
+        List<ExtInterval> res = qtSearchable.search(str, 0);
+        assertTrue(res.size() == 1);
+        assertTrue(res.get(0).getCategory().equals("Profit"));
     }
 }

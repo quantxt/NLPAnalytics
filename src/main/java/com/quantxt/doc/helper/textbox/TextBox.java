@@ -1,9 +1,19 @@
 package com.quantxt.doc.helper.textbox;
 
 import com.quantxt.model.document.BaseTextBox;
+import org.apache.commons.math3.fitting.WeightedObservedPoints;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Text;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class TextBox extends BaseTextBox implements Comparable<TextBox> {
@@ -216,7 +226,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
 
         MeanVar meanVar = new MeanVar(textBoxes);
         meanVar.calc(true);
-    //    float sigma = meanVar.sigma();
         float avg_w = meanVar.avg_w;
         float avg_h = meanVar.avg_h;
 
@@ -229,7 +238,75 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
 
         addToClosest(processedTextBoxes, leftOvers);
         getLinesfromLineBoxes(processedTextBoxes, avg_w, avg_h);
+
         return processedTextBoxes;
+    }
+
+    public static List<BaseTextBox> correctSkew(List<TextBox> lineBoxes, List<BaseTextBox> textBoxes, double thresh){
+        SimpleRegression simpleRegression = new SimpleRegression(true);
+        double sum = 0;
+        double c = 0;
+        for (TextBox lineTb : lineBoxes){
+            if (lineTb.getChilds().size() < 2) continue;
+            simpleRegression.clear();
+            for (BaseTextBox tb : lineTb.getChilds()) {
+                simpleRegression.addData(tb.getLeft(), -1 * tb.getBase());
+
+            }
+            double slope = simpleRegression.getSlope();
+            sum += slope;
+            c +=1;
+        }
+
+        double avgSlope = sum/c;
+        //correction
+
+        if (Math.abs(avgSlope) < thresh) return textBoxes;
+        //correct skew
+        List<BaseTextBox> corrected_textBoxes = new ArrayList<>();
+        for (BaseTextBox btb : textBoxes) {
+
+            BaseTextBox baseTextBox = new BaseTextBox();
+
+            float base = btb.getBase();
+            float left = btb.getLeft();
+            baseTextBox.setLeft(left);
+
+            float top = btb.getTop();
+            float right = btb.getRight();
+            baseTextBox.setRight(right);
+
+            double shift_base = left * avgSlope;
+            double shift_top = right * avgSlope;
+
+            double corrected_top = top + shift_top;
+            baseTextBox.setTop((float) corrected_top);
+            double corrected_base = base + shift_base;
+            baseTextBox.setBase((float) corrected_base);
+
+            baseTextBox.setBase((float) corrected_base);
+            baseTextBox.setStr(btb.getStr());
+            corrected_textBoxes.add(baseTextBox);
+        }
+
+        return corrected_textBoxes;
+
+    }
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+
+        Path path = Paths.get("/Users/matin/Downloads/abdd88d9-3583-4345-b083-1b03435aba7d.textbox");
+        byte[] bytes = Files.readAllBytes(path);
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+        ObjectInput in = new ObjectInputStream(bis);
+        List<List<BaseTextBox>> textBoxes = (List<List<BaseTextBox>>) in.readObject();
+        in.close();
+
+        for (List<BaseTextBox> tbList : textBoxes) {
+            List<TextBox> processed = process(tbList);
+
+        }
     }
 
     private static void addToClosest(List<TextBox> textBoxes,

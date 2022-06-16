@@ -185,6 +185,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         List<BaseTextBox> childs = line_text_boxes.getChilds();
+        if (childs.size() == 0) return null;
 
         //align textbox lefts with string indices
         int index = 0;
@@ -203,7 +204,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         int end_str = interval.getEnd();
         List<BaseTextBox> components = new ArrayList<>();
         int first_box_idx = -1;
-        int last_box_idx = 10000;
+        int last_box_idx = childs.size() - 1;
         for (int i = 0; i < childIdx2StrIdx.length; i++) {
             int current_start = childIdx2StrIdx[i][0];
             int current_end = childIdx2StrIdx[i][1];
@@ -402,13 +403,15 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             String ptr_str = ptr == null ? "" : ptr.pattern();
             if (! ptr_str.isEmpty()) {
                 if (ptr_str.startsWith(AUTO)){
+                //    boolean ignore_prefix_boxes = ptr_str.equals(AUTO);
+                    boolean ignore_prefix_boxes = true;
                     patterns_needed.add(ptr_str);
                     for (ExtIntervalTextBox eitb : extIntervalTextBoxes){
                         LineInfo lineInfo = getLineInfo(content, eitb.interval.getStart());
                         eitb.interval.setEnd(lineInfo.localStart + eitb.interval.getEnd() - eitb.interval.getStart());
                         eitb.interval.setStart(lineInfo.localStart);
                         eitb.interval.setLine(lineInfo.lineNumber);
-                        TextBox tb = findAssociatedTextBox(lineTextBoxMap, eitb.interval, true, true);
+                        TextBox tb = findAssociatedTextBox(lineTextBoxMap, eitb.interval, true, ignore_prefix_boxes);
                         if (tb == null){
                             logger.debug("Didn't find tb got {}", eitb.interval.getStr());
                             continue;
@@ -1684,7 +1687,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         // return 0-based line number : add 1 to account for the newline character and move
         //the cursor to the next character
-        return new LineInfo(lineNumber, start - mostRecentNewLineIndex -1);
+        int shift = lineNumber == 0? 0 : 1;
+        return new LineInfo(lineNumber, start - mostRecentNewLineIndex - shift);
     }
 
     protected int startNextToken(String str, int start){
