@@ -27,6 +27,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.quantxt.doc.QTDocumentHelper.Language.ENGLISH;
 import static com.quantxt.nlp.search.SearchUtils.*;
 
 public class DctSearhFld implements Serializable {
@@ -189,28 +190,26 @@ public class DctSearhFld implements Serializable {
                 this.search_fld = pfx + ".stem";
                 this.priority = 4000;
                 addModePriority();
-                if (lang == null){
-                    this.index_analyzer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
-                } else {
-                    switch (lang) {
-                        case ENGLISH:
-                            this.index_analyzer = new EnglishAnalyzer(stopWordSet);
-                            break;
-                        case SPANISH:
-                            this.index_analyzer = new SpanishAnalyzer(stopWordSet);
-                            break;
-                        case RUSSIAN:
-                            this.index_analyzer = new RussianAnalyzer(stopWordSet);
-                            break;
-                        //         case JAPANESE:
-                        //             this.index_analyzer = new JapaneseAnalyzer();
-                        //             break;
-                        case FRENCH:
-                            this.index_analyzer = new FrenchAnalyzer(stopWordSet);
-                            break;
-                        default:
-                            this.index_analyzer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
-                    }
+                QTDocumentHelper.Language stem_lang = lang == null? ENGLISH :
+                        lang;
+                switch (stem_lang) {
+                    case ENGLISH:
+                        this.index_analyzer = new EnglishAnalyzer(stopWordSet);
+                        break;
+                    case SPANISH:
+                        this.index_analyzer = new SpanishAnalyzer(stopWordSet);
+                        break;
+                    case RUSSIAN:
+                        this.index_analyzer = new RussianAnalyzer(stopWordSet);
+                        break;
+                    //         case JAPANESE:
+                    //             this.index_analyzer = new JapaneseAnalyzer();
+                    //             break;
+                    case FRENCH:
+                        this.index_analyzer = new FrenchAnalyzer(stopWordSet);
+                        break;
+                    default:
+                        this.index_analyzer = new ClassicAnalyzer(CharArraySet.EMPTY_SET);
                 }
             }
             break;
