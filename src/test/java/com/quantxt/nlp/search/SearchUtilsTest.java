@@ -1,10 +1,13 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocumentHelper;
+import com.quantxt.doc.helper.CommonQTDocumentHelper;
+import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.model.ExtInterval;
 import com.quantxt.model.DictItm;
 import com.quantxt.model.DictSearch;
 import com.quantxt.model.Dictionary;
+import com.quantxt.types.QSpan;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.spans.SpanQuery;
 import org.junit.BeforeClass;
@@ -16,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.quantxt.nlp.search.SearchUtils.getMatchAllQuery;
@@ -171,20 +173,6 @@ public class SearchUtilsTest {
         assertTrue(res.get(0).getCategory().equals("Profit"));
         assertTrue(res.get(0).getStr().equals("profti"));
     }
-
-
-    @Test
-    public void OOVCoverage() {
-        // GIVEN
-        String str = "I need tea";
-
-        // WHEN
-        Map<String, Map<String, Long>> stas = qtSearchable.getTermCoverage(str);
-
-        assertTrue(stas.get("dict_test.stem").size()==3);
-        assertTrue(stas.get("dict_test.stem").get("tea")==1L);
-    }
-
 
     @Test
     public void parseMultiTermsQuery() {
@@ -347,9 +335,9 @@ public class SearchUtilsTest {
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.EXACT_CI);
 
 
-        List<ExtInterval> res = qtSearchable.search(str, 0);
+        List<QSpan> res = qtSearchable.search(str, null,0);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getCategory().equals("GST"));
+        assertTrue(res.get(0).getExtInterval().getCategory().equals("GST"));
     }
 
     @Test

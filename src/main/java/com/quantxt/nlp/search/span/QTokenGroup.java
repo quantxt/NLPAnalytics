@@ -1,7 +1,8 @@
-package com.quantxt.nlp.search;
+package com.quantxt.nlp.search.span;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 
 public class QTokenGroup {
     private static final int MAX_NUM_TOKENS_PER_GROUP = 50;
@@ -14,8 +15,10 @@ public class QTokenGroup {
     private int matchEndOffset;
 
     final private OffsetAttribute offsetAtt;
+    final PositionIncrementAttribute postIncAtt;
 
     public QTokenGroup(TokenStream tokenStream) {
+        postIncAtt = tokenStream.addAttribute(PositionIncrementAttribute.class);
         offsetAtt = tokenStream.addAttribute(OffsetAttribute.class);
     }
 

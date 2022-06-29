@@ -552,4 +552,26 @@ public class CommonQTDocumentHelperTest {
         }
         return result.toString("UTF-8");
     }
+
+    @Test
+    public void partial_search_2() {
+        // GIVEN
+        String content = "Unit      Amount      Amount     Tax       %Tax\n" +
+                         "Price      Billed      Paid               Discount";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Match", "Amount Paid" ));
+
+
+        Dictionary dictionary = new Dictionary(null, "Match", dictItms);
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
+
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        List<ExtInterval> values = helper.extract(content, searchableList, null, true);
+    }
 }

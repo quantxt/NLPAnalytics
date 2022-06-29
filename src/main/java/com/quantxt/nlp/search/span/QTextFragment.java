@@ -1,4 +1,4 @@
-package com.quantxt.nlp.search;
+package com.quantxt.nlp.search.span;
 
 import com.quantxt.model.ExtInterval;
 import org.apache.lucene.analysis.TokenStream;
@@ -13,6 +13,73 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class QTextFragment {
+    int startOffset;
+    int endOffset;
+    CharSequence markedUpText;
+    int fragNum;
+    int textStartPos;
+    int textEndPos;
+    float score;
+
+    public int getTextEndPos() {
+        return textEndPos;
+    }
+
+    public void setTextEndPos(int textEndPos) {
+        this.textEndPos = textEndPos;
+    }
+
+    public int getStartOffset() {
+        return startOffset;
+    }
+
+    public int getEndOffset() {
+        return endOffset;
+    }
+
+    public QTextFragment(CharSequence markedUpText, int textStartPos, int fragNum, int startOffset, int endOffset) {
+        this.markedUpText = markedUpText;
+        this.textStartPos = textStartPos;
+        this.fragNum = fragNum;
+        this.startOffset = startOffset;
+        this.endOffset = endOffset;
+    }
+
+    public void merge(QTextFragment frag2) {
+        textEndPos = frag2.textEndPos;
+        score = Math.max(score, frag2.score);
+    //    endOffset = frag2.endOffset; // assuming test is left to right
+    }
+
+    public boolean follows(QTextFragment fragment) {
+        return textStartPos == fragment.textEndPos;
+    }
+
+    public void setScore(float s){
+        score = s;
+    }
+
+    public float getScore() {
+        return score;
+    }
+
+    public int getFragNum() {
+        return fragNum;
+    }
+
+    public int getTextStartPos() {
+        return textStartPos;
+    }
+
+    public void setTextStartPos(int textStartPos) {
+        this.textStartPos = textStartPos;
+    }
+
+    @Override
+    public String toString() {
+        return markedUpText.subSequence(textStartPos, textEndPos).toString();
+    }
+
 
     //Assumption: Left to Right Text!
     private static boolean qtFollows(QToken token1,
@@ -20,27 +87,6 @@ public class QTextFragment {
         if (token2.end < token1.start) return false;
         if (token1.pos + token1.postInc == token2.pos) return true;
         return false;
-    }
-
-    private static class QToken {
-
-        final public String str;
-        final public int start;
-        final public int end;
-        final public int pos;
-        public int postInc;
-
-
-        public QToken(String text,
-                      OffsetAttribute o,
-                      PositionIncrementAttribute p,
-                      int pos){
-            this.start = o.startOffset();
-            this.end = o.endOffset();
-            this.str = text.substring(start, end);
-            this.postInc = p.getPositionIncrement();
-            this.pos = pos;
-        }
     }
 
     public static List<ExtInterval> getBestTextFragments(TokenStream tokenStream,
@@ -53,7 +99,8 @@ public class QTextFragment {
 
         List<QToken> tokenList = new ArrayList<>();
         QueryScorer fragmentScorer = new QueryScorer(query);
-        Fragmenter textFragmenter = new SimpleSpanFragmenter(fragmentScorer, Integer.MAX_VALUE);
+    //    Fragmenter textFragmenter = new SimpleSpanFragmenter(fragmentScorer, Integer.MAX_VALUE);
+        Fragmenter textFragmenter = new NullFragmenter();
 
         OffsetAttribute offsetAtt = tokenStream.addAttribute(OffsetAttribute.class);
         PositionIncrementAttribute postIncAtt = tokenStream.addAttribute(PositionIncrementAttribute.class);
@@ -135,7 +182,7 @@ public class QTextFragment {
         }
     }
 
-    private static ExtInterval[]  mergeContiguousFragments(List<QToken> qTokens,
+    public static ExtInterval[]  mergeContiguousFragments(List<QToken> qTokens,
                                                            String category,
                                                            String dictionary_name,
                                                            String dictionary_id)
@@ -193,7 +240,6 @@ public class QTextFragment {
             }
         }
         while (mergingStillBeingDone);
-
        return matches;
     }
 }
