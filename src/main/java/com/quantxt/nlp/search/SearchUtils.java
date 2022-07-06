@@ -145,16 +145,16 @@ public class SearchUtils {
     }
 
     public static List<ExtIntervalTextBox> getFragments(final Collection<Document> matchedDocs,
-                                                              final DictSearch.Mode mode,
-                                                              final boolean mergeCntsFrags,
-                                                              final int slop,
-                                                              final Analyzer search_analyzer,
-                                                              final Analyzer keyphrase_analyzer,
-                                                              final String searchField,
-                                                              final String vocab_name, //group_name
-                                                              final String vocab_id, //group_id
-                                                              final String str,
-                                                              final Map<Integer, BaseTextBox> lineTextBoxMap) throws Exception {
+                                                        final DictSearch.Mode mode,
+                                                        final boolean mergeCntsFrags,
+                                                        final int slop,
+                                                        final Analyzer search_analyzer,
+                                                        final Analyzer keyphrase_analyzer,
+                                                        final String searchField,
+                                                        final String vocab_name, //group_name
+                                                        final String vocab_id, //group_id
+                                                        final String str,
+                                                        final Map<Integer, BaseTextBox> lineTextBoxMap) throws Exception {
 
         boolean isFuzzy = mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_FUZZY_SPAN
                 || mode == FUZZY_SPAN;

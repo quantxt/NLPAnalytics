@@ -8,6 +8,10 @@ import java.util.*;
 
 public class QSpan extends ExtInterval {
 
+    public enum EXTBOXType {HORIZENTAL_ONE, HORIZENTAL_MANY, VERTICAL_ONE_BELOW, VERTICAL_ONE_ABOVE, VERTICAL_MANY}
+
+    protected EXTBOXType spanType;
+
     protected int local_start;
     protected int local_end;
 
@@ -20,6 +24,7 @@ public class QSpan extends ExtInterval {
 
     private Map<BaseTextBox, Double> neighbors = new HashMap<>();
     private List<ExtIntervalTextBox> extIntervalTextBoxes = new ArrayList<>();
+    private List<ExtIntervalTextBox> aux_extIntervalTextBoxes = new ArrayList<>();
 
     public QSpan(ExtIntervalTextBox e){
         super();
@@ -163,5 +168,13 @@ public class QSpan extends ExtInterval {
 
     public void setLine_str(String line_str) {
         this.line_str = line_str;
+    }
+
+    public EXTBOXType getSpanType() {
+        return spanType;
+    }
+
+    public void setSpanType(EXTBOXType spanType) {
+        this.spanType = spanType;
     }
 }

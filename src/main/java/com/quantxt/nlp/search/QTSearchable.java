@@ -195,7 +195,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
 
                 for (Mode m : mode) {
-                    List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, 0,
+                    List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, slop,
                             searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                             search_fld, vocab_name, vocab_id, content, lineTextBoxMap);
 
@@ -301,14 +301,16 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                                 for (int i = 1; i<seq.length; i++) {
                                     ExtIntervalTextBox curr = singletokenMatches.get(seq[i]);
+                                    // we read tokens in wrriting order/ left to right - top to bottom
+                                    if (curr.getExtInterval().getStart() < prev.getExtInterval().getEnd()) continue;
                                     if (curr == null) continue;
                                     BaseTextBox b1 = qSpan.getTextBox();
                                     BaseTextBox b2 = curr.getTextBox();
                                     float hOverlap = getHorizentalOverlap(b1, b2);
                                     boolean isGood = false;
-                                    float distV = b1.getTop() > b2.getBase() ? b1.getTop() - b2.getBase() : b2.getTop() - b1.getBase();
+                                    float distV = Math.abs(b1.getBase() - b2.getBase());
 
-                                    if (hOverlap > .4 && b2.getTop() >= b1.getBase() && (distV < 2*(b2.getBase() - b2.getTop()))) {
+                                    if (hOverlap > .4 && (distV < 3*(b2.getBase() - b2.getTop()))) {
                                         isGood = true;
                                     } else {
                                         float vOverlap = getVerticalOverlap(b1, b2);
@@ -356,7 +358,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                     qSpan.process(content);
                     String str = qSpan.getStr();
 
-                    String k = qSpan.getStart() + "_" + str;
+                    String k = qSpan.getStart() + "_" + qSpan.getCategory();
                     if (ext_keys.contains(k)) {
                         iter.remove();
                         continue;
@@ -369,9 +371,9 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                     List<Document> mini_mtchs = getMatchedDocs(doc_mini_query);
 
-                    List<ExtIntervalTextBox> mini_frags = getFragments(mini_mtchs, SPAN, false, 1,
+                    List<ExtIntervalTextBox> mini_frags = getFragments(mini_mtchs, SPAN, false,1,
                             searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
-                            search_fld, vocab_name, vocab_id, str, lineTextBoxMap);
+                            search_fld, vocab_name, vocab_id, str, null);
 
                     if (mini_frags.size() == 0) {
                         iter.remove();
