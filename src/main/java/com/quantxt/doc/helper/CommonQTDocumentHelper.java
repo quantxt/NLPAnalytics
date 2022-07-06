@@ -599,6 +599,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 List<Interval> best = bestAutoValue.getBest();
                 if (best.size() > 0) {
                     qSpan.setExtIntervalSimples(best);
+                    foundValues.add(qSpan.getExtInterval());
                 }
 
             } else {
@@ -607,11 +608,23 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (searchVertical && rowValues.size() == 0) {
                     rowValues = findAllVerticalMatches(content, lineTextBoxMap, dictSearch, qSpan.getExtInterval());
                 }
-                setFieldValues(content, qSpan.getExtInterval(), rowValues);
-            }
 
-            if (qSpan.getExtIntervalSimples() != null) {
-                foundValues.add(qSpan.getExtInterval());
+                if (rowValues.size() > 0) {
+
+                    for (Interval eis : rowValues){
+                        LineInfo extIntervalLineInfo = new LineInfo(content, eis);
+                        eis.setEnd(extIntervalLineInfo.getLocalEnd());
+                        eis.setStart(extIntervalLineInfo.getLocalStart());
+                        eis.setLine(extIntervalLineInfo.getLineNumber());
+                    }
+
+                    qSpan.setExtIntervalSimples(rowValues);
+                    LineInfo lineInfo = new LineInfo(content, qSpan.getExtInterval());
+                    qSpan.setStart(lineInfo.getLocalStart());
+                    qSpan.setEnd(lineInfo.getLocalEnd());
+                    qSpan.setLine(lineInfo.getLineNumber());
+                    foundValues.add(qSpan.getExtInterval());
+                }
             }
         }
 
@@ -646,47 +659,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             }
 
         return foundValues;
-    }
-
-    private void setFieldValues(String content,
-                                ExtInterval labelInterval,
-                                List<Interval> values){
-        if (values.size() == 0) return;
-
-        for (Interval eis : values){
-            LineInfo extIntervalLineInfo = new LineInfo(content, eis);
-            eis.setEnd(extIntervalLineInfo.getLocalEnd());
-            eis.setStart(extIntervalLineInfo.getLocalStart());
-            eis.setLine(extIntervalLineInfo.getLineNumber());
-        }
-
-        labelInterval.setExtIntervalSimples(values);
-        setLocalPosition(content, labelInterval);
-    }
-
-    private boolean setLocalPosition(String content,
-                                     ExtInterval labelInterval)
-    {
-        boolean isLastTokenInLine = false;
-    //    int lableStart = labelInterval.getStart();
-        LineInfo lineInfo = new LineInfo(content, labelInterval);
-        int e = content.indexOf("\n", labelInterval.getEnd());
-        /// e == -1 : This is the last line of the content
-        if (e >= labelInterval.getEnd() || e == -1) {
-            if (e == labelInterval.getEnd()){
-                isLastTokenInLine = true;
-            } else {
-                int end_of_line = e == -1 ?content.length() : e;
-                String p = content.substring(labelInterval.getEnd(), end_of_line);
-                if (p.replaceAll("[^\\w]+", "").trim().length() == 0){
-                    isLastTokenInLine = true;
-                }
-            }
-        }
-        labelInterval.setStart(lineInfo.getLocalStart());
-        labelInterval.setEnd(lineInfo.getLocalEnd());
-        labelInterval.setLine(lineInfo.getLineNumber());
-        return isLastTokenInLine;
     }
 
     private static class ExtIntervalLocal extends ExtInterval {
