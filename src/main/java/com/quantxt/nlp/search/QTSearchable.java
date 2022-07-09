@@ -49,10 +49,9 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
     protected QTDocumentHelper.Language lang = QTDocumentHelper.Language.ENGLISH;
 
     protected int topN = 2000;
-    protected int minFuzzyTermLength = 5;
-    private int minTermLength = 5;
-    private int maxEdits = 2;
-    private int prefixLength = 2;
+    private int minTermLength = 2;
+    private int maxEdits = 1;
+    private int prefixLength = 1;
 
     public QTSearchable(Dictionary dictionary) {
         this.synonymPairs = null;

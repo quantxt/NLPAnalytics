@@ -331,7 +331,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             String lineStr = lineTextBoxMap.get(line1).getLine_str();
             if (lineStr.contains(":")) continue;
 
-            String stripped = lineStr.replaceAll("[A-Za-z\\-\\.\\/\\:\\#\\%]+", "").trim();
+            String stripped = lineStr.replaceAll("[A-Za-z\\-\\.\\/\\:\\#\\%\\(\\)]+", "").trim();
             if (stripped.length() < 2) {
                 qSpan1.setSpanType(VERTICAL_MANY);
                 logger.info("{} is table header", qSpan1.getStr());
@@ -348,16 +348,29 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             float l1 = lblTextbox.getLeft();
             float r1 = lblTextbox.getRight();
             int line1 = qSpan.getLine();
+            String lineStr = lineTextBoxMap.get(line1).getLine_str();
+            int s = lineStr.indexOf(lblStr);
+            if (s >= 0 ) {
+                String substr = lineStr.substring(s+lblStr.length());
+                Pattern p = Pattern.compile("^[^A-Za-z0-9]{0,5}\\: {0,7}((\\S+ ){0,5}\\S+)");
+                Matcher m = p.matcher(substr);
+                if (m.find()) {
+                    logger.info("{} is strong form key - value is front", qSpan.getStr());
+                    qSpan.setSpanType(HORIZENTAL_ONE);
+                    continue;
+                }
+            }
+
             int potentialValueCount = 0;
             int total = 0;
-            for (Map.Entry<Integer, BaseTextBox> ee: lineTextBoxMap.entrySet()){
+            for (Map.Entry<Integer, BaseTextBox> ee : lineTextBoxMap.entrySet()) {
                 List<BaseTextBox> childs = ee.getValue().getChilds();
                 int line2 = ee.getValue().getLine();
-                for (BaseTextBox c : childs){
+                for (BaseTextBox c : childs) {
                     //check if this row has all qualified table header characters A-Aa-z-\.\/
                     float l2 = c.getLeft();
                     float r2 = c.getRight();
-                    if (Math.abs( line1 - line2) > 4 ) continue;
+                    if (Math.abs(line1 - line2) > 4) continue;
                     if (Math.abs(l1 - l2) > 5 && Math.abs(r1 - r2) > 5) continue;
                     total++;
                     String stripped = c.getStr().replaceAll("[A-Za-z\\-\\.\\/\\:\\#\\%]+", "").trim();
@@ -365,11 +378,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         potentialValueCount++;
                     }
                 }
-            }
 
-            if (total > 2 && potentialValueCount < 2){
-                logger.info("{} is form key - value is front", qSpan.getStr());
-                qSpan.setSpanType(HORIZENTAL_ONE);
+                if (total > 2 && potentialValueCount < 2) {
+                    logger.info("{} is form key - value is front", qSpan.getStr());
+                    qSpan.setSpanType(HORIZENTAL_ONE);
+                }
             }
         }
 
@@ -512,7 +525,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             boolean isAuto = ptr.equals(AUTO);
             TreeMap<Integer, List<QSpan>> candidateValues = isAuto ? null : content_custom_matches.get(ptr);
 
-     //       if (category.equals(PARTIAL)) continue;
             if (isAuto || (candidateValues != null && candidateValues.size() > 0)) {
                 if (qSpan.getTextBox() == null) continue;
 
@@ -1352,12 +1364,13 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                 isValidCandidate = true;
                             }
                         }
-                    } else {
-                        float hOverlap = getHorizentalOverlap(labelSpan.getTextBox(), btb);
-                        if (hOverlap > 0) {
-                            isValidCandidate = true;
-                        }
                     }
+              //      else {
+              //          float hOverlap = getHorizentalOverlap(labelSpan.getTextBox(), btb);
+              //          if (hOverlap > 0) {
+              //              isValidCandidate = true;
+              //          }
+              //      }
                     if (isValidCandidate) {
                         for (Map.Entry<BaseTextBox, Double> n : labelSpan.getNeighbors().entrySet()) {
                             float ho = getHorizentalOverlap(n.getKey(), eitb.getTextBox());
@@ -1378,6 +1391,14 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             autoValue.hValue = sorted.entrySet().iterator().next().getKey();
             autoValue.h_score = 0;
         }
+
+        /*
+        if (labelSpan.getSpanType() != null && labelSpan.getSpanType() == HORIZENTAL_ONE) {
+            return autoValue;
+        }
+
+         */
+
 
         if (isPotentialTableHeader) {
             AutoValue vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,

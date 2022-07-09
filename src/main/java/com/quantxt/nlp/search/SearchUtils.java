@@ -156,9 +156,9 @@ public class SearchUtils {
                                                         final String str,
                                                         final Map<Integer, BaseTextBox> lineTextBoxMap) throws Exception {
 
-        boolean isFuzzy = mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_FUZZY_SPAN
+        boolean isFuzzy = mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_FUZZY_SPAN || mode ==  PARTIAL_FUZZY_ORDERED_SPAN
                 || mode == FUZZY_SPAN;
-        boolean ordered = mode == ORDERED_SPAN || mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_ORDERED_SPAN;
+        boolean ordered = mode == ORDERED_SPAN || mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_ORDERED_SPAN || mode == PARTIAL_FUZZY_ORDERED_SPAN;
         boolean isMatchAll = mode == ORDERED_SPAN || mode == SPAN || mode == FUZZY_ORDERED_SPAN
                 || mode == FUZZY_SPAN;
 
