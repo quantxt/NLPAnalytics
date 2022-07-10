@@ -26,16 +26,14 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.quantxt.model.DictSearch.AnalyzType.STANDARD;
 import static com.quantxt.model.DictSearch.Mode.ORDERED_SPAN;
 import static com.quantxt.nlp.search.DctSearhFld.*;
 import static com.quantxt.nlp.search.SearchUtils.*;
 
+@Deprecated
 public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
     private static final long serialVersionUID = -2557457339416308514L;
@@ -282,6 +280,11 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
 
     @Override
     public List<T> search(final String query_string, int slop) {
+        return null;
+    }
+
+    @Override
+    public Collection search(String query_string, Map lineTextBoxMap, int slop) {
         return null;
     }
 
