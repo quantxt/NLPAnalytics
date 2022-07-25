@@ -332,7 +332,7 @@ public class SearchUtilsTest {
 
         Dictionary dictionary = new Dictionary(null, "GST", dictItms);
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
-                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.EXACT_CI);
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
 
 
         List<QSpan> res = qtSearchable.search(str, null,0);

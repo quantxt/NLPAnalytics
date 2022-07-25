@@ -333,8 +333,18 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
             String stripped = lineStr.replaceAll("[A-Za-z\\-\\.\\/\\:\\#\\%\\(\\)]+", "").trim();
             if (stripped.length() < 2) {
+                //TODO: Basic form detection: we look at one and two lines below
+                // Most basic case - one value for every key
+
+                Matcher m1 = Generic.matcher(lineStr);
+                Matcher m2 = lineTextBoxMap.containsKey(line1+1)? Generic.matcher(lineTextBoxMap.get(line1+1).getLine_str()): null;
+                Matcher m3 = lineTextBoxMap.containsKey(line1+2)? Generic.matcher(lineTextBoxMap.get(line1+2).getLine_str()): null;
+                Matcher m4 = lineTextBoxMap.containsKey(line1+3)? Generic.matcher(lineTextBoxMap.get(line1+3).getLine_str()): null;
+
+
+
                 qSpan1.setSpanType(VERTICAL_MANY);
-                logger.info("{} is table header", qSpan1.getStr());
+                logger.debug("{} is table header", qSpan1.getStr());
             }
         }
 
@@ -355,7 +365,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 Pattern p = Pattern.compile("^[^A-Za-z0-9]{0,5}\\: {0,7}((\\S+ ){0,5}\\S+)");
                 Matcher m = p.matcher(substr);
                 if (m.find()) {
-                    logger.info("{} is strong form key - value is front", qSpan.getStr());
+                    logger.debug("{} is strong form key - value is front", qSpan.getStr());
                     qSpan.setSpanType(HORIZENTAL_ONE);
                     continue;
                 }
@@ -380,7 +390,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
 
                 if (total > 2 && potentialValueCount < 2) {
-                    logger.info("{} is form key - value is front", qSpan.getStr());
+                    logger.debug("{} is form key - value is front", qSpan.getStr());
                     qSpan.setSpanType(HORIZENTAL_ONE);
                 }
             }
@@ -1206,6 +1216,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         float average_char_width = 1.5f * (header_last.getRight() - header_first.getLeft()) / labelSpan.getExtInterval().getStr().length();
         for (int keyLine = labelSpan.getLine()+1 ; keyLine <= lastLine; keyLine++) {
 
+            /*
             if (lineLabelMap != null) {
                 float r1 = lastMatched.getTextBox().getChilds().get(lastMatched.getTextBox().getChilds().size()-1).getRight();
                 float l1 = lastMatched.getTextBox().getChilds().get(0).getLeft();
@@ -1230,6 +1241,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     if (valueIsKey) break;
                 }
             }
+
+             */
 
             List<QSpan> lineValues = candidateValues.get(keyLine);
             if (lineValues == null) continue;
