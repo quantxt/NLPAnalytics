@@ -194,7 +194,7 @@ public class SearchUtils {
                     if (extInterval == null) continue;
                     extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
                     LineInfo lineInfo = new LineInfo(str, extInterval);
-                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo, false, true);
+                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  true);
                     ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
                     all_matches.add(eitb);
                 }
@@ -206,7 +206,7 @@ public class SearchUtils {
                     extInterval.setDict_id(vocab_id);
                     extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
                     LineInfo lineInfo = new LineInfo(str, extInterval);
-                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo, false, false);
+                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  false);
                     ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
                     all_matches.add(eitb);
                 }

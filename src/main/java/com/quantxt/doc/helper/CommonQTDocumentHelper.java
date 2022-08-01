@@ -184,7 +184,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (lineTextBoxMap != null) {
 
                     tb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(),
-                            lineInfo, true, ignore_prefix_boxes);
+                            lineInfo, ignore_prefix_boxes);
                     if (tb == null) {
                         logger.debug("Didn't find tb got {}", extInterval.getStr());
                         continue;
@@ -526,7 +526,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         for (QSpan qSpan : allLabels) {
-            String category = qSpan.getCategory();
             String dictId = qSpan.getDict_id();
             DictSearch dictSearch = valueNeededDictionaryMap.get(dictId);
             if (dictSearch == null) continue;
@@ -572,14 +571,14 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         boolean isPotentialTableHeader =  val_per_line == null || val_per_line < 2;
 
                         for (TreeMap<Integer, List<QSpan>> c_vals : new TreeMap [] {g1_vals, g2_vals, n1_vals, id_vals}) {
-                            AutoValue autoValue = findBestValue(lineTextBoxMap, lineLabelMap, qSpan, c_vals, isPotentialTableHeader, true);
+                            AutoValue autoValue = findBestValue(lineTextBoxMap, lineLabelMap, labels, qSpan, c_vals, isPotentialTableHeader, true);
                             boolean hasOverlapWithLabels  = hasOvelapWLabels(autoValue, allLabels);
                             if (!hasOverlapWithLabels) {
                                 bestAutoValue.merge(autoValue);
                             }
                         }
                         if (bestAutoValue.hValue == null){
-                            AutoValue genericMatches = findBestValue(lineTextBoxMap, lineLabelMap, qSpan, generic_vals, isPotentialTableHeader, true);
+                            AutoValue genericMatches = findBestValue(lineTextBoxMap, lineLabelMap, labels, qSpan, generic_vals, isPotentialTableHeader, true);
                             if( bestAutoValue.vValue.size() != 0){
                                 if (genericMatches.vValue.size() != 0){
                                     ExtIntervalTextBox firstAutoValue = bestAutoValue.vValue.get(0);
@@ -588,7 +587,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                     if (firstGenericMatch.getTextBox().getTop() < firstAutoValue.getTextBox().getTop()){
                                         bestAutoValue.hValue = null;
                                         bestAutoValue.h_score = 10000f;
-        //                                break;
                                     }
                                 }
                             } else {
@@ -613,7 +611,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         bestAutoValue.h_score = 0;
                         bestAutoValue.hValue = singleFormValueInterval;
                     } else {
-                        bestAutoValue = findBestValue(lineTextBoxMap, lineLabelMap,
+                        bestAutoValue = findBestValue(lineTextBoxMap, lineLabelMap, labels,
                                 qSpan, candidateValues, true, false);
                     }
                 }
@@ -736,7 +734,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             extInterval.setEnd(e);
 
             LineInfo lineInfo = new LineInfo(content, extInterval);
-            BaseTextBox textBox = findAssociatedTextBox(lineTextBoxMap, str, lineInfo, false, ignorePrefixBoxes);
+            BaseTextBox textBox = findAssociatedTextBox(lineTextBoxMap, str, lineInfo,  ignorePrefixBoxes);
             if (textBox == null) {
                 logger.debug("{} wasn't matched to any textbox", str);
                 continue;
@@ -1276,7 +1274,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
                 float vOverlap = getHorizentalOverlap(labelSpan.getTextBox(), candidate_vtb, false);
 
-                if (vOverlap > .4) { //TODO: .95 ?
+                if (vOverlap > .2) { //TODO: .95 ?
                     if (verticalValues.vValue.size() == 0) {
                         float min_horizental_d = Math.min(Math.min(d_left, d_center), d_right);
                         float s = (float) Math.sqrt(min_horizental_d * min_horizental_d + dvtc * dvtc);
@@ -1340,6 +1338,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     }
     private AutoValue findBestValue(Map<Integer, BaseTextBox> lineTextBoxMap,
                                     Map<Integer, List<ExtIntervalTextBox>> lineLabelMap,
+                                    Map<String, Collection<QSpan>> labels,
                                     QSpan labelSpan,
                                     TreeMap<Integer, List<QSpan>> candidateValues,
                                     boolean isPotentialTableHeader,
@@ -1352,6 +1351,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         if (labelSpan.getSpanType() != null && labelSpan.getSpanType() == VERTICAL_MANY) {
             AutoValue vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
                     labelSpan, candidateValues, isAuto);
+    //        if (autoValue.vValue.size() == 0){
+    //            TextBox.extendToNeighbours(lineTextBoxMap, labels, labelSpan);
+    //            vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
+    //                    labelSpan, candidateValues, isAuto);
+    //        }
             return vertical_1;
         }
 
@@ -1416,6 +1420,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         if (isPotentialTableHeader) {
             AutoValue vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
                     labelSpan, candidateValues, isAuto);
+            if (vertical_1.vValue.size() == 0){
+                TextBox.extendToNeighbours(lineTextBoxMap, labels, labelSpan);
+                vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
+                        labelSpan, candidateValues, isAuto);
+            }
             autoValue.merge(vertical_1);
         }
 

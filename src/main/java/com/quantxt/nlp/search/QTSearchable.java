@@ -373,7 +373,9 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     if (!isNegative) {
                                         ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
                                         boolean isInCompleteSpans = false;
-                                        for (QSpan qs : complete_spans){
+                                        ListIterator<QSpan> iter = complete_spans.listIterator();
+                                        while (iter.hasNext()){
+                                            QSpan qs = iter.next();
                                             float d1 = firstPExt.getTextBox().getBase() - qs.getBase();
                                             float d2 = firstPExt.getTextBox().getLeft() - qs.getLeft();
                                             if (Math.abs(d1) < 2 && Math.abs(d2) < 2){

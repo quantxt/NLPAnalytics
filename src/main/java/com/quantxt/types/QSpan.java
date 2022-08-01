@@ -177,4 +177,20 @@ public class QSpan extends ExtInterval {
     public void setSpanType(EXTBOXType spanType) {
         this.spanType = spanType;
     }
+
+    public void setTop(float top) {
+        this.top = top;
+    }
+
+    public void setBase(float base) {
+        this.base = base;
+    }
+
+    public void setLeft(float left) {
+        this.left = left;
+    }
+
+    public void setRight(float right) {
+        this.right = right;
+    }
 }

@@ -2,7 +2,9 @@ package com.quantxt.doc.helper.textbox;
 
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.model.document.BaseTextBox;
+import com.quantxt.model.document.ExtIntervalTextBox;
 import com.quantxt.types.LineInfo;
+import com.quantxt.types.QSpan;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -687,7 +689,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
     public static BaseTextBox findAssociatedTextBox(Map<Integer, BaseTextBox> lineTextBoxMap,
                                                     String str,
                                                     LineInfo lineInfo,
-                                                    boolean extend_to_neighbors,
                                                     boolean ignorePrefixBoxes)
     {
         if (lineTextBoxMap == null) return null;
@@ -805,48 +806,53 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         surronding_box.setChilds(components);
         surronding_box.setLine_str(line_str);
 
-        // adjust extended left and right
-        if (extend_to_neighbors){
-            int line_before = lineInfo.getLineNumber() - 1;
-            int line_after = lineInfo.getLineNumber() + 1;
+        return surronding_box;
+    }
 
-            CommonQTDocumentHelper commonQTDocumentHelper = new CommonQTDocumentHelper();
-            // find all boxes that have overlap
-            List<BaseTextBox> overlappingBoxes = new ArrayList<>();
-            overlappingBoxes.addAll(components);
-            for (int i = line_before; i <= line_after; i++) {
-                BaseTextBox line_boxes = lineTextBoxMap.get(i);
-                if (line_boxes == null || line_boxes.getChilds().size() == 0) continue;
-                for (BaseTextBox bt : line_boxes.getChilds()) {
-                    TextBox temp_tb = new TextBox();
-                    temp_tb.setLeft(bt.getLeft());
-                    temp_tb.setRight(bt.getRight());
-                    float horizentalOverlap = getHorizentalOverlap(temp_tb, surronding_box, false);
-                    if (horizentalOverlap > 0 ) continue;
-                    float verticalOverlap = getVerticalOverlap(bt, surronding_box);
-                    if (verticalOverlap > -.1) {
-                        String bt_str = bt.getStr();
-                        if (commonQTDocumentHelper.tokenize(bt_str).size() == 0) continue;
-                        overlappingBoxes.add(bt);
+    public static void extendToNeighbours(Map<Integer, BaseTextBox> lineTextBoxMap,
+                                          Map<String, Collection<QSpan>> labels,
+                                          QSpan label){
+        // first we check if we have at least one more label overlapping horizentally
+        int numLabelsInRow = 0;
+        BaseTextBox tb = label.getTextBox();
+        int line = label.getLine();
+        for (Map.Entry<String, Collection<QSpan>> e : labels.entrySet()){
+            for (QSpan qSpan : e.getValue()){
+                BaseTextBox btb = qSpan.getTextBox();
+                if (btb == null) continue;
+                float horizentalOverlap = getVerticalOverlap(btb, tb);
+                if (horizentalOverlap > 0 ) {
+                    numLabelsInRow++;
+                }
+            }
+        }
+
+        if (numLabelsInRow < 2) return;
+        float distance_to_right = 10000;
+        boolean foundOthersInRow = false;
+        // find closest textboxes on the right side
+        for (Map.Entry<Integer, BaseTextBox> e : lineTextBoxMap.entrySet()){
+            int lineBoxLine = e.getKey();
+            if (Math.abs(lineBoxLine - line) > 3) continue;
+            for (BaseTextBox bt : e.getValue().getChilds()) {
+                float hOverlap = getHorizentalOverlap(bt, tb, false);
+                if (hOverlap > 0 ) continue;
+                foundOthersInRow = true;
+                float vOcerlap = getVerticalOverlap(bt, tb);
+                if (vOcerlap > 0 ) {
+                    float d = bt.getLeft() - tb.getRight();
+                    if (d < 0) continue;
+                    if (d < distance_to_right){
+                        distance_to_right  = d;
                     }
                 }
             }
 
-            overlappingBoxes.sort((o1, o2) -> Float.compare(o1.getLeft(), o2.getLeft()));
-            //now we extend left and right of surronding_box
-
-            int num_overlapping_boxes = overlappingBoxes.size();
-            for (int i = 0; i < num_overlapping_boxes; i++) {
-                BaseTextBox bt = overlappingBoxes.get(i);
-                if (bt.getLeft() == surronding_box.getLeft()) { // this is our left most  box
-                    surronding_box.setLeft(i==0 ? 0 : overlappingBoxes.get(i - 1).getRight());
-                }
-                if (bt.getRight() == surronding_box.getRight()) { // this is our right most  box
-                    surronding_box.setRight(i==num_overlapping_boxes-1 ? 10000 : overlappingBoxes.get(i+1).getLeft());
-                }
-            }
         }
-        return surronding_box;
+
+        if (foundOthersInRow) {
+            label.setRight(tb.getRight() + distance_to_right);
+        }
     }
 
     public static float getHorizentalOverlap(BaseTextBox textBox1,
