@@ -9,6 +9,7 @@ import com.quantxt.nlp.search.span.*;
 import com.quantxt.nlp.tokenizer.QLetterOnlyTokenizer;
 import com.quantxt.nlp.tokenizer.QLetterTokenizer;
 import com.quantxt.types.LineInfo;
+import com.quantxt.types.QSpan;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
@@ -216,6 +217,41 @@ public class SearchUtils {
         List<ExtIntervalTextBox> noOverlapOutput = getNonOverlappingIntervals(all_matches);
         return noOverlapOutput;
     }
+
+    public static List<QSpan> getNonOverlappingSpans(List<QSpan> qspans){
+
+        ArrayList<QSpan> matchs_sorted_by_length = new ArrayList<>(qspans);
+        matchs_sorted_by_length.sort((QSpan s1, QSpan s2)-> (s2.getExtInterval().getEnd() - s2.getExtInterval().getStart()) - (s1.getExtInterval().getEnd() - s1.getExtInterval().getStart()));
+
+        boolean [] overlaps = new boolean[matchs_sorted_by_length.size()];
+
+        for (int i = 0; i < matchs_sorted_by_length.size(); i++) {
+            if (overlaps[i]) continue;
+            final QSpan firstMatch = matchs_sorted_by_length.get(i);
+            int firstMatchStart = firstMatch.getExtInterval().getStart();
+            int firstMatchEnd   = firstMatch.getExtInterval().getEnd();
+            for (int j = i+1; j < matchs_sorted_by_length.size(); j++) {
+                if (overlaps[j]) continue;
+                final QSpan otherMatch = matchs_sorted_by_length.get(j);
+                int otherMatchStart = otherMatch.getExtInterval().getStart();
+                int otherMatchEnd   = otherMatch.getExtInterval().getEnd();
+                if ((otherMatchStart >= firstMatchStart) && (otherMatchEnd <= firstMatchEnd) &&
+                        firstMatch.getExtInterval().getDict_id().equals(otherMatch.getExtInterval().getDict_id())) {
+                    overlaps[j] = true;
+                }
+            }
+        }
+
+        ArrayList<QSpan> noOverlapOutput = new ArrayList<>();
+        for (int i = 0; i < matchs_sorted_by_length.size(); i++){
+            if (overlaps[i]) continue;
+            noOverlapOutput.add(matchs_sorted_by_length.get(i));
+        }
+        noOverlapOutput.sort((QSpan s1, QSpan s2)-> (s2.getExtInterval().getEnd() - s2.getExtInterval().getStart()) - (s1.getExtInterval().getEnd() - s1.getExtInterval().getStart()));
+
+        return noOverlapOutput;
+    }
+
 
     public static List<ExtIntervalTextBox> getNonOverlappingIntervals(List<ExtIntervalTextBox> allMatches){
 

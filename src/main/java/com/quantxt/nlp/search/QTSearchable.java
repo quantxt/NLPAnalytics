@@ -167,6 +167,26 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         return search(query_string, 1);
     }
 
+    private boolean isIsolated(QSpan qSpan, Analyzer analyzer){
+        String lineStr = qSpan.getLine_str();
+        String str = qSpan.getStr();
+        int idx = lineStr.indexOf(str);
+        if (idx > 1) {
+            String lastCharBefore = lineStr.substring(idx - 2, idx - 1);
+            if (lineStr.charAt(idx - 1) == ' ' && tokenize(analyzer, lastCharBefore) != null) {
+                int lnt = str.length();
+                if (lineStr.length() > idx + lnt) {
+                    String firstCharAfter = lineStr.substring(idx + lnt + 1, idx + lnt + 2);
+                    if (lineStr.charAt(idx + lnt) == ' ' && tokenize(analyzer, firstCharAfter) != null) {
+                        logger.debug("{} in {} is NOT isolated", str, lineStr);
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     @Override
     public List<QSpan> search(String content,
                               Map<Integer, BaseTextBox> lineTextBoxMap,
@@ -203,6 +223,9 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                     for (int i = 0; i < matches.size(); i++) {
                         QSpan qSpan = new QSpan(matches.get(i));
+                        if (lineTextBoxMap != null) {
+                            if (qSpan.getTextBox() == null) continue;
+                        }
                         qSpan.process(content);
                         boolean isNegative = false;
                         for (ExtIntervalTextBox ex : qSpan.getExtIntervalTextBoxes()) {
@@ -213,16 +236,21 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                             }
                         }
                         if (!isNegative) {
+                            boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
+                            if (!isIsolated) continue;
                             complete_spans.add(qSpan);
                         }
                     }
 
                     if (lineTextBoxMap != null) {
+                        /*
                         HashSet<String> cur_matches = new HashSet<>();
                         for (ExtIntervalTextBox etb : matches){
                             String key = etb.getExtInterval().getStart()+"_"+etb.getExtInterval().getEnd();
                             cur_matches.add(key);
                         }
+
+                         */
 
                         List<ExtIntervalTextBox> singletokenMatches = getFragments(matchedDocs, PARTIAL_ORDERED_SPAN,  false,20,
                                 searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
@@ -358,6 +386,10 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     boolean isNegative = false;
                                     qSpan.process(content);
                                     // check if the match is negative
+                                    // we remove matches that are part of a test line
+                                    boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
+                                    if (!isIsolated) continue;
+
                                     List<ExtIntervalTextBox> tmpMatch = getFragments(matchedDocs, SPAN,  false,1,
                                             searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                                             search_fld, vocab_name, vocab_id, qSpan.getStr(), null);
@@ -393,9 +425,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                     }
                 }
 
-            //    spans = lineTextBoxMap == null ? complete_spans : partial_spans;
-
-
+        //        spans.addAll(getNonOverlappingSpans(partial_spans));
                 spans.addAll(partial_spans);
                 spans.addAll(complete_spans);
 
