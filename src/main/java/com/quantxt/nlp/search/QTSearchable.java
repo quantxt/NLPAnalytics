@@ -7,6 +7,7 @@ import com.quantxt.model.DictSearch;
 import com.quantxt.model.Dictionary;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
+import com.quantxt.types.LineInfo;
 import com.quantxt.types.QSpan;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
@@ -261,17 +262,17 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                         for (Document d : matchedDocs){
                             String [] tokens = tokenize(searchAnalyzer, d.getField(search_fld).stringValue());
+                            if (tokens.length > 127) continue;
                             if (tokens.length == 1) continue;
                             matchedDocumentTokens.add(tokens);
                         }
 
-
                         for (String[] tokens : matchedDocumentTokens){
-                            Map<String, List<Integer>> tokenIndex = new HashMap<>();
+                            Map<String, List<Byte>> tokenIndex = new HashMap<>();
 
-                            for (int i=0; i<tokens.length; i++) {
+                            for (byte i=0; i<tokens.length; i++) {
                                 String t = tokens[i];
-                                List<Integer> list = tokenIndex.get(t);
+                                List<Byte> list = tokenIndex.get(t);
                                 if (list == null) {
                                     list = new ArrayList<>();
                                     tokenIndex.put(t, list);
@@ -279,25 +280,27 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                 list.add(i);
                             }
 
-                            Map<Integer, List<Integer>> tokenIdx2MatchIdx = new HashMap<>();
-                            Map<Integer, List<Integer>> relations = new HashMap<>();
-                            for (int i=0; i<singletokenMatches.size(); i++) {
+                            Map<Byte, List<Byte>> tokenIdx2MatchIdx = new HashMap<>();
+                            Map<Byte, List<Byte>> relations = new HashMap<>();
+                            for (byte i=0; i<singletokenMatches.size(); i++) {
                                 ExtIntervalTextBox eitb = singletokenMatches.get(i);
+                                LineInfo lineInfo = new LineInfo(content, eitb.getExtInterval());
+                                eitb.getExtInterval().setLine(lineInfo.getLineNumber());
                                 String singleTokenEitb = eitb.getExtInterval().getStr();
                                 String [] sTokens = tokenize(searchAnalyzer, singleTokenEitb);
                                 if (sTokens == null || sTokens.length == 0 || sTokens[0].isEmpty()) continue;
                                 String singleToken = sTokens[0];
-                                List<Integer> tokenIdxs = tokenIndex.get(singleToken);
+                                List<Byte> tokenIdxs = tokenIndex.get(singleToken);
                                 if (tokenIdxs == null) continue;
-                                for (Integer tm : tokenIdxs) {
-                                    List<Integer> rels = relations.get(i);
+                                for (Byte tm : tokenIdxs) {
+                                    List<Byte> rels = relations.get(i);
                                     if (rels == null) {
                                         rels = new ArrayList<>();
                                         relations.put(i, rels);
                                     }
                                     rels.add(tm);
 
-                                    List<Integer> matchIdxs = tokenIdx2MatchIdx.get(tm);
+                                    List<Byte> matchIdxs = tokenIdx2MatchIdx.get(tm);
                                     if (matchIdxs == null){
                                         matchIdxs = new ArrayList<>();
                                         tokenIdx2MatchIdx.put(tm, matchIdxs);
@@ -311,16 +314,55 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                             //   comb = 3*2*3*4
                             //
 
+                            // remove bad tokenIdx - token i must be after i-1
+                            for (int i=1; i< tokenIdx2MatchIdx.size(); i++){
+                                List<Byte> list_before = tokenIdx2MatchIdx.get((byte)(i-1));
+                                if (list_before == null || list_before.size() == 0) continue;
+
+                                List<Byte> list_current = tokenIdx2MatchIdx.get((byte)(i));
+                                if (list_current == null || list_current.size() == 0) continue;
+
+                                ListIterator<Byte> list_current_iter = tokenIdx2MatchIdx.get((byte)i).listIterator();
+                                while (list_current_iter.hasNext()){
+                                    Byte c_idx = list_current_iter.next();
+                                    ExtIntervalTextBox c_eitb = singletokenMatches.get(c_idx);
+                                    int l2 = c_eitb.getExtInterval().getLine();
+                                    boolean isAfter = false;
+                                    for (Byte b_idx : list_before){
+                                        ExtIntervalTextBox b_eitb = singletokenMatches.get(b_idx);
+                                        if (c_idx > b_idx) {
+                                            isAfter = true;
+                                            break;
+                                        }
+                                        int l1 = b_eitb.getExtInterval().getLine();
+                                        if (l2 - l1 >= 0 && l2 - l1 < 4) {
+                                            isAfter = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!isAfter){
+                                        list_current_iter.remove();
+                                    }
+                                }
+                            }
+
                             int total_combinations = 1;
-                            for (Map.Entry<Integer, List<Integer>> e : tokenIdx2MatchIdx.entrySet()){
+                            for (Map.Entry<Byte, List<Byte>> e : tokenIdx2MatchIdx.entrySet()){
                                 total_combinations *= e.getValue().size();
                             }
-                            int [][] sequences = new int[total_combinations][tokens.length];
+                            if (total_combinations == 0) {
+                                continue;
+                            }
+
+                            logger.info("Total Comb {}, tokens {}", total_combinations, tokens.length);
+
+                           byte [][] sequences = new byte[total_combinations][tokens.length];
 
                             boolean notAllTokensFound = false;
                             int blockSize = total_combinations;
-                            for (int i = 0; i<tokens.length; i++){
-                                List<Integer> matchIdxs = tokenIdx2MatchIdx.get(i);
+                            // create al the combinations
+                            for (byte i = 0; i<tokens.length; i++){
+                                List<Byte> matchIdxs = tokenIdx2MatchIdx.get(i);
                                 if (matchIdxs == null || matchIdxs.size() == 0){
                                     notAllTokensFound = true;
                                     break;
@@ -328,17 +370,31 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                 blockSize /= matchIdxs.size();
                                 for (int j = 0; j<total_combinations; j++){
                                     int idx = j/blockSize;
-                                    int token_idx = matchIdxs.get(idx % matchIdxs.size());
+                                    byte token_idx =  matchIdxs.get(idx % matchIdxs.size());
                                     sequences[j][i] = token_idx;
                                 }
                             }
 
                             if (notAllTokensFound) continue;
 
-                            for (int [] seq : sequences){
+                            for (byte [] seq : sequences){
                                 ExtIntervalTextBox prev = singletokenMatches.get(seq[0]);
                                 if (prev == null) continue;
+                                boolean isValidSeq = true;
+                                for (int i=1; i< seq.length; i++){
+                    //                if (seq[i] <= seq[i-1]) {
+                    //                    isValidSeq = false;
+                    //                    break;
+                    //                }
+                                    int l1 = singletokenMatches.get(seq[i-1]).getExtInterval().getLine();
+                                    int l2 = singletokenMatches.get(seq[i]).getExtInterval().getLine();
+                                    if (l2 - l1 < 0 || l2 - l1 > 3) {
+                                        isValidSeq = false;
+                                        break;
+                                    }
+                                }
 
+                                if (!isValidSeq) continue;
                                 QSpan qSpan = new QSpan(prev);
 
                                 for (int i = 1; i<seq.length; i++) {
@@ -430,7 +486,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 spans.addAll(complete_spans);
 
                 if (spans.size() == 0) return spans;
-                spans.sort(comparingInt((QSpan s) -> s.getExtInterval().getStart()));
+                spans.sort(comparingInt((QSpan s) -> s.getExtInterval(false).getStart()));
 
                 /*
                 ListIterator<QSpan> iter = spans.listIterator();

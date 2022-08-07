@@ -12,9 +12,6 @@ public class QSpan extends ExtInterval {
 
     protected EXTBOXType spanType;
 
-    protected int local_start;
-    protected int local_end;
-
     protected float top = 100000;   // starty
     protected float base = -1;  // endy
     protected float left = 100000;  // startx
@@ -86,35 +83,22 @@ public class QSpan extends ExtInterval {
         if (content != null) {
             LineInfo lineInfo = new LineInfo(content, extIntervalTextBoxes.get(0).getExtInterval());
             line = lineInfo.getLineNumber();
-            local_start = lineInfo.getLocalStart();
-            local_end = lineInfo.getLocalEnd();
         }
     }
 
-    public int getLocal_start() {
-        return local_start;
-    }
-
-    public void setLocal_start(int local_start) {
-        this.local_start = local_start;
-    }
-
-    public int getLocal_end() {
-        return local_end;
-    }
-
-    public void setLocal_end(int local_end) {
-        this.local_end = local_end;
-    }
-
-    public ExtInterval getExtInterval(){
+    public ExtInterval getExtInterval(boolean useLocalLineStart){
         ExtInterval extInterval = new ExtInterval();
         extInterval.setDict_name(extIntervalTextBoxes.get(0).getExtInterval().getDict_name());
         extInterval.setDict_id(extIntervalTextBoxes.get(0).getExtInterval().getDict_id());
         extInterval.setStr(str);
         extInterval.setCategory(extIntervalTextBoxes.get(0).getExtInterval().getCategory());
-        extInterval.setStart(extIntervalTextBoxes.get(0).getExtInterval().getStart());
-        extInterval.setEnd(extIntervalTextBoxes.get(0).getExtInterval().getEnd());
+        if (useLocalLineStart){
+            extInterval.setStart(start);
+            extInterval.setEnd(end);
+        } else {
+            extInterval.setStart(extIntervalTextBoxes.get(0).getExtInterval().getStart());
+            extInterval.setEnd(extIntervalTextBoxes.get(0).getExtInterval().getEnd());
+        }
         extInterval.setLine(line);
         extInterval.setExtIntervalSimples(getExtIntervalSimples());
 

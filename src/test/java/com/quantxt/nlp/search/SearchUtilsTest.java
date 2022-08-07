@@ -337,7 +337,7 @@ public class SearchUtilsTest {
 
         List<QSpan> res = qtSearchable.search(str, null,0);
         assertTrue(res.size() == 1);
-        assertTrue(res.get(0).getExtInterval().getCategory().equals("GST"));
+        assertTrue(res.get(0).getExtInterval(false).getCategory().equals("GST"));
     }
 
     @Test
