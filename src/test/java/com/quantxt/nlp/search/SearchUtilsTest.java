@@ -335,7 +335,7 @@ public class SearchUtilsTest {
                 DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
 
 
-        List<QSpan> res = qtSearchable.search(str, null,0);
+        List<QSpan> res = qtSearchable.search(str, null,0, false);
         assertTrue(res.size() == 1);
         assertTrue(res.get(0).getExtInterval(false).getCategory().equals("GST"));
     }

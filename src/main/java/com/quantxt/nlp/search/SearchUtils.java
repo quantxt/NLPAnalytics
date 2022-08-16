@@ -194,6 +194,7 @@ public class SearchUtils {
                     if (extInterval == null) continue;
                     extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
                     LineInfo lineInfo = new LineInfo(str, extInterval);
+                    extInterval.setLine(lineInfo.getLineNumber());
                     BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  true);
                     ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
                     all_matches.add(eitb);
@@ -206,6 +207,7 @@ public class SearchUtils {
                     extInterval.setDict_id(vocab_id);
                     extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
                     LineInfo lineInfo = new LineInfo(str, extInterval);
+                    extInterval.setLine(lineInfo.getLineNumber());
                     BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  false);
                     ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
                     all_matches.add(eitb);
@@ -227,13 +229,16 @@ public class SearchUtils {
         for (int i = 0; i < matchs_sorted_by_length.size(); i++) {
             if (overlaps[i]) continue;
             final ExtIntervalTextBox firstMatch = matchs_sorted_by_length.get(i);
-            int firstMatchStart = firstMatch.getExtInterval().getStart();
-            int firstMatchEnd   = firstMatch.getExtInterval().getEnd();
+            ExtInterval firstExtInterval = firstMatch.getExtInterval();
+            int firstMatchStart = firstExtInterval.getStart();
+            int firstMatchEnd   = firstExtInterval.getEnd();
             for (int j = i+1; j < matchs_sorted_by_length.size(); j++) {
                 if (overlaps[j]) continue;
                 final ExtIntervalTextBox otherMatch = matchs_sorted_by_length.get(j);
-                int otherMatchStart = otherMatch.getExtInterval().getStart();
-                int otherMatchEnd   = otherMatch.getExtInterval().getEnd();
+                ExtInterval otherExtInterval = otherMatch.getExtInterval();
+                if (!firstExtInterval.getCategory().equals(otherExtInterval.getCategory())) continue;
+                int otherMatchStart = otherExtInterval.getStart();
+                int otherMatchEnd   = otherExtInterval.getEnd();
                 if ((otherMatchStart >= firstMatchStart) && (otherMatchEnd <= firstMatchEnd) &&
                         firstMatch.getExtInterval().getDict_id().equals(otherMatch.getExtInterval().getDict_id())) {
                     overlaps[j] = true;
