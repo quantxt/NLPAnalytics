@@ -236,7 +236,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         List<QSpan> spans = new ArrayList<>();
         List<QSpan> complete_spans = new ArrayList<>();
         List<QSpan> partial_spans = new ArrayList<>();
-
         List<QSpan> negatives = new ArrayList<>();
 
         try {

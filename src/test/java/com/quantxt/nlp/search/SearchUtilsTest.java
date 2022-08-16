@@ -259,6 +259,7 @@ public class SearchUtilsTest {
     }
 
     @Test
+    @Ignore
     public void Letter_Tokenizer_v2() {
         // GIVEN
         String str = "AmzaonInc. reported a profit on his earnings.";

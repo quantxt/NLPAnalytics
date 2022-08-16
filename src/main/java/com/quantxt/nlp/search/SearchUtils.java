@@ -37,6 +37,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.quantxt.doc.helper.textbox.TextBox.*;
+import static com.quantxt.model.DictItm.DONT_CARE;
 import static com.quantxt.model.DictSearch.Mode.*;
 import static com.quantxt.nlp.search.DctSearhFld.*;
 
@@ -230,13 +231,15 @@ public class SearchUtils {
             if (overlaps[i]) continue;
             final ExtIntervalTextBox firstMatch = matchs_sorted_by_length.get(i);
             ExtInterval firstExtInterval = firstMatch.getExtInterval();
+            boolean isFirstNegative = firstExtInterval.getCategory().equals(DONT_CARE);
             int firstMatchStart = firstExtInterval.getStart();
             int firstMatchEnd   = firstExtInterval.getEnd();
             for (int j = i+1; j < matchs_sorted_by_length.size(); j++) {
                 if (overlaps[j]) continue;
                 final ExtIntervalTextBox otherMatch = matchs_sorted_by_length.get(j);
                 ExtInterval otherExtInterval = otherMatch.getExtInterval();
-                if (!firstExtInterval.getCategory().equals(otherExtInterval.getCategory())) continue;
+                boolean isOtherNegative = otherExtInterval.getCategory().equals(DONT_CARE);
+                if ((isFirstNegative && !isOtherNegative) || (!isFirstNegative && isOtherNegative) )continue;
                 int otherMatchStart = otherExtInterval.getStart();
                 int otherMatchEnd   = otherExtInterval.getEnd();
                 if ((otherMatchStart >= firstMatchStart) && (otherMatchEnd <= firstMatchEnd) &&
