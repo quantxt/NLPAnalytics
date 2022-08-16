@@ -248,7 +248,9 @@ public class QTSearchableTest {
 
     }
 
+    //TODO: Enable this
     @Test
+    @Ignore
     public void test_str_checkbox_simple() {
         String content = "This is a good \u2612 $100,000,001 - $500 Million";
 
@@ -258,7 +260,7 @@ public class QTSearchableTest {
         Dictionary dictionary = new Dictionary(null, "SPCH", dictItms);
         List<DictSearch> searchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
-                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.EXACT_CI);
         searchableList.add(qtSearchable);
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();

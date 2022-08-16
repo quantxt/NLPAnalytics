@@ -1,11 +1,13 @@
 package com.quantxt.doc.helper.textbox;
 
+import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.model.document.BaseTextBox;
-import org.apache.commons.math3.fitting.WeightedObservedPoints;
+import com.quantxt.model.document.ExtIntervalTextBox;
+import com.quantxt.types.LineInfo;
+import com.quantxt.types.QSpan;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Text;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -17,27 +19,11 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class TextBox extends BaseTextBox implements Comparable<TextBox> {
-    final private static Logger logger = LoggerFactory.getLogger(BaseTextBox.class);
-
+    final private static Logger logger = LoggerFactory.getLogger(TextBox.class);
 
     final private static float spc_lower = 2.0f;
     final private static float spc_upper = 4.0f;
     final private static float avg_char_width_unit = 50f; // this is the width for an `e`
-
-    List<BaseTextBox> childs;
-    private int line;
-    private String line_str;
-    private boolean processed;
-
-    public TextBox(){
-        super();
-    }
-
-    public TextBox(float t, float b, float l, float r, String s) {
-        super(t, b, l, r, s);
-        childs = new ArrayList<>();
-    }
-
 
     @Override
     public int compareTo(TextBox that) {
@@ -49,34 +35,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         if (this.getBase() > that.getBase()) return +1;
 
         return 0;
-    }
-
-    public String getLine_str() {
-        return line_str;
-    }
-
-    public int getLine() {
-        return line;
-    }
-
-    public boolean isProcessed(){return processed;}
-
-    public void setLine(int line) {
-        this.line = line;
-    }
-
-    public void setLine_str(String line_str) {
-        this.line_str = line_str;
-    }
-
-    public void setProcessed(boolean b){processed = b;}
-
-    public List<BaseTextBox> getChilds() {
-        return childs;
-    }
-
-    public void setChilds(List<BaseTextBox> childs) {
-        this.childs = childs;
     }
 
     @Override
@@ -103,7 +61,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         }
     }
 
-    private static String [] getLinesfromLineBoxes(List<TextBox> textBoxes, float avg_w, float avg_h)
+    private static String [] getLinesfromLineBoxes(List<BaseTextBox> textBoxes, float avg_w, float avg_h)
     {
         float limit = .1f;
         List<String> lines = new ArrayList<>();
@@ -112,7 +70,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         int numLines = textBoxes.size();
         int line_number = 0; // zero-based line numbers
         for (int k=0; k < numLines; k++) {
-            TextBox lineBox = textBoxes.get(k);
+            BaseTextBox lineBox = textBoxes.get(k);
             List<BaseTextBox> lineTextBoxList = lineBox.getChilds();
             lineTextBoxList.sort(new SortByStartWord());
             int total_textboxes_per_line = lineTextBoxList.size();
@@ -120,8 +78,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             StringBuilder sb = new StringBuilder();
             float num_units_in_line = 0;
             float covered_area_in_pxl = 0;
-    //        float first_box_height = lineTextBoxList.get(0).getBase() - lineTextBoxList.get(0).getTop();;
-            for (int i = 0; i < total_textboxes_per_line; i++) {
+             for (int i = 0; i < total_textboxes_per_line; i++) {
                 BaseTextBox textBox = lineTextBoxList.get(i);
                 float tb_h = textBox.getBase() - textBox.getTop();
                 float r = tb_h/avg_h;
@@ -222,31 +179,37 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         return lines.toArray(new String[lines.size()]);
     }
 
-    public static List<TextBox> process(List<BaseTextBox> textBoxes) {
+    public static List<BaseTextBox> process(List<BaseTextBox> textBoxes) {
 
         MeanVar meanVar = new MeanVar(textBoxes);
         meanVar.calc(true);
         float avg_w = meanVar.avg_w;
         float avg_h = meanVar.avg_h;
 
-        List<TextBox> processedTextBoxes = mergeNeighbors(textBoxes);
-        List<TextBox> leftOvers = new ArrayList<>();
+        List<BaseTextBox> processedTextBoxes = mergeNeighbors(textBoxes);
+
         for (float overlap = .9f; overlap > .4f; overlap -= .1) {
-            textBoxes.addAll(leftOvers);
-            mergeTextBoxes(processedTextBoxes, leftOvers, overlap);
+        //    textBoxes.addAll(leftOvers);
+            mergeTextBoxes(processedTextBoxes, overlap);
         }
 
+        List<BaseTextBox> leftOvers = new ArrayList<>();
+        for (BaseTextBox btb : processedTextBoxes){
+            if (btb.getChilds().isEmpty()) {
+                leftOvers.add(btb);
+            }
+        }
         addToClosest(processedTextBoxes, leftOvers);
         getLinesfromLineBoxes(processedTextBoxes, avg_w, avg_h);
 
         return processedTextBoxes;
     }
 
-    public static List<BaseTextBox> correctSkew(List<TextBox> lineBoxes, List<BaseTextBox> textBoxes, double thresh){
+    public static List<BaseTextBox> correctSkew(List<BaseTextBox> lineBoxes, List<BaseTextBox> textBoxes, double thresh){
         SimpleRegression simpleRegression = new SimpleRegression(true);
         double sum = 0;
         double c = 0;
-        for (TextBox lineTb : lineBoxes){
+        for (BaseTextBox lineTb : lineBoxes){
             if (lineTb.getChilds().size() < 2) continue;
             simpleRegression.clear();
             for (BaseTextBox tb : lineTb.getChilds()) {
@@ -304,20 +267,20 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         in.close();
 
         for (List<BaseTextBox> tbList : textBoxes) {
-            List<TextBox> processed = process(tbList);
+            List<BaseTextBox> processed = process(tbList);
 
         }
     }
 
-    private static void addToClosest(List<TextBox> textBoxes,
-                                     List<TextBox> leftOvers)
+    private static void addToClosest(List<BaseTextBox> textBoxes,
+                                     List<BaseTextBox> leftOvers)
     {
         if (textBoxes.size() == 0) return;
-        for (TextBox tb : leftOvers){
+        for (BaseTextBox tb : leftOvers){
             float base = tb.getBase();
-            TextBox bestLine = textBoxes.get(0);
+            BaseTextBox bestLine = textBoxes.get(0);
             float bestDistance = 10000f;
-            for (TextBox lb : textBoxes){
+            for (BaseTextBox lb : textBoxes){
                 float lineBase = lb.getBase();
                 float d = Math.abs(lineBase - base);
                 if (d < bestDistance){
@@ -349,23 +312,18 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             return Float.compare(a_left , b_left); }
     }
 
-    private static int mergeTextBoxes(List<TextBox> textBoxes,
-                               List<TextBox> leftOvers,
-                               float vertical_overlap_ratio) {
+    private static int mergeTextBoxes(List<BaseTextBox> textBoxes,
+                                      float vertical_overlap_ratio) {
 
-        Iterator<TextBox> it = textBoxes.listIterator();
-        while (it.hasNext()){
-            TextBox tb = it.next();
-            tb.setProcessed(false);
-        }
+        HashSet<Integer> processedTbs = new HashSet<>();
 
         textBoxes.sort(new SortByStartWord());
         // find character space estimate
 
         int numMerges = 0;
         for (int i = 0; i < textBoxes.size(); i++) {
-            TextBox textBox1 = textBoxes.get(i);
-            if (textBox1.isProcessed()) continue;
+            if (processedTbs.contains(i)) continue;
+            BaseTextBox textBox1 = textBoxes.get(i);
 
             float top1   = textBox1.getTop();
             float base1  = textBox1.getBase();
@@ -375,9 +333,9 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             List<BaseTextBox> tbList1 = new ArrayList<>();
             for (int j = 0; j < textBoxes.size(); j++) {
                 if (i == j) continue;
-                TextBox textBox2 = textBoxes.get(j);
+                if (processedTbs.contains(j)) continue;
 
-                if (textBox2.isProcessed()) continue;
+                BaseTextBox textBox2 = textBoxes.get(j);
 
                 float top2    = textBox2.getTop();
                 float base2   = textBox2.getBase();
@@ -409,7 +367,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                     tbList1.addAll(childs2);
                 }
 
-                textBox2.setProcessed(true);
+                processedTbs.add(j);
                 numMerges++;
                 top1 = Math.min(top1, top2);
                 base1 = Math.max(base1, base2);
@@ -419,7 +377,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
 
             List<BaseTextBox> childs = textBox1.getChilds();
             if (childs.isEmpty()) {
-                BaseTextBox tCopy = new TextBox(textBox1.getTop(), textBox1.getBase(),
+                BaseTextBox tCopy = new BaseTextBox(textBox1.getTop(), textBox1.getBase(),
                         textBox1.getLeft(), textBox1.getRight(), textBox1.getStr());
                 //        tCopy.setLine(textBox1.getLine());
                 tCopy.setPage(textBox1.getPage());
@@ -433,6 +391,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             textBox1.setRight(right1);
         }
 
+        /*
         it = textBoxes.listIterator();
         leftOvers.clear();
         while (it.hasNext()) {
@@ -445,6 +404,8 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                 it.remove();
             }
         }
+
+         */
 
         return numMerges;
     }
@@ -460,11 +421,11 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
     }
 
 
-    private static List<TextBox> mergeNeighbors(List<BaseTextBox> textBoxes) {
+    private static List<BaseTextBox> mergeNeighbors(List<BaseTextBox> textBoxes) {
 
-        List<TextBox> processedTextboxes = new ArrayList<>();
+        List<BaseTextBox> processedTextboxes = new ArrayList<>();
         for (BaseTextBox tb : textBoxes){
-            TextBox ptb = new TextBox(tb.getTop(), tb.getBase(),
+            BaseTextBox ptb = new BaseTextBox(tb.getTop(), tb.getBase(),
                     tb.getLeft(), tb.getRight(), tb.getStr());
             processedTextboxes.add(ptb);
         }
@@ -472,10 +433,11 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         processedTextboxes.sort(new SortByStartWord());
         // find character space estimate
 
+        HashSet<Integer> processedTbs = new HashSet<>();
         for (int i = 0; i < processedTextboxes.size(); i++) {
-            TextBox textBox1 = processedTextboxes.get(i);
+            if (processedTbs.contains(i)) continue;
 
-            if (textBox1.isProcessed()) continue;
+            BaseTextBox textBox1 = processedTextboxes.get(i);
 
             float top1   = textBox1.getTop();
             float base1  = textBox1.getBase();
@@ -485,9 +447,8 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             List<BaseTextBox> tbList1 = new ArrayList<>();
             for (int j = 0; j < processedTextboxes.size(); j++) {
                 if (i == j) continue;
-                TextBox textBox2 = processedTextboxes.get(j);
-
-                if (textBox2.isProcessed()) continue;
+                BaseTextBox textBox2 = processedTextboxes.get(j);
+                if (processedTbs.contains(j)) continue;
 
                 float top2    = textBox2.getTop();
                 float base2   = textBox2.getBase();
@@ -508,7 +469,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                     tbList1.addAll(childs2);
                 }
 
-                textBox2.setProcessed(true);
+                processedTbs.add(j);
                 top1 = Math.min(top1, top2);
                 base1 = Math.max(base1, base2);
                 left1 = Math.min(left1, left2);
@@ -531,18 +492,15 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             textBox1.setRight(right1);
         }
 
-        Iterator<TextBox> it = processedTextboxes.listIterator();
-        while (it.hasNext()) {
-            TextBox tb = it.next();
-            List<BaseTextBox> childTextBoxes = tb.getChilds();
-            if (tb.isProcessed()) {
-                it.remove();
-            } else if (childTextBoxes.isEmpty()){
-                it.remove();
-            }
+        List<BaseTextBox> resudedProcessedTextboxes = new ArrayList<>();
+        for (int i=0; i<processedTextboxes.size(); i++){
+            if (processedTbs.contains(i)) continue;
+            BaseTextBox btb = processedTextboxes.get(i);
+            if (btb.getChilds().isEmpty()) continue;
+            resudedProcessedTextboxes.add(btb);
         }
 
-        return processedTextboxes;
+        return resudedProcessedTextboxes;
     }
 
 
@@ -726,6 +684,273 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             if (ww < 1f) ww = 1f;
             return ww;
         }
+    }
+
+    public static BaseTextBox findAssociatedTextBox(Map<Integer, BaseTextBox> lineTextBoxMap,
+                                                    String str,
+                                                    LineInfo lineInfo,
+                                                    boolean ignorePrefixBoxes)
+    {
+        if (lineTextBoxMap == null) return null;
+        BaseTextBox line_text_boxes = lineTextBoxMap.get(lineInfo.getLineNumber());
+        if (line_text_boxes == null) return null;
+
+        String line_str = line_text_boxes.getLine_str();
+        BaseTextBox surronding_box = new BaseTextBox();
+
+        int str_start_1 = line_str.indexOf(str);
+        if (str_start_1 < 0) {
+            logger.warn("{} was not found in line_str {}", str, line_str);
+            return null;
+        }
+
+        List<BaseTextBox> childs = line_text_boxes.getChilds();
+        if (childs.size() == 0) return null;
+
+        //align textbox lefts with string indices
+        int index = 0;
+        int[][] childIdx2StrIdx = new int[childs.size()][2];
+
+        for (int i = 0; i < childs.size(); i++) {
+            BaseTextBox baseTextBox = childs.get(i);
+            String child_str = baseTextBox.getStr();
+            index = line_str.indexOf(child_str, index);
+            childIdx2StrIdx[i][0] = index;
+            childIdx2StrIdx[i][1] = index + child_str.length();
+            index += child_str.length();
+        }
+
+        List<BaseTextBox> components = new ArrayList<>();
+        int first_box_idx = -1;
+        int last_box_idx = childs.size() - 1;
+        for (int i = 0; i < childIdx2StrIdx.length; i++) {
+            int current_start = childIdx2StrIdx[i][0];
+            int current_end = childIdx2StrIdx[i][1];
+            BaseTextBox current_box = childs.get(i);
+            boolean added = false;
+            if (lineInfo.getLocalStart() >= current_start && lineInfo.getLocalStart() <= current_end) {
+                surronding_box.setTop(current_box.getTop());
+                surronding_box.setBase(current_box.getBase());
+                surronding_box.setLeft(current_box.getLeft());
+                components.add(current_box);
+                added = true;
+                if (first_box_idx == -1) {
+                    first_box_idx = i;
+                }
+            }
+
+            if (lineInfo.getLocalEnd() >= current_start && lineInfo.getLocalEnd() <= current_end) {
+                surronding_box.setRight(current_box.getRight());
+                if (!added) {
+                    components.add(current_box);
+                }
+                last_box_idx = i;
+                break;
+            }
+        }
+
+        if (first_box_idx == -1) {
+            logger.debug("Didn't find the associating texboxes {}", str);
+            return null;
+        }
+
+        if (ignorePrefixBoxes) {
+
+            // check if first box has token that is the beginining of the str
+            String first_matched_box_str = childs.get(first_box_idx).getStr();
+            if (!str.startsWith(first_matched_box_str)) {
+                if (!first_matched_box_str.startsWith(str)) {
+                    logger.debug("{} is a prefix", str);
+                    return null;
+                }
+            }
+            BaseTextBox textbox_before = first_box_idx > 0 ? childs.get(first_box_idx - 1) : null;
+
+            if (textbox_before != null) {
+                float gap_left = surronding_box.getLeft() - textbox_before.getRight();
+                float w2 = (textbox_before.getRight() - textbox_before.getLeft()) / (textbox_before.getStr().length());
+                if (gap_left < w2 * .8 ) {
+                    String textbox_before_str = textbox_before.getStr();
+                    if (textbox_before_str.length() != 0) {
+                        String lastChar = textbox_before_str.substring(textbox_before_str.length() - 1);
+                        if (lastChar.replaceAll("[A-Za-z0-9\"']", "").length() == 0) {
+                            logger.debug("{} is a left-prefix", str);
+                            return null;
+                        }
+                    }
+                }
+            }
+
+            // This is English so if the phrase ends with colon (:) no need to look the right side
+            BaseTextBox textbox_after = last_box_idx < childs.size()-1 ? childs.get(last_box_idx + 1) : null;
+            BaseTextBox textbox_curr = childs.get(last_box_idx);
+            String last_char_textbox_after = textbox_after == null ? "" : textbox_curr.getStr().substring(textbox_curr.getStr().length() - 1);
+            last_char_textbox_after = last_char_textbox_after.replaceAll("[^\\p{L}]", "");
+            if (textbox_after != null && !last_char_textbox_after.isEmpty()) {
+                float gap_right =  textbox_after.getLeft() - surronding_box.getRight();
+                float w2 = (textbox_after.getRight() - textbox_after.getLeft()) / (textbox_after.getStr().length());
+                if (gap_right < w2 * .8 ) {
+                    String textbox_after_str = textbox_after.getStr();
+                    if (textbox_after_str.length() > 0) {
+                        String firstChar = textbox_after_str.substring(0, 1);
+                        if (firstChar.replaceAll("[\\p{L}]", "").length() == 0) {
+                            logger.debug("{} is a right-prefix", str);
+                            return null;
+                        }
+                    }
+                }
+            }
+
+        }
+
+        surronding_box.setChilds(components);
+        surronding_box.setLine_str(line_str);
+
+        return surronding_box;
+    }
+
+    public static void extendToNeighbours(Map<Integer, BaseTextBox> lineTextBoxMap,
+                                          Map<String, Collection<QSpan>> labels,
+                                          QSpan label){
+        // first we check if we have at least one more label overlapping horizentally
+        int numLabelsInRow = 0;
+        BaseTextBox tb = label.getTextBox();
+        int line = label.getLine();
+        for (Map.Entry<String, Collection<QSpan>> e : labels.entrySet()){
+            for (QSpan qSpan : e.getValue()){
+                BaseTextBox btb = qSpan.getTextBox();
+                if (btb == null) continue;
+                float horizentalOverlap = getVerticalOverlap(btb, tb);
+                if (horizentalOverlap > 0 ) {
+                    numLabelsInRow++;
+                }
+            }
+        }
+
+        if (numLabelsInRow < 2) return;
+        float distance_to_right = 10000;
+        boolean foundOthersInRow = false;
+        // find closest textboxes on the right side
+        for (Map.Entry<Integer, BaseTextBox> e : lineTextBoxMap.entrySet()){
+            int lineBoxLine = e.getKey();
+            if (Math.abs(lineBoxLine - line) > 3) continue;
+            for (BaseTextBox bt : e.getValue().getChilds()) {
+                float hOverlap = getHorizentalOverlap(bt, tb, false);
+                if (hOverlap > 0 ) continue;
+                foundOthersInRow = true;
+                float vOcerlap = getVerticalOverlap(bt, tb);
+                if (vOcerlap > 0 ) {
+                    float d = bt.getLeft() - tb.getRight();
+                    if (d < 0) continue;
+                    if (d < distance_to_right){
+                        distance_to_right  = d;
+                    }
+                }
+            }
+
+        }
+
+        if (foundOthersInRow) {
+            label.setRight(tb.getRight() + distance_to_right);
+        }
+    }
+
+    public static float getHorizentalOverlap(BaseTextBox textBox1,
+                                             BaseTextBox textBox2,
+                                             boolean useChilds){
+        float l1 = useChilds ? textBox1.getChilds().get(0).getLeft() : textBox1.getLeft();
+        float r1 = useChilds ? textBox1.getChilds().get(textBox1.getChilds().size() -1).getRight() : textBox1.getRight();
+
+        float l2 = useChilds ? textBox2.getChilds().get(0).getLeft() : textBox2.getLeft();
+        float r2 = useChilds ? textBox2.getChilds().get(textBox2.getChilds().size() -1).getRight() : textBox2.getRight();
+
+        float w1 = r1 - l1;
+        float w2 = r2 - l2;
+
+
+        if (w1 == 0 || w2 == 0) return 0;
+
+        // h1 100% covers h2
+        if (l2 >= l1 && r2 <= r1) {
+            return 1;
+        }
+
+        // h2 100% covers h1
+        if (l2 <= l1 && r2 >= r1) {
+            return 1;
+        }
+
+        float overlap = 0;
+
+        if (l1 <= r2 && l1 >= l2) {
+            overlap = (r2 - l1 );
+        }
+
+        if (r1 <= r2 && r1 >= l2) {
+            overlap = (r1 - l2);
+        }
+        return overlap / Math.min(w1, w2);
+    }
+
+    public static float getHorizentalOverlap(BaseTextBox textBox1,
+                                             BaseTextBox textBox2){
+        float l1 = textBox1.getLeft();
+        float r1 = textBox1.getRight();
+
+        float l2 = textBox2.getLeft();
+        float r2 = textBox2.getRight();
+
+        float w1 = r1 - l1;
+        float w2 = r2 - l2;
+
+
+        if (w1 == 0 || w2 == 0) return 0;
+
+        // h1 100% covers h2
+        if (l2 >= l1 && r2 <= r1) {
+            return 1;
+        }
+
+        // h2 100% covers h1
+        if (l2 <= l1 && r2 >= r1) {
+            return 1;
+        }
+
+        float overlap = 0;
+
+        if (l1 >= l2) {
+            overlap = Math.max(0, Math.min(r1, r2) - l1);
+        } else {
+            overlap = Math.max(0, Math.min(r1, r2) - l2);
+        }
+        /*
+        if (l1 <= r2 && l1 >= l2) {
+            overlap = (r2 - l1 );
+        } else if (r1 <= r2 && r1 >= l2) {
+            overlap = (r1 - l2);
+        }
+         */
+
+
+        return overlap / Math.min(w1, w2);
+    }
+
+    public static float getVerticalOverlap(BaseTextBox textBox1, BaseTextBox textBox2)
+    {
+        float t1 = textBox1.getTop();
+        float b1 = textBox1.getBase();
+
+        float t2 = textBox2.getTop();
+        float b2 = textBox2.getBase();
+
+        float h1 = b1 - t1;
+        float h2 = b2 - t2;
+        if (h2 == 0 || h1 == 0) return 0;
+
+        float hh1 = b1 > b2 ? b2 - t1 : b1 - t2;
+
+        return hh1 / Math.min(h1, h2);
+
     }
 
     private static Map<Character, Float> ratios = new HashMap<>() {{
