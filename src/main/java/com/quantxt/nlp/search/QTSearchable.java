@@ -179,6 +179,9 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             if (lineStr.charAt(idx - 1) == ' ' && tokenize(analyzer, lastCharBefore) != null) {
                 int lnt = str.length();
                 if (lineStr.length() > idx + lnt) {
+                    if (lineStr.length() == idx + lnt + 1){
+                        return true;
+                    }
                     String firstCharAfter = lineStr.substring(idx + lnt + 1, idx + lnt + 2);
                     if (lineStr.charAt(idx + lnt) == ' ' && tokenize(analyzer, firstCharAfter) != null) {
                         logger.debug("{} in {} is NOT isolated", str, lineStr);
