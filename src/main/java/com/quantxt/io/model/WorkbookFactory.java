@@ -90,9 +90,9 @@ public class WorkbookFactory {
     }
 
     private static String evalCell(Cell c, FormulaEvaluator fevaluator) {
+        String value = null;
         try {
             CellValue cellValue = fevaluator.evaluate(c);
-            String value = null;
             if (cellValue.getCellType() == CellType.BOOLEAN) {
                 value = String.valueOf(cellValue.getBooleanValue());
             } else if (cellValue.getCellType() == CellType.NUMERIC) {
@@ -100,11 +100,22 @@ public class WorkbookFactory {
             } else if (cellValue.getCellType() == CellType.STRING) {
                 value = cellValue.getStringValue();
             }
-            return value;
-        } catch (RuntimeException re){
-            logger.error("Error in formula evaluator " + re.getMessage());
-        }
-        return null;
-    }
 
+        } catch (Exception re){
+            logger.error("Error in formula evaluator. " + re.getMessage() + "\nTry retrieve cashed value.");
+            final CellType cachedFormulaResultType = c.getCachedFormulaResultType();
+            switch (cachedFormulaResultType) {
+                case BOOLEAN:
+                    value = String.valueOf(c.getBooleanCellValue());
+                    break;
+                case NUMERIC:
+                    value = String.valueOf(c.getNumericCellValue());
+                    break;
+                case STRING:
+                    value = String.valueOf(c.getRichStringCellValue());
+                    break;
+            }
+        }
+        return value;
+    }
 }
