@@ -86,7 +86,7 @@ public class QSpan extends ExtInterval {
         }
     }
 
-    public ExtInterval getExtInterval(boolean useLocalLineStart){
+    public ExtInterval  getExtInterval(boolean useLocalLineStart){
         ExtInterval extInterval = new ExtInterval();
         extInterval.setDict_name(extIntervalTextBoxes.get(0).getExtInterval().getDict_name());
         extInterval.setDict_id(extIntervalTextBoxes.get(0).getExtInterval().getDict_id());

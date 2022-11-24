@@ -758,6 +758,8 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
 
             // check if first box has token that is the beginining of the str
             String first_matched_box_str = childs.get(first_box_idx).getStr();
+            // so non number and alphabet charcters at the begining are not prefix: like ( ) %
+            first_matched_box_str = first_matched_box_str.replaceAll("^[^A-Za-z0-9]+", "");
             if (!str.startsWith(first_matched_box_str)) {
                 if (!first_matched_box_str.startsWith(str)) {
                     logger.debug("{} is a prefix", str);
