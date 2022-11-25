@@ -21,7 +21,6 @@ public class QSpan extends ExtInterval {
 
     private Map<BaseTextBox, Double> neighbors = new HashMap<>();
     private List<ExtIntervalTextBox> extIntervalTextBoxes = new ArrayList<>();
-    private List<ExtIntervalTextBox> aux_extIntervalTextBoxes = new ArrayList<>();
 
     public QSpan(ExtIntervalTextBox e){
         super();

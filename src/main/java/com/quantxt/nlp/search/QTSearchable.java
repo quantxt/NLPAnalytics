@@ -530,21 +530,15 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
         if (spans.size() < 2) return spans;
 
-        HashSet<Integer> bad_spans = lineTextBoxMap == null ? getBadSpansWithoutTextBox(spans, negatives):
-                getBadSpansWithTextBox(spans, negatives);
-
-        List<QSpan> filtered = new ArrayList<>();
-        for (int i=0; i< spans.size(); i++) {
-            if (bad_spans.contains(i)) continue;
-            filtered.add(spans.get(i));
-        }
+        List<QSpan> filtered = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(spans, negatives):
+                getFilteredSpansWithTextBox(spans, negatives);
 
         return filtered;
     }
 
 
-    public HashSet<Integer> getBadSpansWithoutTextBox(List<QSpan> spans,
-                                                      List<QSpan> negatives){
+    public static List<QSpan> getFilteredSpansWithoutTextBox(List<QSpan> spans,
+                                                             List<QSpan> negatives){
         HashSet<Integer> bad_spans  = new HashSet<>();
         for (int i=0; i< spans.size(); i++) {
             QSpan span1 = spans.get(i);
@@ -564,11 +558,18 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 }
             }
         }
-        return bad_spans;
+
+        List<QSpan> filtered = new ArrayList<>();
+        for (int i=0; i< spans.size(); i++) {
+            if (bad_spans.contains(i)) continue;
+            filtered.add(spans.get(i));
+        }
+
+        return filtered;
     }
 
-    public HashSet<Integer> getBadSpansWithTextBox(List<QSpan> spans,
-                                                   List<QSpan> negatives){
+    public static List<QSpan> getFilteredSpansWithTextBox(List<QSpan> spans,
+                                                          List<QSpan> negatives){
         HashSet<Integer> bad_spans  = new HashSet<>();
         for (int i=0; i< spans.size(); i++) {
             BaseTextBox b1 = spans.get(i).getTextBox();
@@ -608,7 +609,14 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 }
             }
         }
-        return bad_spans;
+
+        List<QSpan> filtered = new ArrayList<>();
+        for (int i=0; i< spans.size(); i++) {
+            if (bad_spans.contains(i)) continue;
+            filtered.add(spans.get(i));
+        }
+
+        return filtered;
     }
     public int getMinTermLength(){
         return minTermLength;

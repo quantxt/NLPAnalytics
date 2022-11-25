@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import com.quantxt.doc.QTDocumentHelper;
 
 import static com.quantxt.doc.helper.textbox.TextBox.*;
+import static com.quantxt.nlp.search.QTSearchable.getFilteredSpansWithTextBox;
+import static com.quantxt.nlp.search.QTSearchable.getFilteredSpansWithoutTextBox;
 import static com.quantxt.types.QSpan.EXTBOXType.*;
 
 /**
@@ -538,11 +540,15 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 ExtIntervalTextBox singleFormValueInterval = null;
                 if (m.find()) {
                     ExtInterval interval = new ExtInterval();
+                    String str = m.group(1);
                     interval.setStr(m.group(1));
                     interval.setLine(qSpan.getLine());
                     interval.setStart(offset + m.start(1));
                     interval.setEnd(offset + m.end(1));
-                    singleFormValueInterval = new ExtIntervalTextBox(new ExtIntervalLocal(interval), qSpan.getTextBox());
+
+                    LineInfo vLineInfo = new LineInfo(interval.getStart(), interval.getEnd(), interval.getLine());
+                    BaseTextBox tb = findAssociatedTextBox(lineTextBoxMap, str, vLineInfo, false);
+                    singleFormValueInterval = new ExtIntervalTextBox(new ExtIntervalLocal(interval), tb);
                 }
 
                 AutoValue bestAutoValue = new AutoValue();
@@ -604,7 +610,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     }
                 }
 
-                List<Interval> best = bestAutoValue.getBest();
+                List<Interval> best = bestAutoValue.getBest(allLabels);
                 if (best.size() > 0) {
                     qSpan.setExtIntervalSimples(best);
                     foundValues.add(qSpan.getExtInterval(true));
@@ -1104,6 +1110,33 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         }
 
+        private void checkValuesAgainestLabels(List<QSpan> labels){
+
+            if (hValue != null) {
+                QSpan hSpan = new QSpan(hValue);
+                List<QSpan> testSpans = new ArrayList<>();
+                testSpans.add(hSpan);
+                List <QSpan> filtered = hValue.getTextBox() != null ? getFilteredSpansWithTextBox(testSpans, labels) :
+                        getFilteredSpansWithoutTextBox(testSpans, labels);
+                if (filtered.size() == 0) {
+                    hValue = null;
+                    h_score = 100000f;
+                }
+            }
+
+            if (vValue.size() > 0) {
+                QSpan hSpan = new QSpan(vValue.get(0));
+                List<QSpan> testSpans = new ArrayList<>();
+                testSpans.add(hSpan);
+                List <QSpan> filtered = vValue.get(0).getTextBox() != null  ? getFilteredSpansWithTextBox(testSpans, labels) :
+                        getFilteredSpansWithoutTextBox(testSpans, labels);
+                if (filtered.size() == 0) {
+                    vValue = new ArrayList<>();
+                    v_score = 100000f;
+                }
+            }
+        }
+
         public void merge(AutoValue autoValue){
             if (autoValue.hValue != null) {
                 if (autoValue.h_score < h_score) {
@@ -1119,7 +1152,10 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             }
         }
 
-        public List<Interval> getBest(){
+        public List<Interval> getBest(List<QSpan> labels){
+            if (labels != null) {
+                checkValuesAgainestLabels(labels);
+            }
             List<Interval> list = new ArrayList<>();
             if (hValue != null && vValue.size() >0){
                 ExtInterval h = hValue.getExtInterval();
