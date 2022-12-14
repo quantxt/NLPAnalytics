@@ -159,7 +159,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             Document doclookedup = indexSearcher.doc(id);
             matchedDocs.add(doclookedup);
         }
-
         return matchedDocs;
     }
 
@@ -168,7 +167,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         return search(query_string, 1);
     }
 
-    private boolean isIsolated(QSpan qSpan, Analyzer analyzer){
+    private boolean isIsolated(QSpan qSpan, Analyzer analyzer) {
         String lineStr = qSpan.getLine_str();
         // For now we only get linestr for paginated documents such as images nd PDFs
         if (lineStr == null) return true;
@@ -179,7 +178,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             if (lineStr.charAt(idx - 1) == ' ' && tokenize(analyzer, lastCharBefore) != null) {
                 int lnt = str.length();
                 if (lineStr.length() > idx + lnt) {
-                    if (lineStr.length() == idx + lnt + 1){
+                    if (lineStr.length() == idx + lnt + 1) {
                         return true;
                     }
                     String firstCharAfter = lineStr.substring(idx + lnt + 1, idx + lnt + 2);
@@ -196,16 +195,16 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
     private List<byte[]> getNextSequences(List<byte[]> oldSequence,
                                           List<ExtIntervalTextBox> singletokenMatches,
                                           Map<Byte, List<Byte>> tokenIdx2MatchIdx,
-                                          int idx2process){
+                                          int idx2process) {
         List<byte[]> newSequence = new ArrayList<>();
 
         List<Byte> list_current = tokenIdx2MatchIdx.get((byte) idx2process);
         if (list_current == null || list_current.size() == 0) return newSequence;
-        for (byte [] seq : oldSequence){
-            Byte b_idx = seq[seq.length-1];
+        for (byte[] seq : oldSequence) {
+            Byte b_idx = seq[seq.length - 1];
             ExtIntervalTextBox b_eitb = singletokenMatches.get(b_idx);
             int l1 = b_eitb.getExtInterval().getLine();
-            for (byte c_idx : list_current){
+            for (byte c_idx : list_current) {
                 ExtIntervalTextBox c_eitb = singletokenMatches.get(c_idx);
                 int l2 = c_eitb.getExtInterval().getLine();
                 if (c_idx > b_idx) {
@@ -229,6 +228,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
         return newSequence;
     }
+
     @Override
     public List<QSpan> search(String content,
                               Map<Integer, BaseTextBox> lineTextBoxMap,
@@ -257,7 +257,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                 List<Document> matchedDocs = getMatchedDocs(doc_query);
                 // run once with slop = 0
-
 
                 for (Mode m : mode) {
                     List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, slop,
@@ -289,14 +288,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                     }
 
                     if (lineTextBoxMap != null) {
-                        /*
-                        HashSet<String> cur_matches = new HashSet<>();
-                        for (ExtIntervalTextBox etb : matches){
-                            String key = etb.getExtInterval().getStart()+"_"+etb.getExtInterval().getEnd();
-                            cur_matches.add(key);
-                        }
 
-                         */
                         for (Document matchedDoc : matchedDocs) {
                             List<Document> singleMatchedDocList = new ArrayList<>();
                             singleMatchedDocList.add(matchedDoc);
@@ -305,242 +297,239 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     search_fld, vocab_name, vocab_id, content, lineTextBoxMap);
 
                             singletokenMatches.sort(comparingInt((ExtIntervalTextBox s) -> s.getExtInterval().getStart()));
-                    //        List<String[]> matchedDocumentTokens = new ArrayList<>();
 
-                    //        for (Document d : matchedDocs) {
-                                String[] tokens = tokenize(searchAnalyzer, matchedDoc.getField(search_fld).stringValue());
-                                if (tokens.length > 127) continue;
-                                if (tokens.length == 1) continue;
-                    //            matchedDocumentTokens.add(tokens);
-                    //        }
+                            String[] tokens = tokenize(searchAnalyzer, matchedDoc.getField(search_fld).stringValue());
+                            if (tokens.length > 127) continue;
+                            if (tokens.length == 1) continue;
 
-                    //        for (String[] tokens : matchedDocumentTokens) {
-                                Map<String, List<Byte>> tokenIndex = new HashMap<>();
+                            Map<String, List<Byte>> tokenIndex = new HashMap<>();
 
-                                for (byte i = 0; i < tokens.length; i++) {
-                                    String t = tokens[i];
-                                    List<Byte> list = tokenIndex.get(t);
-                                    if (list == null) {
-                                        list = new ArrayList<>();
-                                        tokenIndex.put(t, list);
+                            for (byte i = 0; i < tokens.length; i++) {
+                                String t = tokens[i];
+                                List<Byte> list = tokenIndex.get(t);
+                                if (list == null) {
+                                    list = new ArrayList<>();
+                                    tokenIndex.put(t, list);
+                                }
+                                list.add(i);
+                            }
+
+                            Map<Byte, List<Byte>> tokenIdx2MatchIdx = new HashMap<>();
+                            Map<Byte, List<Byte>> relations = new HashMap<>();
+                            for (byte i = 0; i < singletokenMatches.size(); i++) {
+                                ExtIntervalTextBox eitb = singletokenMatches.get(i);
+                                String singleTokenEitb = eitb.getExtInterval().getStr();
+                                String[] sTokens = tokenize(searchAnalyzer, singleTokenEitb);
+                                if (sTokens == null || sTokens.length == 0 || sTokens[0].isEmpty()) continue;
+                                String singleToken = sTokens[0];
+                                List<Byte> tokenIdxs = tokenIndex.get(singleToken);
+                                if (tokenIdxs == null) continue;
+                                for (Byte tm : tokenIdxs) {
+                                    List<Byte> rels = relations.get(i);
+                                    if (rels == null) {
+                                        rels = new ArrayList<>();
+                                        relations.put(i, rels);
                                     }
-                                    list.add(i);
-                                }
+                                    rels.add(tm);
 
-                                Map<Byte, List<Byte>> tokenIdx2MatchIdx = new HashMap<>();
-                                Map<Byte, List<Byte>> relations = new HashMap<>();
-                                for (byte i = 0; i < singletokenMatches.size(); i++) {
-                                    ExtIntervalTextBox eitb = singletokenMatches.get(i);
-                                    //            LineInfo lineInfo = new LineInfo(content, eitb.getExtInterval());
-                                    //            eitb.getExtInterval().setLine(lineInfo.getLineNumber());
-                                    String singleTokenEitb = eitb.getExtInterval().getStr();
-                                    String[] sTokens = tokenize(searchAnalyzer, singleTokenEitb);
-                                    if (sTokens == null || sTokens.length == 0 || sTokens[0].isEmpty()) continue;
-                                    String singleToken = sTokens[0];
-                                    List<Byte> tokenIdxs = tokenIndex.get(singleToken);
-                                    if (tokenIdxs == null) continue;
-                                    for (Byte tm : tokenIdxs) {
-                                        List<Byte> rels = relations.get(i);
-                                        if (rels == null) {
-                                            rels = new ArrayList<>();
-                                            relations.put(i, rels);
-                                        }
-                                        rels.add(tm);
-
-                                        List<Byte> matchIdxs = tokenIdx2MatchIdx.get(tm);
-                                        if (matchIdxs == null) {
-                                            matchIdxs = new ArrayList<>();
-                                            tokenIdx2MatchIdx.put(tm, matchIdxs);
-                                        }
-                                        matchIdxs.add(i);
+                                    List<Byte> matchIdxs = tokenIdx2MatchIdx.get(tm);
+                                    if (matchIdxs == null) {
+                                        matchIdxs = new ArrayList<>();
+                                        tokenIdx2MatchIdx.put(tm, matchIdxs);
                                     }
-
+                                    matchIdxs.add(i);
                                 }
-                                //   tokens      [0 1 2 3]
-                                //   tokenCounts [3 2 3 4]
-                                //   comb = 3*2*3*4
-                                //
+                            }
+                            //   tokens      [0 1 2 3]
+                            //   tokenCounts [3 2 3 4]
+                            //   comb = 3*2*3*4
+                            //
 
-                                List<byte[]> sequences = new ArrayList<>();
-                                List<Byte> list_0 = tokenIdx2MatchIdx.get((byte) 0);
-                                if (list_0 == null) continue;
-                                for (byte b : list_0) {
-                                    byte[] b_arr = new byte[1];
-                                    b_arr[0] = b;
-                                    sequences.add(b_arr);
-                                }
-                                for (int i = 1; i < tokenIdx2MatchIdx.size(); i++) {
-                                    sequences = getNextSequences(sequences, singletokenMatches, tokenIdx2MatchIdx, i);
-                                }
+                            List<byte[]> sequences = new ArrayList<>();
+                            List<Byte> list_0 = tokenIdx2MatchIdx.get((byte) 0);
+                            if (list_0 == null) continue;
+                            for (byte b : list_0) {
+                                byte[] b_arr = new byte[1];
+                                b_arr[0] = b;
+                                sequences.add(b_arr);
+                            }
+                            for (int i = 1; i < tokenIdx2MatchIdx.size(); i++) {
+                                sequences = getNextSequences(sequences, singletokenMatches, tokenIdx2MatchIdx, i);
+                            }
 
-                                logger.debug("Total Comb {}, tokens {}", sequences.size(), tokens.length);
+                            logger.debug("Total Comb {}, tokens {}", sequences.size(), tokens.length);
 
-                                for (byte[] seq : sequences) {
-                                    ExtIntervalTextBox prev = singletokenMatches.get(seq[0]);
-                                    if (prev == null) continue;
-                                    boolean isValidSeq = true;
-                                    for (int i = 1; i < seq.length; i++) {
-                                        int l1 = singletokenMatches.get(seq[i - 1]).getExtInterval().getLine();
-                                        int l2 = singletokenMatches.get(seq[i]).getExtInterval().getLine();
-                                        if (l2 - l1 < 0 || l2 - l1 > 3) {
-                                            isValidSeq = false;
-                                            break;
-                                        }
+                            for (byte[] seq : sequences) {
+                                ExtIntervalTextBox prev = singletokenMatches.get(seq[0]);
+                                if (prev == null) continue;
+                                boolean isValidSeq = true;
+                                for (int i = 1; i < seq.length; i++) {
+                                    int l1 = singletokenMatches.get(seq[i - 1]).getExtInterval().getLine();
+                                    int l2 = singletokenMatches.get(seq[i]).getExtInterval().getLine();
+                                    if (l2 - l1 < 0 || l2 - l1 > 3) {
+                                        isValidSeq = false;
+                                        break;
                                     }
+                                }
 
-                                    if (!isValidSeq) continue;
-                                    QSpan qSpan = new QSpan(prev);
+                                if (!isValidSeq) continue;
+                                QSpan qSpan = new QSpan(prev);
 
-                                    for (int i = 1; i < seq.length; i++) {
-                                        ExtIntervalTextBox curr = singletokenMatches.get(seq[i]);
-                                        // we read tokens in wrriting order/ left to right - top to bottom
-                                        if (curr.getExtInterval().getStart() < prev.getExtInterval().getEnd()) continue;
-                                        if (curr == null) continue;
-                                        BaseTextBox b1 = qSpan.getTextBox();
-                                        BaseTextBox b2 = curr.getTextBox();
-                                        float hOverlap = getHorizentalOverlap(b1, b2);
-                                        boolean isGood = false;
-                                        float distV = Math.abs(b1.getBase() - b2.getBase());
+                                for (int i = 1; i < seq.length; i++) {
+                                    ExtIntervalTextBox curr = singletokenMatches.get(seq[i]);
+                                    // we read tokens in wrriting order/ left to right - top to bottom
+                                    if (curr.getExtInterval().getStart() < prev.getExtInterval().getEnd()) continue;
+                                    if (curr == null) continue;
+                                    BaseTextBox b1 = qSpan.getTextBox();
+                                    BaseTextBox b2 = curr.getTextBox();
+                                    float hOverlap = getHorizentalOverlap(b1, b2);
+                                    boolean isGood = false;
+                                    float distV = Math.abs(b1.getBase() - b2.getBase());
 
-                                        if (hOverlap > .4 && (distV < 3 * (b2.getBase() - b2.getTop()))) {
-                                            isGood = true;
-                                        } else {
-                                            float vOverlap = getVerticalOverlap(b1, b2);
-                                            boolean currIsAfterqSpan = b1.getLeft() <= b2.getRight(); // this is a sequence of words in english so next word has to be after current
-                                            if (vOverlap > .4 && currIsAfterqSpan) {
-                                                float dist = b1.getLeft() > b2.getRight() ? b1.getLeft() - b2.getRight() : b2.getLeft() - b1.getRight();
-                                                if (dist > 1.2 * (b2.getBase() - b1.getTop())) {
-                                                    if (prev.getExtInterval().getEnd() < curr.getExtInterval().getStart()) {
-                                                        String gap = content.substring(prev.getExtInterval().getEnd(), curr.getExtInterval().getStart());
-                                                        String[] gap_tokens = tokenize(searchAnalyzer, gap);
-                                                        if (gap.length() < 5 && (gap_tokens == null || gap.length() == 0)) {
-                                                            isGood = true;
-                                                        }
+                                    if (hOverlap > .4 && (distV < 3 * (b2.getBase() - b2.getTop()))) {
+                                        isGood = true;
+                                    } else {
+                                        float vOverlap = getVerticalOverlap(b1, b2);
+                                        boolean currIsAfterqSpan = b1.getLeft() <= b2.getRight(); // this is a sequence of words in english so next word has to be after current
+                                        if (vOverlap > .4 && currIsAfterqSpan) {
+                                            float dist = b1.getLeft() > b2.getRight() ? b1.getLeft() - b2.getRight() : b2.getLeft() - b1.getRight();
+                                            if (dist > 1.2 * (b2.getBase() - b1.getTop())) {
+                                                if (prev.getExtInterval().getEnd() < curr.getExtInterval().getStart()) {
+                                                    String gap = content.substring(prev.getExtInterval().getEnd(), curr.getExtInterval().getStart());
+                                                    String[] gap_tokens = tokenize(searchAnalyzer, gap);
+                                                    if (gap.length() < 5 && (gap_tokens == null || gap.length() == 0)) {
+                                                        isGood = true;
                                                     }
-                                                } else {
-                                                    isGood = true;
                                                 }
+                                            } else {
+                                                isGood = true;
                                             }
                                         }
+                                    }
 
-                                        if (isGood) {
-                                            qSpan.add(curr);
-                                            qSpan.process(content);
-                                            prev = curr;
-                                        } else {
+                                    if (isGood) {
+                                        qSpan.add(curr);
+                                        qSpan.process(content);
+                                        prev = curr;
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                if (qSpan.size() == tokens.length) {
+                                    boolean isNegative = false;
+                                    qSpan.process(content);
+                                    // check if the match is negative
+                                    // we remove matches that are part of a test line
+                                    if (isolatedLabelsOnly) {
+                                        boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
+                                        if (!isIsolated) continue;
+                                    }
+
+                                    List<ExtIntervalTextBox> tmpMatch = getFragments(matchedDocs, SPAN, false, 1,
+                                            searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
+                                            search_fld, vocab_name, vocab_id, qSpan.getStr(), null);
+
+                                    for (ExtIntervalTextBox ex : tmpMatch) {
+                                        if (ex.getExtInterval().getCategory().equals(DONT_CARE)) {
+                                            isNegative = true;
+                                            negatives.add(qSpan);
                                             break;
                                         }
                                     }
 
-                                    if (qSpan.size() == tokens.length) {
-                                        boolean isNegative = false;
-                                        qSpan.process(content);
-                                        // check if the match is negative
-                                        // we remove matches that are part of a test line
-                                        if (isolatedLabelsOnly) {
-                                            boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
-                                            if (!isIsolated) continue;
-                                        }
-
-                                        List<ExtIntervalTextBox> tmpMatch = getFragments(matchedDocs, SPAN, false, 1,
-                                                searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
-                                                search_fld, vocab_name, vocab_id, qSpan.getStr(), null);
-
-                                        for (ExtIntervalTextBox ex : tmpMatch) {
-                                            if (ex.getExtInterval().getCategory().equals(DONT_CARE)) {
-                                                isNegative = true;
-                                                negatives.add(qSpan);
+                                    if (!isNegative) {
+                                        ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
+                                        boolean isInCompleteSpans = false;
+                                        ListIterator<QSpan> iter = complete_spans.listIterator();
+                                        while (iter.hasNext()) {
+                                            QSpan qs = iter.next();
+                                            float d1 = firstPExt.getTextBox().getBase() - qs.getBase();
+                                            float d2 = firstPExt.getTextBox().getLeft() - qs.getLeft();
+                                            if (Math.abs(d1) < 2 && Math.abs(d2) < 2) {
+                                                isInCompleteSpans = true;
                                                 break;
                                             }
                                         }
-
-                                        if (!isNegative) {
-                                            ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
-                                            boolean isInCompleteSpans = false;
-                                            ListIterator<QSpan> iter = complete_spans.listIterator();
-                                            while (iter.hasNext()) {
-                                                QSpan qs = iter.next();
-                                                float d1 = firstPExt.getTextBox().getBase() - qs.getBase();
-                                                float d2 = firstPExt.getTextBox().getLeft() - qs.getLeft();
-                                                if (Math.abs(d1) < 2 && Math.abs(d2) < 2) {
-                                                    isInCompleteSpans = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!isInCompleteSpans) {
-                                                partial_spans.add(qSpan);
-                                            }
+                                        if (!isInCompleteSpans) {
+                                            partial_spans.add(qSpan);
                                         }
                                     }
                                 }
-                //            }
+                            }
                         }
                     }
                 }
 
-        //        spans.addAll(getNonOverlappingSpans(partial_spans));
                 spans.addAll(partial_spans);
                 spans.addAll(complete_spans);
 
                 if (spans.size() == 0) return spans;
                 spans.sort(comparingInt((QSpan s) -> s.getExtInterval(false).getStart()));
-
-                /*
-                ListIterator<QSpan> iter = spans.listIterator();
-
-                while (iter.hasNext()) {
-                    QSpan qSpan = iter.next();
-                    qSpan.process(content);
-                    String str = qSpan.getStr();
-                    Query doc_mini_query = useFuzzyMatching ? getFuzzyQuery(searchAnalyzer, search_fld, str,
-                            minTermLength, maxEdits, prefixLength) :
-                            getMatchAllQuery(searchAnalyzer, search_fld, str);
-
-                    List<Document> mini_mtchs = getMatchedDocs(doc_mini_query);
-
-                    List<ExtIntervalTextBox> mini_frags = getFragments(mini_mtchs, SPAN, false, 1,
-                            searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
-                            search_fld, vocab_name, vocab_id, str, null);
-
-                    if (mini_frags.size() == 0) {
-                        iter.remove();
-                        continue;
-                    }
-
-                }
-
-                 */
-
-                /*
-                String str = qSpan.getStr();
-
-                String k = qSpan.getStart() + "_" + qSpan.getCategory();
-                if (ext_keys.contains(k)) {
-                    iter.remove();
-                    continue;
-                }
-                ext_keys.add(k);
-
-                 */
             }
         } catch (Exception e) {
             e.printStackTrace();
             logger.error("Error in name search {}: query_string '{}'", e.getMessage(), content);
         }
 
+        // spans should not contain keyword other than associated label keywords
+        if (lineTextBoxMap != null) {
+            spans = removeSpansWithIrrelevantKeywords(spans, lineTextBoxMap);
+        }
+
         if (spans.size() < 2) return spans;
 
-        List<QSpan> filtered = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(spans, negatives):
+        List<QSpan> filtered = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(spans, negatives) :
                 getFilteredSpansWithTextBox(spans, negatives);
 
         return filtered;
     }
 
 
+    private static List<QSpan> removeSpansWithIrrelevantKeywords(List<QSpan> spans,
+                                                                 Map<Integer, BaseTextBox> lineTextBoxMap)
+    {
+        List<QSpan> filtered = new ArrayList<>();
+
+        for (QSpan qSpan : spans){
+            boolean isGood = false;
+        //    BaseTextBox l_btb = qSpan.getTextBox();
+            for (ExtIntervalTextBox eib : qSpan.getExtIntervalTextBoxes()){
+                int l_eib = eib.getExtInterval().getLine();
+                BaseTextBox lineBox = lineTextBoxMap.get(l_eib);
+                if (lineBox == null) continue;
+                List<BaseTextBox> line_btbs = lineBox.getChilds();
+                // so we check if any of the other boxes on this line have major overlap with our span
+                BaseTextBox l_btb = eib.getTextBox();
+                for (BaseTextBox btb : line_btbs){
+                    String str = btb.getStr();
+                    if (str == null || str.isEmpty() || str.replaceAll("\\p{Punct}", "").trim().isEmpty()) continue;
+                    float vo = getVerticalOverlap(btb, l_btb);
+                    float ho = getHorizentalOverlap(btb, l_btb);
+                    if (ho > .95f && ho < 1.05f && vo > .95f && vo < 1.05f) {
+                        isGood = true;
+                        break;
+                    }
+            //        if ( ho < .1f || vo < .1f) continue;
+            //        if (ho > .85f && ho < 1.05f && vo > .85f && vo < 1.05f) continue;
+           //         isGood = false;
+            //        break;
+                }
+                if (isGood) break;
+            }
+            if (isGood){
+                filtered.add(qSpan);
+            }
+        }
+
+        return filtered;
+    }
+
+
     public static List<QSpan> getFilteredSpansWithoutTextBox(List<QSpan> spans,
-                                                             List<QSpan> negatives){
-        HashSet<Integer> bad_spans  = new HashSet<>();
-        for (int i=0; i< spans.size(); i++) {
+                                                             List<QSpan> negatives) {
+        HashSet<Integer> bad_spans = new HashSet<>();
+        for (int i = 0; i < spans.size(); i++) {
             QSpan span1 = spans.get(i);
             int s1 = span1.getStart();
             int e1 = span1.getEnd();
@@ -550,8 +539,8 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 int s2 = span2.getStart();
                 int e2 = span2.getEnd();
                 int l2 = span2.getLine();
-                if (l1 == l2){
-                    if ((s1 >= s2 && s1 <= e2) || (e1 >= s2 && e1 <= e2)){
+                if (l1 == l2) {
+                    if ((s1 >= s2 && s1 <= e2) || (e1 >= s2 && e1 <= e2)) {
                         bad_spans.add(i);
                         break;
                     }
@@ -560,7 +549,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         }
 
         List<QSpan> filtered = new ArrayList<>();
-        for (int i=0; i< spans.size(); i++) {
+        for (int i = 0; i < spans.size(); i++) {
             if (bad_spans.contains(i)) continue;
             filtered.add(spans.get(i));
         }
@@ -569,9 +558,9 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
     }
 
     public static List<QSpan> getFilteredSpansWithTextBox(List<QSpan> spans,
-                                                          List<QSpan> negatives){
-        HashSet<Integer> bad_spans  = new HashSet<>();
-        for (int i=0; i< spans.size(); i++) {
+                                                          List<QSpan> negatives) {
+        HashSet<Integer> bad_spans = new HashSet<>();
+        for (int i = 0; i < spans.size(); i++) {
             BaseTextBox b1 = spans.get(i).getTextBox();
             if (b1 == null) continue;
             for (int j = 0; j < negatives.size(); j++) {
@@ -586,22 +575,22 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             }
         }
 
-        for (int i=0; i< spans.size(); i++) {
+        for (int i = 0; i < spans.size(); i++) {
             if (bad_spans.contains(i)) continue;
             BaseTextBox b1 = spans.get(i).getTextBox();
             if (b1 == null) continue;
             float s1 = (b1.getRight() - b1.getLeft()) * (b1.getBase() - b1.getTop());
-            for (int j=i+1; j< spans.size(); j++) {
+            for (int j = i + 1; j < spans.size(); j++) {
                 if (bad_spans.contains(j)) continue;
                 BaseTextBox b2 = spans.get(j).getTextBox();
                 if (b2 == null) continue;
                 float ho = getHorizentalOverlap(b1, b2);
                 float vo = getVerticalOverlap(b1, b2);
-                if (ho > .95 && vo > .95){  // i completely covers j
+                if (ho > .95 && vo > .95) {  // i completely covers j
                     bad_spans.add(j);
-                } else if (ho > 0 && vo > 0){
+                } else if (ho > 0 && vo > 0) {
                     float s2 = (b2.getRight() - b2.getLeft()) * (b2.getBase() - b2.getTop());
-                    if (s1 > s2){
+                    if (s1 > s2) {
                         bad_spans.add(i);
                     } else {
                         bad_spans.add(j);
@@ -611,17 +600,19 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         }
 
         List<QSpan> filtered = new ArrayList<>();
-        for (int i=0; i< spans.size(); i++) {
+        for (int i = 0; i < spans.size(); i++) {
             if (bad_spans.contains(i)) continue;
             filtered.add(spans.get(i));
         }
 
         return filtered;
     }
-    public int getMinTermLength(){
+
+    public int getMinTermLength() {
         return minTermLength;
     }
-    public void setMinTermLength(int minTermLength){
+
+    public void setMinTermLength(int minTermLength) {
         this.minTermLength = minTermLength;
     }
 

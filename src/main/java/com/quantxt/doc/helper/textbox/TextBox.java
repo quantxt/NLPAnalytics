@@ -908,12 +908,12 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
 
         if (w1 == 0 || w2 == 0) return 0;
 
-        // h1 100% covers h2
+        // w1 100% covers w2
         if (l2 >= l1 && r2 <= r1) {
             return 1;
         }
 
-        // h2 100% covers h1
+        // w2 100% covers w1
         if (l2 <= l1 && r2 >= r1) {
             return 1;
         }
@@ -925,34 +925,39 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         } else {
             overlap = Math.max(0, Math.min(r1, r2) - l2);
         }
-        /*
-        if (l1 <= r2 && l1 >= l2) {
-            overlap = (r2 - l1 );
-        } else if (r1 <= r2 && r1 >= l2) {
-            overlap = (r1 - l2);
-        }
-         */
-
-
         return overlap / Math.min(w1, w2);
     }
 
     public static float getVerticalOverlap(BaseTextBox textBox1, BaseTextBox textBox2)
     {
-        float t1 = textBox1.getTop();
-        float b1 = textBox1.getBase();
+        float t1 = textBox1.getTop();  //l=t
+        float b1 = textBox1.getBase(); //r=b
 
         float t2 = textBox2.getTop();
         float b2 = textBox2.getBase();
 
-        float h1 = b1 - t1;
+        float h1 = b1 - t1;     //w=h
         float h2 = b2 - t2;
+
         if (h2 == 0 || h1 == 0) return 0;
 
-        float hh1 = b1 > b2 ? b2 - t1 : b1 - t2;
+        if (t2 >= t1 && b2 <= b1) {
+            return 1;
+        }
 
-        return hh1 / Math.min(h1, h2);
+        // h2 100% covers h1
+        if (t2 <= t1 && b2 >= b1) {
+            return 1;
+        }
 
+        float overlap = 0;
+        if (t1 >= t2) {
+            overlap = Math.max(0, Math.min(b1, b2) - t1);
+        } else {
+            overlap = Math.max(0, Math.min(b1, b2) - t2);
+        }
+
+        return overlap / Math.min(h1, h2);
     }
 
     private static Map<Character, Float> ratios = new HashMap<>() {{

@@ -89,6 +89,7 @@ public class QTextFragment {
         return false;
     }
 
+    /*
     public static List<ExtInterval> getBestTextFragments(TokenStream tokenStream,
                                                          SpanQuery query,
                                                          String text,
@@ -115,7 +116,6 @@ public class QTextFragment {
 
         try
         {
-
             textFragmenter.start(text, tokenStream);
             QTokenGroup tokenGroup = new QTokenGroup(tokenStream);
             tokenStream.reset();
@@ -181,11 +181,13 @@ public class QTextFragment {
             }
         }
     }
+     */
 
-    public static ExtInterval[]  mergeContiguousFragments(List<QToken> qTokens,
-                                                           String category,
-                                                           String dictionary_name,
-                                                           String dictionary_id)
+    public static ExtInterval[] mergeContiguousFragments(List<QToken> qTokens,
+                                                         int max_merge,
+                                                         String category,
+                                                         String dictionary_name,
+                                                         String dictionary_id)
     {
         ExtInterval [] matches = new ExtInterval[qTokens.size()];
         for (int i=0; i< qTokens.size(); i++){
@@ -218,21 +220,25 @@ public class QTextFragment {
 
                     //if blocks are contiguous....
                     QToken qToken_x = qTokens.get(x);
-                    if (qtFollows(qToken_x, qToken_i))
+                    if (qToken_x.num_merged < max_merge && qtFollows(qToken_x, qToken_i))
                     {
                         // match_x  match_i
                         matches[i].setStart(qToken_x.start);
                         qToken_x.postInc += qToken_i.postInc;
-                        String new_keyword = qToken_i.str;
+                        qToken_x.num_merged++;
+                        //TODO: Is this right?
+                        String new_keyword = qToken_i.str; // ??
                         matches[i].setStr(new_keyword);
                         matches[x] = null;
                     }
-                    else if ( qtFollows(qToken_i, qToken_x))
+                    else if ( qToken_i.num_merged < max_merge && qtFollows(qToken_i, qToken_x))
                     {
                         // match_i match_x
                         matches[i].setEnd(qToken_x.end);
                         qToken_i.postInc += qToken_x.postInc;
+                        qToken_i.num_merged++;
                         String new_keyword = qToken_i.str;
+                        //TODO: Is this right?
                         matches[i].setStr(new_keyword);
                         matches[x] = null;
                     }
