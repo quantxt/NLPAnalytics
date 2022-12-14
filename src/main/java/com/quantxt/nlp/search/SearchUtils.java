@@ -167,6 +167,10 @@ public class SearchUtils {
 
         for (Document matchedDoc : matchedDocs) {
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
+            // how many tokens in the query?
+            String [] tokens =  tokenize(search_analyzer, query_string_raw);
+            if (tokens == null) continue;
+            int num_tokens = tokens.length;
             //    String query_string_escaped = QueryParserUtil.escape(query_string_raw);
 
             //    if (slop < 2) {
@@ -185,11 +189,11 @@ public class SearchUtils {
             QTHighlighter highlighter = new QTHighlighter(formatter, scorer);
             Fragmenter fragmenter = new QSimpleSpanFragmenter(scorer, 2000);
             highlighter.setTextFragmenter(fragmenter);
-            QTextFragment[] frag = highlighter.getBestTextFragments(tokenStream, str, false, 10);
+            QTextFragment[] frags = highlighter.getBestTextFragments(tokenStream, str, false, 10);
 
             ArrayList<QToken> tokenList = highlighter.getTokenList();
             if (mergeCntsFrags) {
-                ExtInterval[] merged = QTextFragment.mergeContiguousFragments(tokenList, category, vocab_name, vocab_id);
+                ExtInterval[] merged = QTextFragment.mergeContiguousFragments(tokenList, num_tokens-1, category, vocab_name, vocab_id);
 
                 for (ExtInterval extInterval : merged) {
                     if (extInterval == null) continue;

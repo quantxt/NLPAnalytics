@@ -10,6 +10,8 @@ public class QToken {
     int pos;
     int postInc;
 
+    int num_merged = 0;
+
 
     public QToken(String text,
                   OffsetAttribute o,
