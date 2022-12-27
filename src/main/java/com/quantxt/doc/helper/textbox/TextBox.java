@@ -391,6 +391,15 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             textBox1.setRight(right1);
         }
 
+        ListIterator<BaseTextBox> iter = textBoxes.listIterator();
+        int i=0;
+        while (iter.hasNext()){
+            iter.next();
+            if (processedTbs.contains(i++)) {
+                iter.remove();
+            }
+        }
+
         /*
         it = textBoxes.listIterator();
         leftOvers.clear();
