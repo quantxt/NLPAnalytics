@@ -189,19 +189,10 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         List<BaseTextBox> processedTextBoxes = mergeNeighbors(textBoxes);
 
         for (float overlap = .9f; overlap > .4f; overlap -= .1) {
-        //    textBoxes.addAll(leftOvers);
             mergeTextBoxes(processedTextBoxes, overlap);
         }
 
-        List<BaseTextBox> leftOvers = new ArrayList<>();
-        for (BaseTextBox btb : processedTextBoxes){
-            if (btb.getChilds().isEmpty()) {
-                leftOvers.add(btb);
-            }
-        }
-        addToClosest(processedTextBoxes, leftOvers);
         getLinesfromLineBoxes(processedTextBoxes, avg_w, avg_h);
-
         return processedTextBoxes;
     }
 
@@ -316,7 +307,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                                       float vertical_overlap_ratio) {
 
         HashSet<Integer> processedTbs = new HashSet<>();
-
         textBoxes.sort(new SortByStartWord());
         // find character space estimate
 
@@ -336,30 +326,32 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                 if (processedTbs.contains(j)) continue;
 
                 BaseTextBox textBox2 = textBoxes.get(j);
+                List<BaseTextBox> childs2 = textBox2.getChilds();
 
                 float top2    = textBox2.getTop();
                 float base2   = textBox2.getBase();
                 float left2   = textBox2.getLeft();
                 float right2  = textBox2.getRight();
 
-                float vertical_overlap = getOverlap(top1, base1, top2, base2, vertical_overlap_ratio);
-                if (vertical_overlap <= 0) continue;
+                float vertical_overlap = getVerticalOverlap(textBox1, textBox2);
+                if (vertical_overlap < vertical_overlap_ratio) continue;
 
-                boolean hasHorizentalOverlap = hasHorizentalOverlap(textBox1, textBox2);
-                if (hasHorizentalOverlap) continue;
-                for (BaseTextBox tb1 : textBox1.getChilds()){
-                    hasHorizentalOverlap = hasHorizentalOverlap(tb1, textBox2);
+                // check overlap of child
+                boolean hasHorizentalOverlap = false;
+                for (BaseTextBox tb2 : textBox2.getChilds()) {
+                    for (BaseTextBox tb1 : textBox1.getChilds()){
+                        hasHorizentalOverlap = getHorizentalOverlap(tb1, tb2) >0;
+                        if (hasHorizentalOverlap) break;
+                    }
+                    if (hasHorizentalOverlap) break;
+
+                    for (BaseTextBox tb1 : tbList1){
+                        hasHorizentalOverlap = getHorizentalOverlap(tb1, tb2) >0;
+                        if (hasHorizentalOverlap) break;
+                    }
                     if (hasHorizentalOverlap) break;
                 }
                 if (hasHorizentalOverlap) continue;
-
-                for (BaseTextBox tb1 : tbList1){
-                    hasHorizentalOverlap = hasHorizentalOverlap(tb1, textBox2);
-                    if (hasHorizentalOverlap) break;
-                }
-                if (hasHorizentalOverlap) continue;
-
-                List<BaseTextBox> childs2 = textBox2.getChilds();
 
                 if (childs2.isEmpty()){
                     tbList1.add(textBox2);
@@ -379,7 +371,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             if (childs.isEmpty()) {
                 BaseTextBox tCopy = new BaseTextBox(textBox1.getTop(), textBox1.getBase(),
                         textBox1.getLeft(), textBox1.getRight(), textBox1.getStr());
-                //        tCopy.setLine(textBox1.getLine());
                 tCopy.setPage(textBox1.getPage());
                 childs.add(tCopy);
             }
@@ -399,22 +390,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                 iter.remove();
             }
         }
-
-        /*
-        it = textBoxes.listIterator();
-        leftOvers.clear();
-        while (it.hasNext()) {
-            TextBox tb = it.next();
-            List<BaseTextBox> childTextBoxes = tb.getChilds();
-            if (tb.isProcessed()) {
-                it.remove();
-            } else if (childTextBoxes.isEmpty()){
-                leftOvers.add(tb);
-                it.remove();
-            }
-        }
-
-         */
 
         return numMerges;
     }
@@ -452,39 +427,48 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             float base1  = textBox1.getBase();
             float left1  = textBox1.getLeft();
             float right1 = textBox1.getRight();
+            if (textBox1.getStr().isEmpty()) continue;
+            float avg_c = (right1 - left1) / textBox1.getStr().length();
 
+            /*
             List<BaseTextBox> tbList1 = new ArrayList<>();
-            for (int j = 0; j < processedTextboxes.size(); j++) {
-                if (i == j) continue;
+            BaseTextBox master_tb = textBox1;
+            for (int j = i+1; j < processedTextboxes.size(); j++) {
+        //        if (i == j) continue;
                 BaseTextBox textBox2 = processedTextboxes.get(j);
                 if (processedTbs.contains(j)) continue;
 
-                float top2    = textBox2.getTop();
-                float base2   = textBox2.getBase();
-                float left2   = textBox2.getLeft();
-                float right2  = textBox2.getRight();
+                float d = textBox2.getLeft() - master_tb.getRight();
+                if (d < -.1) continue;
+                if (d > 5 * avg_c) break; // if distance is mor than 5 character they cant be neighbours
+                float vertical_overlap = getVerticalOverlap(master_tb, textBox2);
+                if (vertical_overlap <= .6f) continue;
 
-                float vertical_overlap = getOverlap(top1, base1, top2, base2, .5f);
-                if (vertical_overlap <= 0) continue;
-
-                boolean isNeighbour = isNeighbour(textBox1, textBox2);
+                boolean isNeighbour = isNeighbour(master_tb, textBox2);
                 if (!isNeighbour) continue;
+                master_tb = textBox2;
 
-                List<BaseTextBox> childs2 = textBox2.getChilds();
-
-                if (childs2.isEmpty()){
-                    tbList1.add(textBox2);
-                } else {
-                    tbList1.addAll(childs2);
-                }
+        //        List<BaseTextBox> childs2 = textBox2.getChilds();
+                tbList1.add(textBox2);
+        //        if (childs2.isEmpty()){
+        //            tbList1.add(textBox2);
+        //        } else {
+        //            tbList1.addAll(childs2);
+        //        }
 
                 processedTbs.add(j);
-                top1 = Math.min(top1, top2);
-                base1 = Math.max(base1, base2);
-                left1 = Math.min(left1, left2);
-                right1 = Math.max(right1, right2);
+        //        top1 = top2;
+        //        base1 = base2;
+        //        left1 = left2;
+        //        right1 = right2;
+            //    top1 = Math.min(top1, top2);
+            //    base1 = Math.max(base1, base2);
+            //    left1 = Math.min(left1, left2);
+            //    right1 = Math.max(right1, right2);
             }
 
+
+             */
             List<BaseTextBox> childs = textBox1.getChilds();
             if (childs.isEmpty()) {
                 BaseTextBox tCopy = new BaseTextBox(textBox1.getTop(), textBox1.getBase(),
@@ -493,12 +477,12 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                 childs.add(tCopy);
             }
 
-            childs.addAll(tbList1);
+       //     childs.addAll(tbList1);
             // modify TextBox dimentions. A box that covers all the childs
-            textBox1.setTop(top1);
-            textBox1.setBase(base1);
-            textBox1.setLeft(left1);
-            textBox1.setRight(right1);
+    //        textBox1.setTop(top1);
+    //        textBox1.setBase(base1);
+    //        textBox1.setLeft(left1);
+    //        textBox1.setRight(right1);
         }
 
         List<BaseTextBox> resudedProcessedTextboxes = new ArrayList<>();
@@ -526,73 +510,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             }
         }
         return false;
-    }
-
-    private static float getOverlap(float top1, float base1,
-                             float top2, float base2,
-                             float vertical_overlap_ratio)
-    {
-        // case 1:
-        //     ---     |     ---
-        //         --- | ---
-        //         --- | ---
-        //     ---     |     ---
-
-
-        //                    2
-        //     ---     |     ---
-        //         --- |  1  ---
-        //         --- | ---
-        //     ---     | ---
-
-        float h2 = base2 - top2;
-        float h1 = base1 - top1;
-        if (h2 == 0 || h1 == 0) return 0;
-
-        // h1 100% covers h2
-        if (top2 >= top1 && base2 <= base1) {
-            return 1;
-        }
-
-        // h2 100% covers h1
-        if (top2 <= top1 && base2 >= base1) {
-            return 1;
-        }
-
-
-        // case 2:
-
-        if (top2 <= top1 && base2 <= base1) {
-            if (base2 >= top1){
-                float overlap = base2 - top1;
-                if (overlap < 0) {
-                    return 0;
-                }
-                float overlap_ratio_1 = overlap / h1;
-                float overlap_ratio_2 = overlap / h2;
-                if (overlap_ratio_1 > vertical_overlap_ratio && overlap_ratio_2 > vertical_overlap_ratio) return overlap;
-            }
-            return 0;
-        }
-        if (top2 >= top1 && base2 >= base1) {
-            if (base1 >= top2){
-                float overlap = base1 - top2 ;
-                if (overlap < 0) {
-                    return 0;
-                }
-                float overlap_ratio_1 = overlap / (base1 - top1);
-                float overlap_ratio_2 = overlap / (base2 - top2);
-                if (overlap_ratio_1 > vertical_overlap_ratio && overlap_ratio_2 > vertical_overlap_ratio) return overlap;
-            }
-            return 0;
-        }
-
-        //       ---  |   ---
-        //   ---      |       ---
-        //       ---  |   ---
-        //   ---      |       ---
-
-        return 0;
     }
 
     private static float getSingleSpaceEstimate(BaseTextBox tb){
