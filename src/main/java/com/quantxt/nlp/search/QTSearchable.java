@@ -287,6 +287,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         }
                     }
 
+
                     if (lineTextBoxMap != null) {
 
                         for (Document matchedDoc : matchedDocs) {
@@ -373,44 +374,77 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                 }
 
                                 if (!isValidSeq) continue;
-                                QSpan qSpan = new QSpan(prev);
 
+                                List<QSpan> qSpans = new ArrayList<>();
+                                for (int i = 0; i < seq.length; i++) {
+                                    ExtIntervalTextBox eit = singletokenMatches.get(seq[i]);
+                                    QSpan qSpan = new QSpan(eit);
+                                    qSpans.add(qSpan);
+                                }
+
+                                QSpan qSpan = qSpans.get(0);
+
+                                // merge horientally
                                 for (int i = 1; i < seq.length; i++) {
-                                    ExtIntervalTextBox curr = singletokenMatches.get(seq[i]);
+                                    QSpan curr = qSpans.get(i);
                                     // we read tokens in wrriting order/ left to right - top to bottom
-                                    if (curr.getExtInterval().getStart() < prev.getExtInterval().getEnd()) continue;
-                                    if (curr == null) continue;
+                                    if (curr == null){
+                                        continue;
+                                    }
+                                    if (curr.getStart() < qSpan.getEnd()) continue;
                                     BaseTextBox b1 = qSpan.getTextBox();
                                     BaseTextBox b2 = curr.getTextBox();
-                                    float hOverlap = getHorizentalOverlap(b1, b2);
-                                    boolean isGood = false;
-                                    float distV = Math.abs(b1.getBase() - b2.getBase());
 
-                                    if (hOverlap > .4 && (distV < 3 * (b2.getBase() - b2.getTop()))) {
-                                        isGood = true;
-                                    } else {
-                                        float vOverlap = getVerticalOverlap(b1, b2);
-                                        boolean currIsAfterqSpan = b1.getLeft() <= b2.getRight(); // this is a sequence of words in english so next word has to be after current
-                                        if (vOverlap > .4 && currIsAfterqSpan) {
-                                            float dist = b1.getLeft() > b2.getRight() ? b1.getLeft() - b2.getRight() : b2.getLeft() - b1.getRight();
-                                            if (dist > 1.2 * (b2.getBase() - b1.getTop())) {
-                                                if (prev.getExtInterval().getEnd() < curr.getExtInterval().getStart()) {
-                                                    String gap = content.substring(prev.getExtInterval().getEnd(), curr.getExtInterval().getStart());
-                                                    String[] gap_tokens = tokenize(searchAnalyzer, gap);
-                                                    if (gap.length() < 5 && (gap_tokens == null || gap.length() == 0)) {
-                                                        isGood = true;
-                                                    }
+                                    float vOverlap = getVerticalOverlap(b1, b2);
+                                    boolean isGood = false;
+                                    boolean currIsAfterqSpan = b1.getLeft() <= b2.getRight(); // this is a sequence of words in english so next word has to be after current
+                                    if (vOverlap > .4 && currIsAfterqSpan) {
+                                        float dist = b1.getLeft() > b2.getRight() ? b1.getLeft() - b2.getRight() : b2.getLeft() - b1.getRight();
+                                        if (dist > 1.2 * (b2.getBase() - b1.getTop())) {
+                                            if (qSpan.getEnd() < curr.getStart()) {
+                                                String gap = content.substring(qSpan.getEnd(), curr.getStart());
+                                                String[] gap_tokens = tokenize(searchAnalyzer, gap);
+                                                if (gap.length() < 5 && (gap_tokens == null || gap.length() == 0)) {
+                                                    isGood = true;
                                                 }
-                                            } else {
-                                                isGood = true;
                                             }
+                                        } else {
+                                            isGood = true;
                                         }
+
                                     }
 
                                     if (isGood) {
-                                        qSpan.add(curr);
+                                        for (ExtIntervalTextBox eit : curr.getExtIntervalTextBoxes()) {
+                                            qSpan.add(eit);
+                                        }
+                                        qSpans.set(i, null);
                                         qSpan.process(content);
-                                        prev = curr;
+                                    } else {
+                                        qSpan = curr;
+                                    }
+                                }
+
+                                // merge vertically
+                                qSpan = qSpans.get(0);
+                                for (int i = 1; i < seq.length; i++) {
+                                    QSpan curr = qSpans.get(i);
+                                    // we read tokens in wrriting order/ left to right - top to bottom
+                                    if (curr == null) {
+                                        continue;
+                                    }
+                                    if (curr.getStart() < qSpan.getEnd()) continue;
+                                    BaseTextBox b1 = qSpan.getTextBox();
+                                    BaseTextBox b2 = curr.getTextBox();
+                                    float hOverlap = getHorizentalOverlap(b1, b2);
+                                    float distV = Math.abs(b1.getBase() - b2.getBase());
+
+                                    if (hOverlap > .4 && (distV < 3 * (b2.getBase() - b2.getTop()))) {
+                                        for (ExtIntervalTextBox eit : curr.getExtIntervalTextBoxes()) {
+                                            qSpan.add(eit);
+                                        }
+                                        qSpans.set(i, null);
+                                        qSpan.process(content);
                                     } else {
                                         break;
                                     }
@@ -438,17 +472,22 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                         }
                                     }
 
+
                                     if (!isNegative) {
                                         ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
                                         boolean isInCompleteSpans = false;
                                         ListIterator<QSpan> iter = complete_spans.listIterator();
+                                        String text1 = qSpan.getStr().trim();
                                         while (iter.hasNext()) {
                                             QSpan qs = iter.next();
                                             float d1 = firstPExt.getTextBox().getBase() - qs.getBase();
                                             float d2 = firstPExt.getTextBox().getLeft() - qs.getLeft();
                                             if (Math.abs(d1) < 2 && Math.abs(d2) < 2) {
-                                                isInCompleteSpans = true;
-                                                break;
+                                                String text2 = qs.getStr().trim();
+                                                if (text1.equals(text2)) {
+                                                    isInCompleteSpans = true;
+                                                    break;
+                                                }
                                             }
                                         }
                                         if (!isInCompleteSpans) {
@@ -477,10 +516,11 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             spans = removeSpansWithIrrelevantKeywords(spans, lineTextBoxMap);
         }
 
-        if (spans.size() < 2) return spans;
+        List<QSpan> split_spans = getSplitSpans(spans);
+        List<QSpan> split_negatives = getSplitSpans(negatives);
 
         List<QSpan> filtered = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(spans, negatives) :
-                getFilteredSpansWithTextBox(spans, negatives);
+                getFilteredSpansWithTextBox(split_spans, split_negatives);
 
         return filtered;
     }
@@ -543,6 +583,83 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                     if ((s1 >= s2 && s1 <= e2) || (e1 >= s2 && e1 <= e2)) {
                         bad_spans.add(i);
                         break;
+                    }
+                }
+            }
+        }
+
+        List<QSpan> filtered = new ArrayList<>();
+        for (int i = 0; i < spans.size(); i++) {
+            if (bad_spans.contains(i)) continue;
+            filtered.add(spans.get(i));
+        }
+
+        return filtered;
+    }
+
+    private static List<QSpan> getSplitSpans(List<QSpan> spans){
+        HashSet<Integer> bad_spans = new HashSet<>();
+
+        for (int i = 0; i < spans.size(); i++) {
+            if (bad_spans.contains(i)) continue;
+            QSpan qSpan1 = spans.get(i);
+            BaseTextBox b1 = qSpan1.getTextBox();
+            if (b1 == null) continue;
+            float s1 = (b1.getRight() - b1.getLeft()) * (b1.getBase() - b1.getTop());
+            HashSet<Integer> total_lines_1 = new HashSet<>();
+            String str1 = qSpan1.getStr();
+            for (ExtIntervalTextBox eib : qSpan1.getExtIntervalTextBoxes()){
+                total_lines_1.add(eib.getExtInterval().getLine());
+            }
+            //unique case                  AMT
+            //                   AMT       PAID
+            // here we should keep both AMT PAID and filter one or both of them with negatives
+            // removing `AMT PAID` since it occupise 2 lines is not ok
+            if (total_lines_1.size() == 1 && str1.split(" {2,}").length > 1) continue;
+            for (int j = i + 1; j < spans.size(); j++) {
+                if (bad_spans.contains(j)) continue;
+                QSpan qSpan2 = spans.get(j);
+                BaseTextBox b2 = qSpan2.getTextBox();
+                if (b2 == null) continue;
+                String str2 = qSpan2.getStr();
+
+                float ho = getHorizentalOverlap(b1, b2);
+                float vo = getVerticalOverlap(b1, b2);
+
+                if (ho > .1 && vo > .1) {
+                    HashSet<Integer> total_lines_2 = new HashSet<>();
+                    for (ExtIntervalTextBox eib : qSpan2.getExtIntervalTextBoxes()) {
+                        total_lines_2.add(eib.getExtInterval().getLine());
+                    }
+
+                    if (str1.equals(str2)){
+                        if (total_lines_2.size() == 1 && total_lines_1.size() != 1){
+                            bad_spans.add(i);
+                            break;
+                        }
+
+                        if (total_lines_2.size() != 1 && total_lines_1.size() == 1){
+                            bad_spans.add(j);
+                            break;
+                        }
+                    }
+                    if (ho > .98 && vo > .98) {
+                        // we remove the larger one
+                        float s2 = (b2.getRight() - b2.getLeft()) * (b2.getBase() - b2.getTop());
+                        if (s2 >= s1){
+                            bad_spans.add(i);
+                        } else {
+                            bad_spans.add(j);
+                        }
+                    } else {
+                        //we take the one that is spread on less number of lines
+
+                        if (total_lines_2.size() == 1 && str2.split(" {2,}").length > 1) continue;
+                        if (total_lines_2.size() > total_lines_1.size()) {
+                            bad_spans.add(j);
+                        } else if (total_lines_2.size() < total_lines_1.size()) {
+                            bad_spans.add(i);
+                        }
                     }
                 }
             }
