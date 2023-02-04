@@ -55,6 +55,7 @@ public class QSpan extends ExtInterval {
 
     public void process(String content){
         StringBuilder sb = new StringBuilder();
+        extIntervalTextBoxes.sort(Comparator.comparingInt(o -> o.getExtInterval().getStart()));
 
         for (ExtIntervalTextBox ext : extIntervalTextBoxes){
             sb.append(ext.getExtInterval().getStr()).append(" ");
