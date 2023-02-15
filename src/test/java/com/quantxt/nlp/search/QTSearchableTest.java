@@ -213,14 +213,14 @@ public class QTSearchableTest {
         // THEN
         assertNotNull(values1);
         assertNotNull(values2);
-        assertTrue(values1.get(0).getCategory().equals("V2"));
-        assertTrue(values1.get(1).getCategory().equals("V5"));
-        assertTrue(values1.get(2).getCategory().equals("V6"));
-        assertTrue(values1.get(3).getCategory().equals("V1"));
-        assertTrue(values1.get(4).getCategory().equals("V7"));
+        assertTrue(values1.get(0).getCategory().equals("V1"));
+        assertTrue(values1.get(1).getCategory().equals("V2"));
+        assertTrue(values1.get(2).getCategory().equals("V5"));
+        assertTrue(values1.get(3).getCategory().equals("V7"));
+        assertTrue(values1.get(4).getCategory().equals("V6"));
 
-        assertTrue(values2.get(0).getCategory().equals("V3"));
-        assertTrue(values2.get(1).getCategory().equals("V4"));
+        assertTrue(values2.get(0).getCategory().equals("V4"));
+        assertTrue(values2.get(1).getCategory().equals("V3"));
         assertTrue(values2.get(2).getCategory().equals("V8"));
 
     }

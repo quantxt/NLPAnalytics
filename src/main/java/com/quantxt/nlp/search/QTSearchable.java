@@ -237,9 +237,14 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         ArrayList<ExtIntervalTextBox> res = new ArrayList<>();
         boolean useFuzzyMatching = useFuzzyMatch();
         List<QSpan> spans = new ArrayList<>();
-        List<QSpan> complete_spans = new ArrayList<>();
-        List<QSpan> partial_spans = new ArrayList<>();
-        List<QSpan> negatives = new ArrayList<>();
+
+        List<QSpan> spread_spans = new ArrayList<>();
+        List<QSpan> compact_spans = new ArrayList<>();
+        List<QSpan> single_word_spans = new ArrayList<>();
+
+        List<QSpan> spread_negatives = new ArrayList<>();
+        List<QSpan> compact_negatives = new ArrayList<>();
+        List<QSpan> single_word_negatives = new ArrayList<>();
 
         try {
             // This list is ordered by priorities
@@ -259,6 +264,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 // run once with slop = 0
 
                 for (Mode m : mode) {
+                    // we seach for phrases in one line only
                     List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, slop,
                             searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                             search_fld, vocab_name, vocab_id, content, lineTextBoxMap);
@@ -269,11 +275,18 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                             if (qSpan.getTextBox() == null) continue;
                         }
                         qSpan.process(content);
+                        String str = qSpan.getStr();
+                        boolean str_is_spread = str.split("   ").length > 1;
                         boolean isNegative = false;
                         for (ExtIntervalTextBox ex : qSpan.getExtIntervalTextBoxes()) {
                             if (ex.getExtInterval().getCategory().equals(DONT_CARE)) {
                                 isNegative = true;
-                                negatives.add(qSpan);
+                                if (str_is_spread){
+                                    spread_negatives.add(qSpan);
+                                } else {
+                                    compact_negatives.add(qSpan);
+                                    single_word_negatives.add(qSpan);
+                                }
                                 break;
                             }
                         }
@@ -283,10 +296,14 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                             LineInfo lineInfo = new LineInfo(content, matches.get(i).getExtInterval());
                             qSpan.getExtIntervalTextBoxes().get(0).getExtInterval().setLine(lineInfo.getLineNumber());
-                            complete_spans.add(qSpan);
+                            if (str_is_spread){
+                                spread_spans.add(qSpan);
+                            } else {
+                                compact_spans.add(qSpan);
+                                single_word_spans.add(qSpan);
+                            }
                         }
                     }
-
 
                     if (lineTextBoxMap != null) {
 
@@ -403,6 +420,11 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                         if (dist > 1.2 * (b2.getBase() - b1.getTop())) {
                                             if (qSpan.getEnd() < curr.getStart()) {
                                                 String gap = content.substring(qSpan.getEnd(), curr.getStart());
+                                                if (gap.trim().isEmpty() && gap.length() > 1){
+                                                    // we're capturing tokens in a table header and most likely tapping
+                                                    // to adjacent column
+                                                    break;
+                                                }
                                                 String[] gap_tokens = tokenize(searchAnalyzer, gap);
                                                 if (gap.length() < 5 && (gap_tokens == null || gap.length() == 0)) {
                                                     isGood = true;
@@ -467,7 +489,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     for (ExtIntervalTextBox ex : tmpMatch) {
                                         if (ex.getExtInterval().getCategory().equals(DONT_CARE)) {
                                             isNegative = true;
-                                            negatives.add(qSpan);
+                                            compact_negatives.add(qSpan);
                                             break;
                                         }
                                     }
@@ -476,7 +498,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     if (!isNegative) {
                                         ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
                                         boolean isInCompleteSpans = false;
-                                        ListIterator<QSpan> iter = complete_spans.listIterator();
+                                        ListIterator<QSpan> iter = compact_spans.listIterator();
                                         String text1 = qSpan.getStr().trim();
                                         while (iter.hasNext()) {
                                             QSpan qs = iter.next();
@@ -491,7 +513,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                             }
                                         }
                                         if (!isInCompleteSpans) {
-                                            partial_spans.add(qSpan);
+                                            compact_spans.add(qSpan);
                                         }
                                     }
                                 }
@@ -500,10 +522,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                     }
                 }
 
-                spans.addAll(partial_spans);
-                spans.addAll(complete_spans);
-
-                if (spans.size() == 0) return spans;
+                if (spread_spans.size() == 0 && compact_spans.size() == 0) return new ArrayList<>();
                 spans.sort(comparingInt((QSpan s) -> s.getExtInterval(false).getStart()));
             }
         } catch (Exception e) {
@@ -513,19 +532,112 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
         // spans should not contain keyword other than associated label keywords
         if (lineTextBoxMap != null) {
-            spans = removeSpansWithIrrelevantKeywords(spans, lineTextBoxMap);
+            spread_spans = removeSpansWithIrrelevantKeywords(spread_spans, lineTextBoxMap);
+            compact_spans = removeSpansWithIrrelevantKeywords(compact_spans, lineTextBoxMap);
         }
 
-        List<QSpan> split_spans = getSplitSpans(spans);
-        List<QSpan> split_negatives = getSplitSpans(negatives);
 
-        List<QSpan> filtered = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(spans, negatives) :
-                getFilteredSpansWithTextBox(split_spans, split_negatives);
+    //    combine(spread_spans, compact_spans);
+    //    combine(spread_negatives, compact_negatives);
+
+        filterNegativeWTextBox(spread_spans, compact_negatives, .25f);
+    //    filterNegativeWTextBox(spread_spans, compact_spans, .25f);
+
+        filterNegativeWithoutTextBox(spread_spans, spread_negatives);
+        filterNegativeWTextBox(compact_spans, compact_negatives, .25f);
+
+        filterNegativeWithoutTextBox(spread_spans, single_word_negatives);
+        filterNegativeWTextBox(compact_spans, single_word_negatives, .98f);
+
+        List<QSpan> split_spread_spans = getSplitSpans(spread_spans);
+        List<QSpan> split_compact_spans = getSplitSpans(compact_spans);
+
+        List<QSpan> split_spread_negatives = getSplitSpans(spread_negatives);
+        List<QSpan> split_compact_negatives = getSplitSpans(compact_negatives);
+
+        List<QSpan> filtered = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(compact_spans, compact_negatives) :
+                getFilteredSpansWithTextBox(split_compact_spans, split_compact_negatives);
+
+        List<QSpan> filtered_spread = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(spread_spans, spread_negatives) :
+                getFilteredSpansWithTextBox(split_spread_spans, split_spread_negatives);
+
+        if (filtered_spread.size() > 0){
+            filtered.addAll(filtered_spread);
+        }
 
         return filtered;
     }
 
 
+    private static void combine(List<QSpan> spread_spans, List<QSpan> compact_spans){
+
+        HashSet<Integer> bad_spans_spread = new HashSet<>();
+        HashSet<Integer> bad_spans_compact = new HashSet<>();
+        for (int i=0; i<spread_spans.size(); i++){
+            QSpan qSpan1 = spread_spans.get(i); // these are oneliners
+            int s1 = qSpan1.getExtIntervalTextBoxes().get(0).getExtInterval().getStart();
+            int e1 = qSpan1.getExtIntervalTextBoxes().get(0).getExtInterval().getEnd();
+            BaseTextBox b1 = qSpan1.getTextBox();
+            if (b1 == null) continue;
+            String str1 = qSpan1.getStr();
+            boolean isPotentialCrossCell = str1.split("  ").length > 1;
+            for (int j=0; j<compact_spans.size(); j++) {
+                QSpan qSpan2 = compact_spans.get(j);
+                BaseTextBox b2 = qSpan2.getTextBox();
+                if (b2 == null) continue;
+
+
+                HashSet<Integer> total_lines = new HashSet<>();
+                for (ExtIntervalTextBox eib : qSpan2.getExtIntervalTextBoxes()){
+                    total_lines.add(eib.getExtInterval().getLine());
+                }
+
+                int lines = total_lines.size();
+                int components = qSpan2.getExtIntervalTextBoxes().size();
+                //    Allowed
+                //    Amount   PAID
+
+                if (isPotentialCrossCell) {
+                    float ho = getHorizentalOverlap(b1, b2);
+                    float vo = getVerticalOverlap(b1, b2);
+                    if (ho > .1 && vo > .1) {
+                        bad_spans_spread.add(i);
+                        break;
+                    }
+                    // here we're just removing duplicates
+                } else if (lines == 1 && components != 1){
+                    int num_cmpt = qSpan2.getExtIntervalTextBoxes().size();
+                    int s2 = qSpan2.getExtIntervalTextBoxes().get(0).getExtInterval().getStart();
+                    int e2 = qSpan2.getExtIntervalTextBoxes().get(num_cmpt-1).getExtInterval().getEnd();
+                    if ((s2 >= s1 && e2 <= e1) || (s1 >= s2 && e1 <= e2) ){
+                        bad_spans_compact.add(j);
+                    }
+                    //    Allowed
+                    //    Amount     PAID
+                    // We would remove "amount paid" from the matches
+                }
+            }
+
+        }
+
+        ListIterator<QSpan> iter_spread = spread_spans.listIterator();
+        int i=0;
+        while (iter_spread.hasNext()){
+            iter_spread.next();
+            if (bad_spans_spread.contains(i++)){
+                iter_spread.remove();
+            }
+        }
+
+        ListIterator<QSpan> iter_compact = compact_spans.listIterator();
+        int j=0;
+        while (iter_compact.hasNext()){
+            iter_compact.next();
+            if (bad_spans_compact.contains(j++)){
+                iter_compact.remove();
+            }
+        }
+    }
     private static List<QSpan> removeSpansWithIrrelevantKeywords(List<QSpan> spans,
                                                                  Map<Integer, BaseTextBox> lineTextBoxMap)
     {
@@ -533,7 +645,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
         for (QSpan qSpan : spans){
             boolean isGood = false;
-        //    BaseTextBox l_btb = qSpan.getTextBox();
             for (ExtIntervalTextBox eib : qSpan.getExtIntervalTextBoxes()){
                 int l_eib = eib.getExtInterval().getLine();
                 BaseTextBox lineBox = lineTextBoxMap.get(l_eib);
@@ -550,10 +661,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         isGood = true;
                         break;
                     }
-            //        if ( ho < .1f || vo < .1f) continue;
-            //        if (ho > .85f && ho < 1.05f && vo > .85f && vo < 1.05f) continue;
-           //         isGood = false;
-            //        break;
                 }
                 if (isGood) break;
             }
@@ -611,11 +718,12 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             for (ExtIntervalTextBox eib : qSpan1.getExtIntervalTextBoxes()){
                 total_lines_1.add(eib.getExtInterval().getLine());
             }
+            int lines_1 = total_lines_1.size();
             //unique case                  AMT
             //                   AMT       PAID
             // here we should keep both AMT PAID and filter one or both of them with negatives
-            // removing `AMT PAID` since it occupise 2 lines is not ok
-            if (total_lines_1.size() == 1 && str1.split(" {2,}").length > 1) continue;
+            // removing `AMT PAID` since it occupies 2 lines is not ok
+            if (lines_1 == 1 && str1.split(" {2,}").length > 1) continue;
             for (int j = i + 1; j < spans.size(); j++) {
                 if (bad_spans.contains(j)) continue;
                 QSpan qSpan2 = spans.get(j);
@@ -630,6 +738,30 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                     HashSet<Integer> total_lines_2 = new HashSet<>();
                     for (ExtIntervalTextBox eib : qSpan2.getExtIntervalTextBoxes()) {
                         total_lines_2.add(eib.getExtInterval().getLine());
+                    }
+
+                    // if both spans have 1 line, we prefer the longer one
+                    if (total_lines_2.size() == 1 && total_lines_1.size() == 1){
+                        int e1 = qSpan1.getEnd();
+                        int e2 = qSpan2.getEnd();
+                        int st1 = qSpan1.getStart();
+                        int st2 = qSpan2.getStart();
+                        if (st1 == st2){
+                            if (e1 >= e2){
+                                bad_spans.add(j);
+                            } else {
+                                bad_spans.add(i);
+                            }
+                        } else {
+                            int n1 = qSpan1.getExtIntervalTextBoxes().size();
+                            int n2 = qSpan2.getExtIntervalTextBoxes().size();
+                            if (n1 >= n2){
+                                bad_spans.add(i);
+                            } else {
+                                bad_spans.add(j);
+                            }
+                        }
+                        break;
                     }
 
                     if (str1.equals(str2)){
@@ -674,24 +806,50 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         return filtered;
     }
 
-    public static List<QSpan> getFilteredSpansWithTextBox(List<QSpan> spans,
-                                                          List<QSpan> negatives) {
-        HashSet<Integer> bad_spans = new HashSet<>();
-        for (int i = 0; i < spans.size(); i++) {
-            BaseTextBox b1 = spans.get(i).getTextBox();
+    public static void filterNegativeWithoutTextBox(List<QSpan> spans,
+                                                    List<QSpan> negatives){
+        ListIterator<QSpan> iter1 = spans.listIterator();
+        while (iter1.hasNext()){
+            QSpan qSpan1 = iter1.next();
+            int s1 = qSpan1.getStart();
+            int e1 = qSpan1.getEnd();
+            for (int j = 0; j < negatives.size(); j++) {
+                QSpan qSpan2 = negatives.get(j);
+                int s2 = qSpan2.getStart();
+                int e2 = qSpan2.getEnd();
+                if ((s2 >=s1 && s2 <=e1 ) || (s1 >=s2 && s1 <= e2) ) {  // i completely covers j
+                    iter1.remove();
+                    break;
+                }
+            }
+        }
+    }
+
+    public static void filterNegativeWTextBox(List<QSpan> spans,
+                                              List<QSpan> negatives,
+                                              float ratio){
+        ListIterator<QSpan> iter1 = spans.listIterator();
+        while (iter1.hasNext()){
+            BaseTextBox b1 = iter1.next().getTextBox();
             if (b1 == null) continue;
             for (int j = 0; j < negatives.size(); j++) {
                 BaseTextBox b2 = negatives.get(j).getTextBox();
                 if (b2 == null) continue;
                 float ho = getHorizentalOverlap(b1, b2);
                 float vo = getVerticalOverlap(b1, b2);
-                if (ho > .95 && vo > .95) {  // i completely covers j
-                    bad_spans.add(i);
+                if (ho > ratio && vo > ratio) {  // i completely covers j
+                    iter1.remove();
                     break;
                 }
             }
         }
+    }
+    public static List<QSpan> getFilteredSpansWithTextBox(List<QSpan> spans,
+                                                          List<QSpan> negatives) {
 
+     //   filterNegativeWTextBox(spans, negatives);
+
+        HashSet<Integer> bad_spans = new HashSet<>();
         for (int i = 0; i < spans.size(); i++) {
             if (bad_spans.contains(i)) continue;
             BaseTextBox b1 = spans.get(i).getTextBox();

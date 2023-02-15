@@ -171,18 +171,13 @@ public class SearchUtils {
             String [] tokens =  tokenize(search_analyzer, query_string_raw);
             if (tokens == null) continue;
             int num_tokens = tokens.length;
-            //    String query_string_escaped = QueryParserUtil.escape(query_string_raw);
 
-            //    if (slop < 2) {
             SpanQuery query = getSpanQuery(keyphrase_analyzer, searchField, query_string_raw,
                     slop, isFuzzy, ordered, isMatchAll);
             if (query == null) continue;
 
             TokenStream tokenStream = search_analyzer.tokenStream(null, str);
             String category = matchedDoc.getField(DataField).stringValue();
-
-            //    List<ExtInterval> matches2 = QTextFragment.getBestTextFragments(tokenStream, query,
-            //            str, dataValue, vocab_name, vocab_id);
 
             QSimpleHTMLFormatter formatter = new QSimpleHTMLFormatter();
             QScorer scorer = new QScorer(query);
@@ -198,6 +193,12 @@ public class SearchUtils {
                 for (ExtInterval extInterval : merged) {
                     if (extInterval == null) continue;
                     extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
+                    if (slop == 0 && num_tokens > 1 && extInterval.getStr().indexOf('\n') > 0){
+                        // when searching for multi token that is split in mutiple lines
+                        // make sure it is a paragraph and not random form fields
+                        if (extInterval.getStr().indexOf("   ") > 0) continue;
+                    }
+
                     LineInfo lineInfo = new LineInfo(str, extInterval);
                     extInterval.setLine(lineInfo.getLineNumber());
                     BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  true);

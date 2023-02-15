@@ -1,8 +1,6 @@
 package com.quantxt.doc.helper.textbox;
 
-import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.model.document.BaseTextBox;
-import com.quantxt.model.document.ExtIntervalTextBox;
 import com.quantxt.types.LineInfo;
 import com.quantxt.types.QSpan;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
@@ -649,10 +647,24 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         List<BaseTextBox> components = new ArrayList<>();
         int first_box_idx = -1;
         int last_box_idx = childs.size() - 1;
+        int spanStart = lineInfo.getLocalStart();
+        int spanEnd = lineInfo.getLocalEnd();
         for (int i = 0; i < childIdx2StrIdx.length; i++) {
             int current_start = childIdx2StrIdx[i][0];
+            if (current_start > spanEnd) break;
             int current_end = childIdx2StrIdx[i][1];
             BaseTextBox current_box = childs.get(i);
+            if ((spanStart >= current_start && spanStart <= current_end) ||
+                    (spanEnd >= current_start && spanEnd <= current_end)) {
+                components.add(current_box);
+                if (first_box_idx == -1) {
+                    first_box_idx = i;
+                }
+                last_box_idx = i;
+            }
+        }
+
+            /*
             boolean added = false;
             if (lineInfo.getLocalStart() >= current_start && lineInfo.getLocalStart() <= current_end) {
                 surronding_box.setTop(current_box.getTop());
@@ -673,11 +685,23 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                 last_box_idx = i;
                 break;
             }
-        }
 
-        if (first_box_idx == -1) {
+             */
+    //    }
+
+        if (components.size() == 0) {
             logger.debug("Didn't find the associating texboxes {}", str);
             return null;
+        } else {
+            float s_left = components.get(0).getLeft();
+            float s_right = components.get(components.size()-1).getRight();
+            float s_top = 100000;
+            float s_base = -100000;
+            for (BaseTextBox s : components){
+                s_top = Math.min(s.getTop(), s_top);
+                s_base = Math.max(s.getBase(), s_base);
+            }
+            surronding_box = new BaseTextBox(s_top, s_base, s_left, s_right, null);
         }
 
         if (ignorePrefixBoxes) {
