@@ -88,8 +88,18 @@ public class QSpan extends ExtInterval {
             extInterval.setStart(start);
             extInterval.setEnd(end);
         } else {
+            // find unique lines
+            HashSet<Integer> uLines = new HashSet<>();
             extInterval.setStart(extIntervalTextBoxes.get(0).getExtInterval().getStart());
-            extInterval.setEnd(extIntervalTextBoxes.get(0).getExtInterval().getEnd());
+            for (ExtIntervalTextBox etb : extIntervalTextBoxes){
+                uLines.add(etb.getExtInterval().getLine());
+            }
+            if (uLines.size() == 1){
+                extInterval.setEnd(extIntervalTextBoxes.get(extIntervalTextBoxes.size()-1).getExtInterval().getEnd());
+            } else {
+                extInterval.setEnd(extIntervalTextBoxes.get(0).getExtInterval().getEnd());
+            }
+
         }
         extInterval.setLine(line);
         extInterval.setExtIntervalSimples(getExtIntervalSimples());
