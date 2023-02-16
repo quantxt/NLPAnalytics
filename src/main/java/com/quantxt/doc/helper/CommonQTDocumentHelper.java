@@ -23,8 +23,7 @@ import com.quantxt.doc.QTDocumentHelper;
 import static com.quantxt.doc.helper.textbox.TextBox.*;
 import static com.quantxt.model.DictSearch.AnalyzType.SIMPLE;
 import static com.quantxt.model.DictSearch.Mode.ORDERED_SPAN;
-import static com.quantxt.nlp.search.QTSearchable.getFilteredSpansWithTextBox;
-import static com.quantxt.nlp.search.QTSearchable.getFilteredSpansWithoutTextBox;
+import static com.quantxt.nlp.search.QTSearchable.*;
 import static com.quantxt.types.QSpan.EXTBOXType.*;
 
 /**
@@ -50,7 +49,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static Pattern UTF8_TOKEN = Pattern.compile("^(?:[a-zA-Z]\\.){2,}|([\\p{L}\\p{N}]+[\\.\\&]{0,1}[\\p{L}\\p{N}])");
 
  //   final private static Pattern simple_form_val   = Pattern.compile("^[^\\p{L}\\p{N}:]*: {0,20}((?:[\\p{L}\\p{N}]\\S* )*\\S+)");
-    final private static Pattern simple_form_val   = Pattern.compile("[^\\:]*: *((?:\\S([^\\:\\s]+ )*[^\\:\\s]+))(?=$|\\s{2,})");
+    final private static Pattern simple_form_val   = Pattern.compile("^[^\\p{L}\\:]*: *((?:\\S([^\\:\\s]+ )*[^\\:\\s]+))(?=$|\\s{2,})");
 
     final private static String begin_pad = "(?<=^|[:\\s])";
     final private static String end_pad   = "(?=$|\\n| {2,})";
@@ -801,7 +800,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     interval.setStart(offset + m.start(1));
                     interval.setEnd(offset + m.end(1));
 
-                    LineInfo vLineInfo = new LineInfo(interval.getStart(), interval.getEnd(), interval.getLine());
+                    LineInfo vLineInfo = new LineInfo(interval.getLine(), interval.getStart(), interval.getEnd());
                     BaseTextBox tb = findAssociatedTextBox(lineTextBoxMap, str, vLineInfo, false);
                     singleFormValueInterval = new ExtIntervalTextBox(new ExtIntervalLocal(interval), tb);
                 }
@@ -925,6 +924,13 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         List<ExtInterval> foundValues = cleanUp2(finalQSpans);
         foundValues.addAll(labelsOnly);
+
+        Collections.sort(foundValues, new Comparator<ExtInterval>(){
+            public int compare(ExtInterval s1, ExtInterval s2) {
+                return (s1.getLine() * 10000 + s1.getStart()) - (s2.getLine()*10000 + s2.getStart());
+            }
+        });
+
         return foundValues;
     }
 
@@ -969,12 +975,15 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 for (ValueDistance vd : valueDists){
                     if (vd.v.getExtIntervalTextBoxes() == null || vd.v.getExtIntervalTextBoxes().size() == 0) continue;
                     String vocab = vd.v.getExtIntervalTextBoxes().get(0).getExtInterval().getDict_id();
-                    Integer d = valueDist4Vocab.get(vocab);
+                //    ExtInterval ext = vd.v.getExtIntervalTextBoxes().get(0).getExtInterval();
+                //    String header = ext.getLine() + "_" + ext.getStart() + "_" + ext.getEnd();
+                    String header = vocab;
+                    Integer d = valueDist4Vocab.get(header);
                     if (d == null){
-                        valueDist4Vocab.put(vocab, vd.dist);
+                        valueDist4Vocab.put(header, vd.dist);
                     } else {
                         if (vd.dist < d){
-                            valueDist4Vocab.put(vocab, vd.dist);
+                            valueDist4Vocab.put(header, vd.dist);
                         }
                     }
                 }
@@ -982,8 +991,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 while (iter.hasNext()){
                     ValueDistance vd = iter.next();
                     if (vd.v.getExtIntervalTextBoxes() == null || vd.v.getExtIntervalTextBoxes().size() == 0) continue;
+        //            ExtInterval ext = vd.v.getExtIntervalTextBoxes().get(0).getExtInterval();
                     String vocab = vd.v.getExtIntervalTextBoxes().get(0).getExtInterval().getDict_id();
-                    Integer d = valueDist4Vocab.get(vocab);
+        //            String header = ext.getLine() + "_" + ext.getStart() + "_" + ext.getEnd();
+                    String header = vocab;
+                    Integer d = valueDist4Vocab.get(header);
                     if (d == null) continue;
                     if (d != vd.dist) iter.remove();
                 }
@@ -1399,9 +1411,14 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 QSpan hSpan = new QSpan(hValue);
                 List<QSpan> testSpans = new ArrayList<>();
                 testSpans.add(hSpan);
-                List <QSpan> filtered = hValue.getTextBox() != null ? getFilteredSpansWithTextBox(testSpans, labels) :
-                        getFilteredSpansWithoutTextBox(testSpans, labels);
-                if (filtered.size() == 0) {
+                if (hValue.getTextBox() != null){
+                    filterNegativeWTextBox(testSpans, labels, .2f);
+                } else {
+                    filterNegativeWithoutTextBox(testSpans, labels);
+                }
+       //         List <QSpan> filtered = hValue.getTextBox() != null ? getFilteredSpansWithTextBox(testSpans, labels) :
+       //                 getFilteredSpansWithoutTextBox(testSpans, labels);
+                if (testSpans.size() == 0) {
                     hValue = null;
                     h_score = 100000f;
                 }
@@ -1411,9 +1428,14 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 QSpan hSpan = new QSpan(vValue.get(0));
                 List<QSpan> testSpans = new ArrayList<>();
                 testSpans.add(hSpan);
-                List <QSpan> filtered = vValue.get(0).getTextBox() != null  ? getFilteredSpansWithTextBox(testSpans, labels) :
-                        getFilteredSpansWithoutTextBox(testSpans, labels);
-                if (filtered.size() == 0) {
+                if (vValue.get(0).getTextBox() != null){
+                    filterNegativeWTextBox(testSpans, labels, .2f);
+                } else {
+                    filterNegativeWithoutTextBox(testSpans, labels);
+                }
+            //    List <QSpan> filtered = vValue.get(0).getTextBox() != null  ? getFilteredSpansWithTextBox(testSpans, labels) :
+            //            getFilteredSpansWithoutTextBox(testSpans, labels);
+                if (testSpans.size() == 0) {
                     vValue = new ArrayList<>();
                     v_score = 100000f;
                 }
