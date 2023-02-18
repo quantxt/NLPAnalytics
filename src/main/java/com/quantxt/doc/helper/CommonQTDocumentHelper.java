@@ -52,7 +52,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     final private static Pattern simple_form_val   = Pattern.compile("^[^\\p{L}\\:]*: *((?:\\S([^\\:\\s]+ )*[^\\:\\s]+))(?=$|\\s{2,})");
 
     final private static String begin_pad = "(?<=^|[:\\s])";
-    final private static String end_pad   = "(?=$|\\n| {2,})";
+    final private static String end_pad   = "(?=$|\\s)";
     final private static String genricPharse =  "\\S+";
     final private static String numAlphabet =  "(\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]+|[\\p{L}]|[\\p{L}\\-]+\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]*)";
 
@@ -576,7 +576,16 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         if (textBoxes != null && content.length() < 15000) {
             List<DictSearch> allFormFields = getFormFields(content);
             isolatedAugmentedlabels = findLabels(allFormFields, null, content, 0, true);
+
             content_wt_form_vals = removeLabels(content, isolatedAugmentedlabels);
+
+            for (Map.Entry<String, Collection<QSpan>> e : isolatedAugmentedlabels.entrySet()){
+                for (QSpan qs : e.getValue()) {
+                    LineInfo lineInfo = new LineInfo(content, qs.getExtInterval(false));
+                    qs.setStart(lineInfo.getLocalStart());
+                    qs.setEnd(lineInfo.getLocalEnd());
+                }
+            }
         }
 
         Map<String, TreeMap<Integer, List<QSpan>>> content_custom_matches = new HashMap<>();
@@ -656,6 +665,19 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             return labelsOnly;
         }
 
+        Map<Integer, Integer> allValueLines = new HashMap<>();
+        for (TreeMap<Integer, List<QSpan>> c_vals : new TreeMap [] {g1_vals, g2_vals, n1_vals, id_vals}) {
+            if (c_vals == null) continue;
+            for (Map.Entry<Integer, List<QSpan>> e : c_vals.entrySet()){
+                int line = e.getKey();
+                Integer num = allValueLines.get(line);
+                if (num == null){
+                    num = 0;
+                }
+                allValueLines.put(line, num + e.getValue().size());
+            }
+        }
+
         List<QSpan> allLabels = new ArrayList<>();
         TreeMap<Integer, List<QSpan>> allLabelsTreeMap = new TreeMap<>();
         for (Map.Entry<String, Collection<QSpan>> e : labels.entrySet()) {
@@ -721,10 +743,10 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         bestAutoValue.hValue = singleFormValueInterval;
                     } else {
                         int qspan_line = qSpan.getLine();
-                        boolean isPotentialTableHeader = false;
+                        Integer val_per_line = allValueLines.get(qspan_line);
+                        boolean isPotentialTableHeader =  val_per_line == null || val_per_line < 2;
                         if (line_scores.get(qspan_line) != null &&  line_scores.get(qspan_line) > 1){
                             qSpan.setSpanType(VERTICAL_MANY);
-                            isPotentialTableHeader = true;
                         }
 
                         for (TreeMap<Integer, List<QSpan>> c_vals : new TreeMap [] {g1_vals, g2_vals, n1_vals, id_vals}) {
@@ -837,6 +859,24 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             dist = d;
         }
     }
+
+    private boolean spanOverlaps(Map<String, Collection<QSpan>> formKeys,
+                                 Interval interval){
+
+        int value_line = interval.getLine();
+        int value_s = interval.getStart();
+        int value_e = interval.getEnd();
+        for (Collection<QSpan> fs : formKeys.values()){
+            for (QSpan f : fs){
+                if (f.getLine() != value_line) continue;
+                if ( (f.getStart() >= value_s && f.getStart() <= value_e) ||
+                        (value_s >= f.getStart() && value_s <= f.getEnd())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     private List<ExtInterval> cleanUp2(List<QSpan> qSpans,
                                        Map<String, Collection<QSpan>> labels,
                                        Map<String, Collection<QSpan>> formKeys){
@@ -844,6 +884,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         // filter out table values that overlap with form values
         // and values that overlap with labels
+
         for (QSpan qSpan : qSpans) {
             List<Interval> vals = qSpan.getExtIntervalSimples();
             if (vals == null || vals.size() == 0) continue;
@@ -852,22 +893,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             while (iter.hasNext()) {
                 Interval interval = iter.next();
                 int value_line = interval.getLine();
-                int value_s = interval.getStart();
-                int value_e = interval.getEnd();
-                boolean hasOverlapWFormKey = false;
                 if (value_line <= label_line) continue;
-                for (Collection<QSpan> fs : formKeys.values()){
-                    for (QSpan f : fs){
-                        if (f.getLine() != value_line) continue;
-                        if ( (f.getStart() >= value_s && f.getStart() <= value_e) ||
-                                (value_s >= f.getStart() && value_s <= f.getEnd())) {
-                            hasOverlapWFormKey = true;
-                            break;
-                        }
-                    }
-                    if (hasOverlapWFormKey) break;
-                }
-
+                boolean hasOverlapWFormKey = spanOverlaps(formKeys, interval);
                 if (hasOverlapWFormKey){
                     iter.remove();
                 }
