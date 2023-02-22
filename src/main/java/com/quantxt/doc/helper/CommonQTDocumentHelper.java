@@ -583,11 +583,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         bestAutoValue.h_score = 0;
                         bestAutoValue.hValue = singleFormValueInterval;
                     } else {
-                        int qspan_line = qSpan.getLine();
-                        Integer val_per_line = allValueLines.get(qspan_line);
-                        boolean isPotentialTableHeader = true;
                          AutoValue autoValue = findBestValue(content, lineTextBoxMap, lineLabelMap, labels, qSpan, all_auto_matches, grouped_vertical_auto_matches,
-                                max_distance_bet_lines, firstFormValueBelowLineNum, isPotentialTableHeader, true);
+                                max_distance_bet_lines, firstFormValueBelowLineNum, true);
                         boolean hasOverlapWithLabels  = hasOvelapWLabels(autoValue, allLabels);
                         if (!hasOverlapWithLabels) {
                             bestAutoValue.merge(autoValue);
@@ -595,7 +592,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
                         if (bestAutoValue.hValue == null && bestAutoValue.vValue.size() == 0){
                             AutoValue genericMatches = findBestValue(content, lineTextBoxMap, lineLabelMap, labels, qSpan, all_auto_matches_generic, grouped_vertical_auto_matches_generic,
-                                    max_distance_bet_lines, firstFormValueBelowLineNum, isPotentialTableHeader, true);
+                                    max_distance_bet_lines, firstFormValueBelowLineNum, true);
                             if( bestAutoValue.vValue.size() != 0){
                                 if (genericMatches.vValue.size() != 0){
                                     ExtIntervalTextBox firstAutoValue = bestAutoValue.vValue.get(0);
@@ -647,7 +644,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         TreeMap<Integer, List<QSpan>> v_matchs = grouped_vertical_matches.get(ptr);
 
                         bestAutoValue = findBestValue(content, lineTextBoxMap, lineLabelMap, labels,
-                                qSpan, h_matchs, v_matchs, max_distance_bet_lines, Integer.MAX_VALUE, true, false);
+                                qSpan, h_matchs, v_matchs, max_distance_bet_lines, Integer.MAX_VALUE, false);
                     }
                 }
 
@@ -1409,7 +1406,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                     TreeMap<Integer, List<QSpan>> candidateVerticalValues,
                                     int max_distance_bet_lines,
                                     int max_line_number_for_vertical_vals,
-                                    boolean isPotentialTableHeader,
                                     boolean isAuto)
     {
         // check for simple form values
@@ -1486,19 +1482,19 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             return autoValue;
         }
 
-        if (isPotentialTableHeader) {
-            AutoValue vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
-                    labelSpan, candidateVerticalValues, max_distance_bet_lines, max_line_number_for_vertical_vals, .2f, isAuto);
-            if (vertical_1.vValue.size() == 0){
-                float oldRight = labelSpan.getRight();
-                float newRight = TextBox.extendToNeighbours(lineTextBoxMap, labelSpan);
-                labelSpan.setRight(newRight);
-                vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
-                        labelSpan, candidateVerticalValues, max_distance_bet_lines, max_line_number_for_vertical_vals, .99f, isAuto);
-                labelSpan.setRight(oldRight);
-            }
-            autoValue.merge(vertical_1);
+
+        AutoValue vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
+                labelSpan, candidateVerticalValues, max_distance_bet_lines, max_line_number_for_vertical_vals, .2f, isAuto);
+        if (vertical_1.vValue.size() == 0){
+            float oldRight = labelSpan.getRight();
+            float newRight = TextBox.extendToNeighbours(lineTextBoxMap, labelSpan);
+            labelSpan.setRight(newRight);
+            vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
+                    labelSpan, candidateVerticalValues, max_distance_bet_lines, max_line_number_for_vertical_vals, .99f, isAuto);
+            labelSpan.setRight(oldRight);
         }
+        autoValue.merge(vertical_1);
+
 
         return autoValue;
     }
