@@ -761,50 +761,25 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         return surronding_box;
     }
 
-    public static void extendToNeighbours(Map<Integer, BaseTextBox> lineTextBoxMap,
-                                          Map<String, Collection<QSpan>> labels,
+    public static float extendToNeighbours(Map<Integer, BaseTextBox> lineTextBoxMap,
                                           QSpan label){
-        // first we check if we have at least one more label overlapping horizentally
-        int numLabelsInRow = 0;
-        BaseTextBox tb = label.getTextBox();
-        int line = label.getLine();
-        for (Map.Entry<String, Collection<QSpan>> e : labels.entrySet()){
-            for (QSpan qSpan : e.getValue()){
-                BaseTextBox btb = qSpan.getTextBox();
-                if (btb == null) continue;
-                float horizentalOverlap = getVerticalOverlap(btb, tb);
-                if (horizentalOverlap > 0 ) {
-                    numLabelsInRow++;
-                }
-            }
-        }
-
-        if (numLabelsInRow < 2) return;
-        float distance_to_right = 10000;
-        boolean foundOthersInRow = false;
         // find closest textboxes on the right side
+        BaseTextBox tb = label.getTextBox();
+        BaseTextBox newTb = new BaseTextBox(tb.getTop(), tb.getLeft(), tb.getRight(), 10000, "");
         for (Map.Entry<Integer, BaseTextBox> e : lineTextBoxMap.entrySet()){
             int lineBoxLine = e.getKey();
-            if (Math.abs(lineBoxLine - line) > 3) continue;
+            if (Math.abs(lineBoxLine - label.getLine()) > 3) continue;
             for (BaseTextBox bt : e.getValue().getChilds()) {
-                float hOverlap = getHorizentalOverlap(bt, tb, false);
-                if (hOverlap > 0 ) continue;
-                foundOthersInRow = true;
                 float vOcerlap = getVerticalOverlap(bt, tb);
-                if (vOcerlap > 0 ) {
-                    float d = bt.getLeft() - tb.getRight();
-                    if (d < 0) continue;
-                    if (d < distance_to_right){
-                        distance_to_right  = d;
-                    }
+                if (vOcerlap  <= 0) continue;
+                float hOverlap = getHorizentalOverlap(bt, newTb, false);
+                if (hOverlap > 0 && bt.getLeft() > tb.getRight()) {
+                    newTb.setRight(bt.getLeft());
                 }
             }
-
         }
 
-        if (foundOthersInRow) {
-            label.setRight(tb.getRight() + distance_to_right);
-        }
+        return newTb.getRight();
     }
 
     public static float getHorizentalOverlap(BaseTextBox textBox1,
