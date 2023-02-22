@@ -52,11 +52,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     final private static Pattern simple_form_val   = Pattern.compile("^[^\\p{L}\\:]*: *((?:\\S([^\\:\\s]+ )*[^\\:\\s]+))(?=$|\\s{2,})");
 
     final private static String begin_pad = "(?<=^|[:\\s])";
-    final private static String end_pad   = "(?=$|\\n| {2,})";
+    final private static String end_pad   = "(?=$|\\s)";
     final private static String genricPharse =  "\\S+";
     final private static String numAlphabet =  "(\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]+|[\\p{L}]|[\\p{L}\\-]+\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]*)";
 
-    final private static Pattern FormKey  = Pattern.compile("(  [A-Za-z](?:[^\\: \\n]+ )*[^\\:\\n ]+ {0,20}[\\:](?:(?: {0,20}(?:[^\\: \\n]+){0,3}[^\\: \\n]+)))"+ end_pad);
+    final private static Pattern FormKey  = Pattern.compile("  (\\p{L}(?:[^\\: \\n]+ )*[^\\:\\n ]+ {0,20}[\\:](?:(?: {0,35}(?:(?:[^ \\n]*[^\\:]) ){0,4}[^ \\n]+[^\\:])))"+ end_pad);
     final private static Pattern TableHDR = Pattern.compile("(?<=[^A-Z]{2})((?:[A-Za-z][^\\:\\n ]+ )*[A-Za-z%#]+)(?=  |\\n)");
 
     final private static Pattern GenericDate1  = Pattern.compile(begin_pad + "((?:[1-9]|[01]\\d)[ -\\/](?:[1-9]|[0123]\\d)[ -\\/](?:19\\d{2}|20\\d{2}|\\d{2}))" + end_pad);  // mm dd yyyy
@@ -70,7 +70,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
     final private static Pattern GenericToken = Pattern.compile("(\\S+)");
     final private static Pattern Generic = Pattern.compile("(?<=^|  )" + "((?:"+ genricPharse+" ){0,15}" + genricPharse + ")"  + end_pad);
-    final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, Numbers, Id1, Generic};
+    final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, Numbers, Id1};
+    final private static Pattern [] AUTO_Patterns_W_Generic = new Pattern[] {GenericDate1, GenericDate2, Numbers, Id1, Generic};
 
     protected Analyzer analyzer;
 
@@ -176,55 +177,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return lineTextBoxes;
     }
 
-    private void addNeighbors(QSpan qSpan, BaseTextBox tb2){
-
-        BaseTextBox tb1 = qSpan.getTextBox();
-
-        float b1 = tb1.getBase();
-        float b2 = tb2.getBase();
-
-        float t1 = tb1.getTop();
-        float t2 = tb2.getTop();
-
-        float l1 = tb1.getLeft();
-        float l2 = tb2.getLeft();
-
-        float r1 = tb1.getRight();
-        float r2 = tb2.getRight();
-
-        //TODO: we only over values below or to the right of the key
-        float vOverlap = getVerticalOverlap(tb1, tb2);
-        if (vOverlap > .4 ){
-            if ( (l2 - r1) >0 ) {
-                double d = l2 - r1;
-                qSpan.getNeighbors().put(tb2, d);
-                return;
-            }
-        }
-
-        float hOverlap = getHorizentalOverlap(tb1, tb2);
-        if (hOverlap > 0 ){
-            if ( (t2 - b1) >0 && (t2 - b1) < 100){
-                double d = t2 - b1;
-                qSpan.getNeighbors().put(tb2, d);
-                return;
-            }
-        }
-
-        if ( (t2-b1)<100 && (t2-b1)>0 ){
-            if ((l2 - r1)> 0 && (l2 - r1) <100) {
-                double d = Math.sqrt(Math.pow(b2 - b1, 2) + Math.pow(l2 - r1, 2));
-                qSpan.getNeighbors().put(tb2, d);
-                return;
-            }
-            if ((l1 - r2)> 0 && (l1 - r2) <100) {
-                double d = Math.sqrt(Math.pow(b2 - b1, 2) + Math.pow(l1 - r2, 2));
-                qSpan.getNeighbors().put(tb2, d);
-                return;
-            }
-        }
-    }
-
     private Map<Integer, List<ExtIntervalTextBox>> getLocalLineAndTextBox3(Map<String, Collection<QSpan>> labels){
         Map<Integer, List<ExtIntervalTextBox>> lineTolabelsWithLineAndTextbox = new HashMap<>();
         for (Map.Entry<String, Collection<QSpan>> e : labels.entrySet()) {
@@ -238,109 +190,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 tbList.add(eitb);
             }
         }
-        return lineTolabelsWithLineAndTextbox;
-    }
-
-    private Map<Integer, List<ExtIntervalTextBox>> getLocalLineAndTextBox2(Map<Integer, BaseTextBox> lineTextBoxMap,
-                                                                           Map<String, Collection<QSpan>> labels){
-
-        List<QSpan> allLabels = new ArrayList<>();
-        Map<Integer, List<ExtIntervalTextBox>> lineTolabelsWithLineAndTextbox = new HashMap<>();
-        for (Map.Entry<String, Collection<QSpan>> e : labels.entrySet()) {
-            for (QSpan qSpan : e.getValue()) {
-                ExtIntervalTextBox eitb = new ExtIntervalTextBox(qSpan.getExtInterval(true), qSpan.getTextBox());
-                List<ExtIntervalTextBox> tbList = lineTolabelsWithLineAndTextbox.get(qSpan.getLine());
-                if (tbList == null){
-                    tbList = new ArrayList<>();
-                    lineTolabelsWithLineAndTextbox.put(qSpan.getLine(), tbList );
-                }
-                tbList.add(eitb);
-
-                //find potential associated value(s)
-                String lbl = qSpan.getStr();
-                int lblLine = qSpan.getLine();
-                BaseTextBox lblTextbox = qSpan.getTextBox();
-                if (lblTextbox == null) continue;
-                allLabels.add(qSpan);
-                // we start one line above for case of skewed lines
-        //        for (int l=lblLine-1; l< lblLine+5; l++){
-        //            BaseTextBox lineTexbox = lineTextBoxMap.get(l);
-
-        //            if (lineTexbox == null) continue;
-        //            for (BaseTextBox c : lineTexbox.getChilds()){
-        //                addNeighbors(qSpan, c);
-        //            }
-        //        }
-
-
-                /*
-                Map<BaseTextBox, Double> sortedValues = MapSort.sortByValue(values);
-
-                logger.info(lblTextbox.getStr());
-                for (Map.Entry<BaseTextBox, Double> ee : sortedValues.entrySet()){
-                    logger.info("\t {} {}", ee.getKey().getStr(), ee.getValue());
-                }
-
-                 */
-
-            }
-        }
-
-        // trying to detect table headers
-        // we must have at least two hearder in the label set
-
-        for (int i=0; i< allLabels.size(); i++) {
-            QSpan qSpan1 = allLabels.get(i);
-            if (qSpan1.getSpanType() != null) continue;
-            BaseTextBox baseTextBox1 = qSpan1.getTextBox();
-            boolean hasOverlapWithOneLabel = false;
-    //        int line1 = qSpan1.getLine();
-
-            QSpan qSpan2 = null;
-            for (int j=i+1; j< allLabels.size(); j++) {
-                qSpan2 = allLabels.get(j);
-                if (qSpan2.getSpanType() != null) continue;
-                BaseTextBox baseTextBox2 = qSpan2.getTextBox();
-                float ov = getVerticalOverlap(baseTextBox1, baseTextBox2);
-                if (ov > .7){
-                    hasOverlapWithOneLabel = true;
-                    break;
-                }
-            }
-            if (!hasOverlapWithOneLabel) continue;
-            boolean isHeader = true;
-            for (ExtIntervalTextBox eitb : qSpan1.getExtIntervalTextBoxes()) {
-                String lineStr = lineTextBoxMap.get(eitb.getExtInterval().getLine()).getLine_str();
-                if (lineStr.contains(":")) {
-                    isHeader = false;
-                    break;
-                }
-
-                String stripped = lineStr.replaceAll("[A-Za-z\\-\\.\\/\\:\\#\\%\\(\\)]+", "").trim();
-                if (stripped.length() >= 2) {
-                    isHeader = false;
-                    break;
-                }
-            }
-            if (isHeader) {
-                //TODO: Basic form detection: we look at one and two lines below
-                // Most basic case - one value for every key
-
-                /*
-                Matcher m1 = Generic.matcher(lineStr);
-                Matcher m2 = lineTextBoxMap.containsKey(line1+1)? Generic.matcher(lineTextBoxMap.get(line1+1).getLine_str()): null;
-                Matcher m3 = lineTextBoxMap.containsKey(line1+2)? Generic.matcher(lineTextBoxMap.get(line1+2).getLine_str()): null;
-                Matcher m4 = lineTextBoxMap.containsKey(line1+3)? Generic.matcher(lineTextBoxMap.get(line1+3).getLine_str()): null;
-                 */
-
-                qSpan1.setSpanType(VERTICAL_MANY);
-                if (qSpan2 != null) {
-                    qSpan2.setSpanType(VERTICAL_MANY);
-                }
-                logger.debug("{} is table header", qSpan1.getStr());
-            }
-        }
-
         return lineTolabelsWithLineAndTextbox;
     }
 
@@ -448,87 +297,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return dictSearches;
     }
 
-    private TreeMap<Integer, List<QSpan>> detectAllValues(Map<String, TreeMap<Integer, List<QSpan>>> content_custom_matches,
-                                                          int max_line){
-        TreeMap<Integer, List<QSpan>> detectedValues = new TreeMap<>();
-
-        TreeMap<Integer, List<QSpan>> generic_vals = content_custom_matches.get(Generic.pattern());
-        if (generic_vals != null) {
-            for (int i = 0; i <= max_line; i++) {
-                List<QSpan> allLineVals = new ArrayList<>();
-                for (Pattern aut_ptr : AUTO_Patterns) {
-                    String ptr = aut_ptr.pattern();
-                    if (ptr.equals(Generic.pattern())) continue;
-                    TreeMap<Integer, List<QSpan>> vals = content_custom_matches.get(ptr);
-                    if (vals == null) continue;
-                    List<QSpan> lineVals = vals.get(i);
-                    if (lineVals == null) continue;
-                    allLineVals.addAll(lineVals);
-                }
-
-                List<QSpan> lineGenericVals = generic_vals.get(i);
-
-                if (lineGenericVals == null) {
-                    if (allLineVals.size() > 0) detectedValues.put(i, allLineVals);
-                } else {
-
-                    List<QSpan> newLineGenericVals = new ArrayList<>();
-                    for (QSpan qs2 : allLineVals){
-                        BaseTextBox bt2 = qs2.getTextBox();
-                        ListIterator<QSpan> iter = lineGenericVals.listIterator();
-                        boolean hasOverLap = false;
-                        while (iter.hasNext()) {
-                            QSpan qs1 = iter.next();
-                            BaseTextBox bt1 = qs1.getTextBox();
-                            float ho = getHorizentalOverlap(bt1, bt2);
-                            if (ho > 0) {
-                                newLineGenericVals.add(qs1);
-                                iter.remove();
-                                hasOverLap = true;
-                                break;
-                            }
-                        }
-                        if (!hasOverLap) {
-                            newLineGenericVals.add(qs2);
-                        }
-                    }
-
-                    if (newLineGenericVals.size() > 0) detectedValues.put(i, newLineGenericVals);
-                }
-            }
-        }
-
-        return detectedValues;
-    }
-
-    private String removeFormStyleKeyValues(String content,
-                                            List<BaseTextBox> textBoxes,
-                                            Map<String, Collection<QSpan>> labels){
-
-        if (textBoxes == null || content.length() > 15000) return content;
-
-        List<DictSearch> allFormFields = getFormFields(content);
-
-        Map<String, Collection<QSpan>> isolatedAugmentedlabels = findLabels(allFormFields, null, content, 0, true);
-        String stripped_content = removeLabels(content, isolatedAugmentedlabels);
-        return stripped_content;
-    }
-
-    private String getStrippedContent(String content,
-                                      List<BaseTextBox> textBoxes,
-                                      Map<String, Collection<QSpan>> labels){
-
-        if (textBoxes == null || content.length() > 15000) return content;
-
-        List<DictSearch> allFormFields = getFormFields(content);
-
-        Map<String, Collection<QSpan>> isolatedAugmentedlabels = findLabels(allFormFields, null, content, 0, true);
-        String stripped_content_v1 = removeLabels(content, isolatedAugmentedlabels);
-
-        String stripped_content = removeLabels(stripped_content_v1, labels);
-        return stripped_content;
-    }
-
     private List<QSpan> findBestLabel(QSpan qSpan,
                                       TreeMap<Integer, List<QSpan>> generic_vals){
         int firstElemLine = qSpan.getLine();
@@ -573,15 +341,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             lineTextBoxMap = getFakeLineTextBoxMapFromContent(content);
         }
 
-
         List<DictSearch> isolated = new ArrayList<>();
         List<DictSearch> nonIsolated = new ArrayList<>();
 
-
-        boolean hasSmartFields = false;
         for (DictSearch qtSearchable : extractDictionaries) {
             Pattern ptr = qtSearchable.getDictionary().getPattern();
-            if (ptr != null && ptr.equals(AUTO)) hasSmartFields = true;
             if (ptr == null || !ptr.pattern().startsWith(AUTO)) {
                 nonIsolated.add(qtSearchable);
             } else {
@@ -594,59 +358,89 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         Map<String, Collection<QSpan>> isolatedLabels = findLabels(isolated, lineTextBoxMap, content, 0, true);
         Map<String, Collection<QSpan>> nonIsolatedlabels = findLabels(nonIsolated, lineTextBoxMap4NonIsolatedLabels, content, 0, false);
-        // remove labels defined in the input dictionaries
 
         Map<String, Collection<QSpan>> labels = new LinkedHashMap<>();
-        Map<String, Collection<QSpan>> augmentedLabels = new LinkedHashMap<>();
         labels.putAll(isolatedLabels);
-        augmentedLabels.putAll(isolatedLabels);
 
         for (Map.Entry<String, Collection<QSpan>> e : nonIsolatedlabels.entrySet()) {
             labels.putIfAbsent(e.getKey(), e.getValue());
         }
 
         String content_wt_form_vals = content;
-
         Map<Integer, List<ExtIntervalTextBox>> lineLabelMap = getLocalLineAndTextBox3(labels);
-
-        Map<Integer, List<ExtIntervalTextBox>> augmentedLineLabelMap = lineLabelMap;
-        if (textBoxes != null && content.length() < 15000) {
-
+        Map<String, Collection<QSpan>> isolatedAugmentedlabels = new HashMap<>();
+        boolean formValsRemoved = textBoxes != null && content.length() < 15000;
+        if (formValsRemoved) {
             List<DictSearch> allFormFields = getFormFields(content);
-            Map<String, Collection<QSpan>> isolatedAugmentedlabels = findLabels(allFormFields, null, content, 0, true);
-    //        augmentedLabels.putAll(isolatedAugmentedlabels);
-    //        augmentedLineLabelMap = getLocalLineAndTextBox3(augmentedLabels);
+            isolatedAugmentedlabels = findLabels(allFormFields, null, content, 0, true);
+
             content_wt_form_vals = removeLabels(content, isolatedAugmentedlabels);
+
+            for (Map.Entry<String, Collection<QSpan>> e : isolatedAugmentedlabels.entrySet()){
+                for (QSpan qs : e.getValue()) {
+                    LineInfo lineInfo = new LineInfo(content, qs.getExtInterval(false));
+                    qs.setStart(lineInfo.getLocalStart());
+                    qs.setEnd(lineInfo.getLocalEnd());
+                }
+            }
         }
 
-    //    String stripped_content = removeLabels(content, isolatedAugmentedlabels);
+        Map<String, TreeMap<Integer, List<QSpan>>> all_matches = new HashMap<>();
+        Map<String, TreeMap<Integer, List<QSpan>>> grouped_vertical_matches = new HashMap<>();
 
-    //    String content_wt_form_vals = removeFormStyleKeyValues(content, textBoxes, labels);
-    //    String stripped_content = removeLabels(content_wt_form_vals, labels);
+        TreeMap<Integer, List<QSpan>> all_auto_matches = new TreeMap<>();
+        TreeMap<Integer, List<QSpan>> grouped_vertical_auto_matches = new TreeMap<>();
 
-    //    ArrayList<ExtInterval> foundValues = new ArrayList<>();
-        Map<String, TreeMap<Integer, List<QSpan>>> content_custom_matches = new HashMap<>();
+        TreeMap<Integer, List<QSpan>> all_auto_matches_generic = new TreeMap<>();
+        TreeMap<Integer, List<QSpan>> grouped_vertical_auto_matches_generic = new TreeMap<>();
 
-        for (Pattern aut_ptr : AUTO_Patterns) {
-            TreeMap<Integer, List<QSpan>> candidateValues = findPatterns(content, content,
+        for (Pattern aut_ptr : AUTO_Patterns_W_Generic) {
+            TreeMap<Integer, List<QSpan>> matches = findPatterns(content,
                     aut_ptr, lineTextBoxMap, false);
-            groupVerticalValues3(candidateValues, augmentedLineLabelMap, 10, 10);
-            content_custom_matches.put(aut_ptr.pattern(), candidateValues);
+            if (aut_ptr.equals(Generic)){
+                all_auto_matches_generic.putAll(matches);
+            } else {
+                for (Map.Entry<Integer, List<QSpan>> e : matches.entrySet()){
+                    List<QSpan> list = all_auto_matches.get(e.getKey());
+                    if (list == null){
+                        list = new ArrayList<>();
+                        all_auto_matches.put(e.getKey(), list);
+                    }
+                    list.addAll(e.getValue());
+                }
+            }
+
+            TreeMap<Integer, List<QSpan>> grouped_matches = matches;
+
+            if (formValsRemoved){
+                grouped_matches = findPatterns(content_wt_form_vals,
+                        aut_ptr, lineTextBoxMap, false);
+            }
+
+            groupVerticalValues3(grouped_matches, lineLabelMap, 10, 10);
+            if (aut_ptr.equals(Generic)){
+                grouped_vertical_auto_matches_generic.putAll(grouped_matches);
+            } else {
+                for (Map.Entry<Integer, List<QSpan>> e : grouped_matches.entrySet()){
+                    List<QSpan> list = grouped_vertical_auto_matches.get(e.getKey());
+                    if (list == null){
+                        list = new ArrayList<>();
+                        grouped_vertical_auto_matches.put(e.getKey(), list);
+                    }
+                    list.addAll(e.getValue());
+                }
+            }
         }
-
-        TreeMap<Integer, List<QSpan>> g1_vals = content_custom_matches.get(GenericDate1.pattern());
-        TreeMap<Integer, List<QSpan>> g2_vals = content_custom_matches.get(GenericDate2.pattern());
-        TreeMap<Integer, List<QSpan>> n1_vals = content_custom_matches.get(Numbers.pattern());
-        TreeMap<Integer, List<QSpan>> id_vals = content_custom_matches.get(Id1.pattern());
-        TreeMap<Integer, List<QSpan>> generic_vals = content_custom_matches.get(Generic.pattern());
-
         // find best table headers
 
+        /*
         HashSet<String> candidate_header_line_map = new HashSet<>();
         Map<Integer, Integer> line_scores = new HashMap<>();
-        TreeMap<Integer, List<QSpan>> candidate_headers = findPatterns(content, content_wt_form_vals,
+
+        TreeMap<Integer, List<QSpan>> candidate_headers = findPatterns(content_wt_form_vals,
                 TableHDR, lineTextBoxMap, false);
-        for (TreeMap<Integer, List<QSpan>> vals : new TreeMap[]{n1_vals, g1_vals, g2_vals, id_vals}){
+        for (Pattern ptr : AUTO_Patterns){
+            TreeMap<Integer, List<QSpan>> vals = grouped_vertical_matches.get(ptr.pattern());
             if (vals == null) continue;
             for (Map.Entry<Integer, List<QSpan>> e : vals.entrySet()) {
                 List<QSpan> list = e.getValue();
@@ -663,16 +457,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         line_scores.put(line, score + 1);
                     }
                 }
-            }
-        }
-
-
-        /*
-        for (Map.Entry<Integer, Integer> e : line_scores.entrySet()){
-            int line = e.getKey();
-            int hits = e.getValue();
-            if (hits > 1) {
-                logger.info(" {} -> {}", line, lineTextBoxMap.get(line).getLine_str());
             }
         }
 
@@ -702,11 +486,20 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 valueNeededDictionaryMap.put(dicId, qtSearchable);
                 if (ptr_str.startsWith(AUTO) && !ptr_str.equals(AUTO)) {
                     Pattern pattern = Pattern.compile(ptr_str.replace(AUTO, ""));
-                    TreeMap<Integer, List<QSpan>> candidateValues = findPatterns(content, content,
+
+                    TreeMap<Integer, List<QSpan>> matches = findPatterns(content,
                             pattern, lineTextBoxMap, false);
-        //            TreeMap<Integer, List<QSpan>> grouped = groupVerticalValues2(candidateValues, null, 30);
-                    groupVerticalValues3(candidateValues, augmentedLineLabelMap, heightMult1, heightMult2);
-                    content_custom_matches.put(ptr_str, candidateValues);
+                    all_matches.put(pattern.pattern(), matches);
+
+                    if (formValsRemoved){
+                        TreeMap<Integer, List<QSpan>> matches_wt_form_vals = findPatterns(content_wt_form_vals,
+                                pattern, lineTextBoxMap, false);
+                        groupVerticalValues3(matches_wt_form_vals, lineLabelMap, heightMult1, heightMult2);
+                        grouped_vertical_matches.put(pattern.pattern(), matches_wt_form_vals);
+                    } else {
+                        groupVerticalValues3(matches, lineLabelMap, heightMult1, heightMult2);
+                        grouped_vertical_matches.put(pattern.pattern(), matches);
+                    }
                 }
             }
         }
@@ -715,38 +508,15 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             return labelsOnly;
         }
 
-        // print associates
-        /*
-        for (Pattern aut_ptr : AUTO_Patterns){
-            TreeMap<Integer, List<ExtIntervalTextBox>> v = content_custom_matches.get(aut_ptr.pattern());
-            if (v == null) continue;
-            for (Map.Entry<Integer, List<ExtIntervalTextBox>> e : v.entrySet()){
-                for (ExtIntervalTextBox ee : e.getValue()){
-                    String h = ee.interval.getStr();
-                    List<String> as = new ArrayList<>();
-                    for (ExtIntervalTextBox eee : ee.associates){
-                        as.add(eee.interval.getStr());
-                    }
-                    logger.info(" {} -> {}", h, String.join(",", as));
-                }
-            }
-        }
-
-         */
-
-
         Map<Integer, Integer> allValueLines = new HashMap<>();
-        for (TreeMap<Integer, List<QSpan>> c_vals : new TreeMap [] {g1_vals, g2_vals, n1_vals, id_vals}) {
-            if (c_vals == null) continue;
-            for (Map.Entry<Integer, List<QSpan>> e : c_vals.entrySet()){
-    //        for (Map.Entry<Integer, List<QSpan>> e : detectedValues.entrySet()){
-                int line = e.getKey();
-                Integer num = allValueLines.get(line);
-                if (num == null){
-                    num = 0;
-                }
-                allValueLines.put(line, num + e.getValue().size());
+
+        for (Map.Entry<Integer, List<QSpan>> e : all_auto_matches.entrySet()){
+            int line = e.getKey();
+            Integer num = allValueLines.get(line);
+            if (num == null){
+                num = 0;
             }
+            allValueLines.put(line, num + e.getValue().size());
         }
 
         List<QSpan> allLabels = new ArrayList<>();
@@ -772,11 +542,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             DictSearch dictSearch = valueNeededDictionaryMap.get(dictId);
             if (dictSearch == null) continue;
 
-            String ptr = dictSearch.getDictionary().getPattern().pattern();
-            boolean isAuto = ptr.equals(AUTO);
-            TreeMap<Integer, List<QSpan>> candidateValues = isAuto ? null : content_custom_matches.get(ptr);
+            String raw_ptr = dictSearch.getDictionary().getPattern().pattern();
+            boolean isAuto = raw_ptr.equals(AUTO);
+            boolean isCustomAuto = raw_ptr.startsWith(AUTO) && raw_ptr.length() > AUTO.length();
 
-            if (isAuto || (candidateValues != null && candidateValues.size() > 0)) {
+            if (isAuto || isCustomAuto) {
                 if (qSpan.getTextBox() == null) continue;
 
                 //TODO:improve this
@@ -788,7 +558,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 qSpan.setLine(lineInfo.getLineNumber());
                 qSpan.setLine_str(line_str);
 
-                //    int offset = extIntervalTextBox.getExtInterval().getLocal_end();
                 String sub_str = line_str.substring(offset);
                 Matcher m = simple_form_val.matcher(sub_str);
                 ExtIntervalTextBox singleFormValueInterval = null;
@@ -808,36 +577,22 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 AutoValue bestAutoValue = new AutoValue();
 
                 if (isAuto) {
-                    // check this label againest other label to see how far down we can search for values
-                    // this is good for forms
-            //        AutoValue firstFormValueBelow = findBestVerticalValues(lineTextBoxMap, lineLabelMap, qSpan, allLabelsTreeMap,
-            //                max_distance_bet_lines, Integer.MAX_VALUE, false);
                     int firstFormValueBelowLineNum = Integer.MAX_VALUE;
-            //        int firstFormValueBelowLineNum = firstFormValueBelow.vValue.size() > 0 ? firstFormValueBelow.vValue.get(0).getExtInterval().getLine()
-            //                : Integer.MAX_VALUE;
                     if (singleFormValueInterval != null ){
                         bestAutoValue = new AutoValue();
                         bestAutoValue.h_score = 0;
                         bestAutoValue.hValue = singleFormValueInterval;
                     } else {
-                        int qspan_line = qSpan.getLine();
-                        Integer val_per_line = allValueLines.get(qspan_line);
-                        boolean isPotentialTableHeader =  val_per_line == null || val_per_line < 2;
-                        if (line_scores.get(qspan_line) != null &&  line_scores.get(qspan_line) > 1){
-                            qSpan.setSpanType(VERTICAL_MANY);
+                         AutoValue autoValue = findBestValue(content, lineTextBoxMap, lineLabelMap, labels, qSpan, all_auto_matches, grouped_vertical_auto_matches,
+                                max_distance_bet_lines, firstFormValueBelowLineNum, true);
+                        boolean hasOverlapWithLabels  = hasOvelapWLabels(autoValue, allLabels);
+                        if (!hasOverlapWithLabels) {
+                            bestAutoValue.merge(autoValue);
                         }
 
-                        for (TreeMap<Integer, List<QSpan>> c_vals : new TreeMap [] {g1_vals, g2_vals, n1_vals, id_vals}) {
-                            AutoValue autoValue = findBestValue(content, lineTextBoxMap, lineLabelMap, labels, qSpan, /*detectedValues*/ c_vals,
-                                    max_distance_bet_lines, firstFormValueBelowLineNum, isPotentialTableHeader, true);
-                            boolean hasOverlapWithLabels  = hasOvelapWLabels(autoValue, allLabels);
-                            if (!hasOverlapWithLabels) {
-                                bestAutoValue.merge(autoValue);
-                            }
-                        }
                         if (bestAutoValue.hValue == null && bestAutoValue.vValue.size() == 0){
-                            AutoValue genericMatches = findBestValue(content, lineTextBoxMap, lineLabelMap, labels, qSpan, generic_vals,
-                                    max_distance_bet_lines, firstFormValueBelowLineNum, isPotentialTableHeader, true);
+                            AutoValue genericMatches = findBestValue(content, lineTextBoxMap, lineLabelMap, labels, qSpan, all_auto_matches_generic, grouped_vertical_auto_matches_generic,
+                                    max_distance_bet_lines, firstFormValueBelowLineNum, true);
                             if( bestAutoValue.vValue.size() != 0){
                                 if (genericMatches.vValue.size() != 0){
                                     ExtIntervalTextBox firstAutoValue = bestAutoValue.vValue.get(0);
@@ -855,9 +610,10 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
                                 if (bestAutoValue.hValue != null && bestAutoValue.vValue.size() > 0) {
                                     QSpan tmpQspan = new QSpan(bestAutoValue.hValue);
-                                    for (TreeMap<Integer, List<QSpan>> c_vals : new TreeMap[]{g1_vals, g2_vals, n1_vals, id_vals}) {
-                                        AutoValue v_vals = findBestVerticalValues(lineTextBoxMap, lineLabelMap, tmpQspan, c_vals,
-                                                max_distance_bet_lines, firstFormValueBelowLineNum, false);
+                                    for (Pattern aptr : AUTO_Patterns) {
+                                        TreeMap<Integer, List<QSpan>> group_values = grouped_vertical_matches.get(aptr.pattern());
+                                        AutoValue v_vals = findBestVerticalValues(lineTextBoxMap, lineLabelMap, tmpQspan, group_values,
+                                                max_distance_bet_lines, firstFormValueBelowLineNum, .2f, false);
                                         if (v_vals.vValue.size() > 0) {
                                             double d1 = bestAutoValue.v_score;
                                             double d2 = v_vals.v_score;
@@ -878,20 +634,23 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
                     }
                 } else {
-                    if (singleFormValueInterval != null && Pattern.matches(ptr.replace(AUTO, ""), singleFormValueInterval.getExtInterval().getStr())){
+                    String ptr = raw_ptr.replace(AUTO, "");
+                    if (singleFormValueInterval != null && Pattern.matches(ptr, singleFormValueInterval.getExtInterval().getStr())){
                         bestAutoValue = new AutoValue();
                         bestAutoValue.h_score = 0;
                         bestAutoValue.hValue = singleFormValueInterval;
                     } else {
+                        TreeMap<Integer, List<QSpan>> h_matchs = all_matches.get(ptr);
+                        TreeMap<Integer, List<QSpan>> v_matchs = grouped_vertical_matches.get(ptr);
+
                         bestAutoValue = findBestValue(content, lineTextBoxMap, lineLabelMap, labels,
-                                qSpan, candidateValues, max_distance_bet_lines, Integer.MAX_VALUE, true, false);
+                                qSpan, h_matchs, v_matchs, max_distance_bet_lines, Integer.MAX_VALUE, false);
                     }
                 }
 
                 List<Interval> best = bestAutoValue.getBest(allLabels);
                 if (best.size() > 0) {
                     qSpan.setExtIntervalSimples(best);
-        //            foundValues.add(qSpan.getExtInterval(true));
                     finalQSpans.add(qSpan);
                 }
 
@@ -903,7 +662,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
 
                 if (rowValues.size() > 0) {
-
                     for (Interval eis : rowValues){
                         LineInfo extIntervalLineInfo = new LineInfo(content, eis);
                         eis.setEnd(extIntervalLineInfo.getLocalEnd());
@@ -916,21 +674,18 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     qSpan.setStart(lineInfo.getLocalStart());
                     qSpan.setEnd(lineInfo.getLocalEnd());
                     qSpan.setLine(lineInfo.getLineNumber());
-            //        foundValues.add(qSpan.getExtInterval(true));
                     finalQSpans.add(qSpan);
                 }
             }
         }
 
-        List<ExtInterval> foundValues = cleanUp2(finalQSpans);
+        List<ExtInterval> foundValues = cleanUp2(finalQSpans, labels, isolatedAugmentedlabels);
         foundValues.addAll(labelsOnly);
-
         Collections.sort(foundValues, new Comparator<ExtInterval>(){
             public int compare(ExtInterval s1, ExtInterval s2) {
                 return (s1.getLine() * 10000 + s1.getStart()) - (s2.getLine()*10000 + s2.getStart());
             }
         });
-
         return foundValues;
     }
 
@@ -942,8 +697,47 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             dist = d;
         }
     }
-    private List<ExtInterval> cleanUp2(List<QSpan> qSpans){
+
+    private boolean spanOverlaps(Map<String, Collection<QSpan>> formKeys,
+                                 Interval interval){
+
+        int value_line = interval.getLine();
+        int value_s = interval.getStart();
+        int value_e = interval.getEnd();
+        for (Collection<QSpan> fs : formKeys.values()){
+            for (QSpan f : fs){
+                if (f.getLine() != value_line) continue;
+                if ( (f.getStart() >= value_s && f.getStart() <= value_e) ||
+                        (value_s >= f.getStart() && value_s <= f.getEnd())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    private List<ExtInterval> cleanUp2(List<QSpan> qSpans,
+                                       Map<String, Collection<QSpan>> labels,
+                                       Map<String, Collection<QSpan>> formKeys){
         // if a value is assigned to more than one key, pick the closest key
+
+        // filter out table values that overlap with form values
+        // and values that overlap with labels
+
+        for (QSpan qSpan : qSpans) {
+            List<Interval> vals = qSpan.getExtIntervalSimples();
+            if (vals == null || vals.size() == 0) continue;
+            int label_line = qSpan.getLine();
+            ListIterator<Interval> iter  = vals.listIterator();
+            while (iter.hasNext()) {
+                Interval interval = iter.next();
+                int value_line = interval.getLine();
+                if (value_line <= label_line) continue;
+                boolean hasOverlapWFormKey = spanOverlaps(formKeys, interval);
+                if (hasOverlapWFormKey){
+                    iter.remove();
+                }
+            }
+        }
 
         Map<String, List<ValueDistance>> best_found_values = new HashMap<>();
         for (QSpan qSpan : qSpans){
@@ -975,8 +769,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 for (ValueDistance vd : valueDists){
                     if (vd.v.getExtIntervalTextBoxes() == null || vd.v.getExtIntervalTextBoxes().size() == 0) continue;
                     String vocab = vd.v.getExtIntervalTextBoxes().get(0).getExtInterval().getDict_id();
-                //    ExtInterval ext = vd.v.getExtIntervalTextBoxes().get(0).getExtInterval();
-                //    String header = ext.getLine() + "_" + ext.getStart() + "_" + ext.getEnd();
                     String header = vocab;
                     Integer d = valueDist4Vocab.get(header);
                     if (d == null){
@@ -991,9 +783,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 while (iter.hasNext()){
                     ValueDistance vd = iter.next();
                     if (vd.v.getExtIntervalTextBoxes() == null || vd.v.getExtIntervalTextBoxes().size() == 0) continue;
-        //            ExtInterval ext = vd.v.getExtIntervalTextBoxes().get(0).getExtInterval();
                     String vocab = vd.v.getExtIntervalTextBoxes().get(0).getExtInterval().getDict_id();
-        //            String header = ext.getLine() + "_" + ext.getStart() + "_" + ext.getEnd();
                     String header = vocab;
                     Integer d = valueDist4Vocab.get(header);
                     if (d == null) continue;
@@ -1111,14 +901,13 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     private TreeMap<Integer, List<QSpan>> findPatterns(String content,
-                                                       String stripped_content,
                                                        Pattern regex,
                                                        Map<Integer, BaseTextBox> lineTextBoxMap,
                                                        boolean ignorePrefixBoxes) {
 
         TreeMap<Integer, List<QSpan>> values = new TreeMap<>();
         if (lineTextBoxMap == null || lineTextBoxMap.size() == 0) return values;
-        Matcher matcher = regex.matcher(stripped_content);
+        Matcher matcher = regex.matcher(content);
         int group = matcher.groupCount() >= 1 ? 1 : 0;
         while (matcher.find()){
             int s = matcher.start(group);
@@ -1507,6 +1296,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private AutoValue findAssociatedVerticalValues(QSpan labelSpan,
                                                    List<QSpan> lineValues,
+                                                   float min_overlap,
                                                    int max_distance_bet_lines){
 
         List<ExtIntervalTextBox> line_items = new ArrayList<>();
@@ -1542,14 +1332,13 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             float d_right = Math.abs(last.getRight() - header_last.getRight());
 
             float vOverlap = getHorizentalOverlap(label_span_tb, candidate_vtb, false);
-            if (vOverlap < .2) continue;
+            if (vOverlap < min_overlap) continue;
 
             if (verticalValues.vValue.size() == 0) {
                 float min_horizental_d = Math.min(Math.min(d_left, d_center), d_right);
                 float s = (float) Math.sqrt(min_horizental_d * min_horizental_d + dvtc * dvtc);
                 if (s < verticalValues.v_score ){
                     verticalValues.v_score = s;
-        //            max_key_value_distance_in_lines =  15;
                     line_items.addAll(qSpan.getExtIntervalTextBoxes());
                     verticalValues.vValue.addAll(line_items);
                     return verticalValues;
@@ -1574,12 +1363,16 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                              TreeMap<Integer, List<QSpan>> candidateValues,
                                              int max_distance_bet_lines,
                                              int max_line_number_for_vertical_vals,
+                                             float min_overlap,
                                              boolean isAuto){
 
         if (candidateValues == null || candidateValues.size() == 0) return new AutoValue();
         String header_str = lineTextBoxMap.get(labelSpan.getLine()).getLine_str();
+   //     AutoValue autoValue = new AutoValue();
+   //     List<ExtIntervalTextBox> items = new ArrayList<>();
         int lastLine = Math.min(max_line_number_for_vertical_vals-1, candidateValues.lastEntry().getKey());
-        for (int keyLine = labelSpan.getLine()+1 ; keyLine <= lastLine; keyLine++) {
+        int labelLine = labelSpan.getExtIntervalTextBoxes().get(labelSpan.getExtIntervalTextBoxes().size()-1).getExtInterval().getLine();
+        for (int keyLine = labelLine+1 ; keyLine <= lastLine; keyLine++) {
 
             List<QSpan> lineValues = candidateValues.get(keyLine);
             if (lineValues == null) continue;
@@ -1589,12 +1382,14 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 boolean isAligned = compareRows(header_str, lineTextBoxMap.get(keyLine).getLine_str());
                 if (!isAligned) continue;
             }
-            AutoValue autoValue = findAssociatedVerticalValues(labelSpan, lineValues, max_distance_bet_lines);
+            AutoValue autoValue = findAssociatedVerticalValues(labelSpan, lineValues, min_overlap, max_distance_bet_lines);
             if (autoValue.vValue.size() > 0) {
                 if (isAuto && autoValue.vValue.size() == 1){
                     // don't return single far vertical elements
                     int dist = keyLine - labelSpan.getLine();
-                    if (dist > 4) continue;
+                    if (dist > 4) {
+                        continue;
+                    }
                 }
                 return autoValue;
             }
@@ -1607,24 +1402,27 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                     Map<Integer, List<ExtIntervalTextBox>> lineLabelMap,
                                     Map<String, Collection<QSpan>> labels,
                                     QSpan labelSpan,
-                                    TreeMap<Integer, List<QSpan>> candidateValues,
+                                    TreeMap<Integer, List<QSpan>> candidateHorizentalValues,
+                                    TreeMap<Integer, List<QSpan>> candidateVerticalValues,
                                     int max_distance_bet_lines,
                                     int max_line_number_for_vertical_vals,
-                                    boolean isPotentialTableHeader,
                                     boolean isAuto)
     {
         // check for simple form values
         AutoValue autoValue = new AutoValue();
-        if (candidateValues == null || candidateValues.size() == 0) return autoValue;
 
         if (isAuto) {
             if (labelSpan.getSpanType() != null && labelSpan.getSpanType() == VERTICAL_MANY) {
                 AutoValue vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
-                        labelSpan, candidateValues, max_distance_bet_lines, max_line_number_for_vertical_vals, isAuto);
+                        labelSpan, candidateVerticalValues, max_distance_bet_lines, max_line_number_for_vertical_vals, .2f, isAuto);
                 if (vertical_1.vValue.size() == 0) {
-                    TextBox.extendToNeighbours(lineTextBoxMap, labels, labelSpan);
+                    float oldRight = labelSpan.getRight();
+                    float newRight = TextBox.extendToNeighbours(lineTextBoxMap, labelSpan);
+                    labelSpan.setRight(newRight);
                     vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
-                            labelSpan, candidateValues, max_distance_bet_lines, max_line_number_for_vertical_vals, isAuto);
+                            labelSpan, candidateVerticalValues, max_distance_bet_lines, max_line_number_for_vertical_vals, .99f, isAuto);
+                    // make sure we change it back to original border
+                    labelSpan.setRight(oldRight);
                 }
                 return vertical_1;
             }
@@ -1643,7 +1441,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         if (r_end > -1) {
-            for (Map.Entry<Integer, List<QSpan>> e : candidateValues.entrySet()) {
+            for (Map.Entry<Integer, List<QSpan>> e : candidateHorizentalValues.entrySet()) {
                 List<QSpan> qSpans = e.getValue();
                 for (QSpan qSpan : qSpans) {
                     List<ExtIntervalTextBox> eitbs = qSpan.getExtIntervalTextBoxes();
@@ -1684,16 +1482,19 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             return autoValue;
         }
 
-        if (isPotentialTableHeader) {
-            AutoValue vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
-                    labelSpan, candidateValues, max_distance_bet_lines, max_line_number_for_vertical_vals, isAuto);
-            if (vertical_1.vValue.size() == 0){
-                TextBox.extendToNeighbours(lineTextBoxMap, labels, labelSpan);
-                vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
-                        labelSpan, candidateValues, max_distance_bet_lines, max_line_number_for_vertical_vals, isAuto);
-            }
-            autoValue.merge(vertical_1);
+
+        AutoValue vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
+                labelSpan, candidateVerticalValues, max_distance_bet_lines, max_line_number_for_vertical_vals, .2f, isAuto);
+        if (vertical_1.vValue.size() == 0){
+            float oldRight = labelSpan.getRight();
+            float newRight = TextBox.extendToNeighbours(lineTextBoxMap, labelSpan);
+            labelSpan.setRight(newRight);
+            vertical_1 = findBestVerticalValues(lineTextBoxMap, lineLabelMap,
+                    labelSpan, candidateVerticalValues, max_distance_bet_lines, max_line_number_for_vertical_vals, .99f, isAuto);
+            labelSpan.setRight(oldRight);
         }
+        autoValue.merge(vertical_1);
+
 
         return autoValue;
     }

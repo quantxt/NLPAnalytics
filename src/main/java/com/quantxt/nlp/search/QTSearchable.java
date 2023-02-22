@@ -462,6 +462,28 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     float distV = Math.abs(b1.getBase() - b2.getBase());
 
                                     if (hOverlap > .4 && (distV < 3 * (b2.getBase() - b2.getTop()))) {
+                                        // we have to make sure there no other token verticaly in-between
+                                        // compute textbox in between and check if any other textbox overlaps with it
+                                        // we do this only if the two candidate spans are in lines that are NOT right under each other
+                                        // l1 - l2 > 1
+                                        if ((curr.getLine() - qSpan.getLine()) > 1) {
+                                            BaseTextBox gapBetween = new BaseTextBox(b1.getBase(), b2.getBase(), Math.min(b1.getLeft(), b2.getLeft()), Math.max(b1.getRight(), b2.getRight()), "");
+                                            boolean gapIsClear = true;
+                                            int lastLine = qSpan.getExtIntervalTextBoxes().get(qSpan.getExtIntervalTextBoxes().size()-1).getExtInterval().getLine();
+                                            for (Map.Entry<Integer, BaseTextBox> e : lineTextBoxMap.entrySet()) {
+                                                int gline = e.getKey();
+                                                if (gline <= lastLine || gline >= curr.getLine()) continue;
+                                                for (BaseTextBox gbox : e.getValue().getChilds()) {
+                                                    float ghOverlap = getHorizentalOverlap(gapBetween, gbox);
+                                                    if (ghOverlap > .2) {
+                                                        gapIsClear = false;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!gapIsClear) break;
+                                            }
+                                            if (!gapIsClear) continue;
+                                        }
                                         for (ExtIntervalTextBox eit : curr.getExtIntervalTextBoxes()) {
                                             qSpan.add(eit);
                                         }
