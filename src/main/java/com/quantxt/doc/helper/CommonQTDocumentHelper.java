@@ -48,21 +48,27 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     protected static String UTF8_BULLETS = "\\u2022|\\u2023|\\u25E6|\\u2043|\\u2219";
     protected static Pattern UTF8_TOKEN = Pattern.compile("^(?:[a-zA-Z]\\.){2,}|([\\p{L}\\p{N}]+[\\.\\&]{0,1}[\\p{L}\\p{N}])");
 
- //   final private static Pattern simple_form_val   = Pattern.compile("^[^\\p{L}\\p{N}:]*: {0,20}((?:[\\p{L}\\p{N}]\\S* )*\\S+)");
     final private static Pattern simple_form_val   = Pattern.compile("^[^\\p{L}\\:]*: *((?:\\S([^\\:\\s]+ )*[^\\:\\s]+))(?=$|\\s{2,})");
 
     final private static String begin_pad = "(?<=^|[:\\s])";
     final private static String end_pad   = "(?=$|\\s)";
     final private static String genricPharse =  "\\S+";
+
+    final private static String SpcCharacter1 =  "[0-9_\\-\\.\\/\\)\\(\\*]+";
     final private static String numAlphabet =  "(\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]+|[\\p{L}]|[\\p{L}\\-]+\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]*)";
 
     final private static Pattern FormKey  = Pattern.compile("  (\\p{L}(?:[^\\: \\n]+ )*[^\\:\\n ]+ {0,20}[\\:](?:(?: {0,35}(?:(?:[^ \\n]*[^\\:]) ){0,4}[^ \\n]+[^\\:])))"+ end_pad);
     final private static Pattern TableHDR = Pattern.compile("(?<=[^A-Z]{2})((?:[A-Za-z][^\\:\\n ]+ )*[A-Za-z%#]+)(?=  |\\n)");
 
-    final private static Pattern GenericDate1  = Pattern.compile(begin_pad + "((?:[1-9]|[01]\\d)[ -\\/](?:[1-9]|[0123]\\d)[ -\\/](?:19\\d{2}|20\\d{2}|\\d{2}))" + end_pad);  // mm dd yyyy
+    final private static Pattern GenericDate1  = Pattern.compile(begin_pad + "((?:[1-9]|[01]\\d)[ -\\/\\.](?:[1-9]|[0123]\\d)[ -\\/\\.](?:19\\d{2}|20\\d{2}|\\d{2}))" + end_pad);  // mm dd yyyy
     final private static Pattern GenericDate2  = Pattern.compile(begin_pad + "/([12]\\d{3}[ -\\/](?:0[1-9]|1[0-2])[ -\\/](?:0[1-9]|[12]\\d|3[01]))/" + end_pad);  // YYYY-mm-dd
-    final private static Pattern Numbers       = Pattern.compile(begin_pad + "((?:\\p{Sc} {0,6})?[+\\-]{0,1}[0-9]{1,3}(?:[\\.,]?[0-9]{3})*(?:[,\\.][0-9]{2})?%?)" + end_pad);  // mm dd yyyy
+    final private static Pattern Numbers       = Pattern.compile(begin_pad + "((?:\\-)?(?:\\p{Sc} {0,6})?[+\\-]{0,1}[0-9]{1,3}(?:[\\.,]?[0-9]{3})*(?:[,\\.][0-9]{2})?%?)" + end_pad);  // mm dd yyyy
     final private static Pattern Id1           = Pattern.compile(begin_pad + "(" +numAlphabet + ")"+ end_pad);
+
+    final private static Pattern ShortDesc1    = Pattern.compile(begin_pad + "((?:" +SpcCharacter1 + " )*" + SpcCharacter1 +")" + end_pad);
+
+  //  final private static Pattern ShortDesc1    = Pattern.compile("(?<=  )((?:\\S+ ){0,5}\\S*[^\\:\\s])(?=$|\\n| {2,})");
+
 
     final private static Pattern Digits =  Pattern.compile("\\p{N}");
     final private static Pattern Alphabets =  Pattern.compile("((?:[#\\p{L}]+[ \\-_\\/\\.%])*[#\\p{L}]+[\\/\\.%]*(?=$| ))");
@@ -70,8 +76,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
     final private static Pattern GenericToken = Pattern.compile("(\\S+)");
     final private static Pattern Generic = Pattern.compile("(?<=^|  )" + "((?:"+ genricPharse+" ){0,15}" + genricPharse + ")"  + end_pad);
-    final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, Numbers, Id1};
-    final private static Pattern [] AUTO_Patterns_W_Generic = new Pattern[] {GenericDate1, GenericDate2, Numbers, Id1, Generic};
+    final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, Numbers, ShortDesc1, Id1};
+    final private static Pattern [] AUTO_Patterns_W_Generic = new Pattern[] {GenericDate1, GenericDate2, Numbers, ShortDesc1, Id1, Generic};
 
     protected Analyzer analyzer;
 
@@ -431,9 +437,42 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
             }
         }
-        // find best table headers
+
+        // merge single matches
+        for (Map.Entry<Integer, List<QSpan>> e : all_auto_matches.entrySet()){
+            List<QSpan> values = e.getValue();
+            HashSet<Integer> overlapped = new HashSet<>();
+            List<QSpan> newSpans = new ArrayList<>();
+            for (int i=0; i<values.size(); i++){
+                if (overlapped.contains(i)) continue;
+                QSpan value_1 = values.get(i);
+                int s1 = value_1.getStart();
+                int e1 = value_1.getEnd();
+                for (int j=0; j<values.size(); j++){
+                    if (i == j) continue;
+                    if (overlapped.contains(j)) continue;
+                    QSpan value_2 = values.get(j);
+                    int s2 = value_2.getStart();
+                    int e2 = value_2.getEnd();
+                    if (s1 >= s2 && e1 <= e2){
+                        overlapped.add(i);
+                        break;
+                    }
+                }
+            }
+
+            if (overlapped.size() > 0) {
+                for (int i = 0; i < values.size(); i++) {
+                    if (overlapped.contains(i)) continue;
+                    newSpans.add(values.get(i));
+                }
+                all_auto_matches.put(e.getKey(), newSpans);
+            }
+
+        }
 
         /*
+        // find best table headers
         HashSet<String> candidate_header_line_map = new HashSet<>();
         Map<Integer, Integer> line_scores = new HashMap<>();
 
