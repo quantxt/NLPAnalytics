@@ -43,6 +43,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
     final private static Logger logger = LoggerFactory.getLogger(QTSearchable.class);
 
     protected transient IndexSearcher indexSearcher;
+    protected transient IndexSearcher negativeIndexSearcher;
 
     protected List<DctSearhFld> docSearchFldList = new ArrayList<>();
     protected List<String> synonymPairs;
@@ -61,7 +62,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         this.dictionary = dictionary;
         this.stopWords = null;
         initDocSearchFld();
-        create();
+        this.indexSearcher = create(dictionary.getVocab());
     }
 
     public QTSearchable(Dictionary dictionary,
@@ -77,7 +78,12 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         this.analyzType = new DictSearch.AnalyzType[]{analyzType};
         this.dictionary = dictionary;
         initDocSearchFld();
-        create();
+        this.indexSearcher = create(dictionary.getVocab());
+    }
+
+    public void setNegativeDictionary(Dictionary negativeDictionary){
+        this.negativeDictionary = negativeDictionary;
+        this.negativeIndexSearcher = create(negativeDictionary.getVocab());
     }
 
     public QTSearchable(Dictionary dictionary,
@@ -93,7 +99,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         this.analyzType = analyzType;
         this.dictionary = dictionary;
         initDocSearchFld();
-        create();
+        this.indexSearcher = create(dictionary.getVocab());
     }
 
     private boolean useFuzzyMatch() {
@@ -127,7 +133,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         minTermLength, maxEdits, prefixLength) :
                         getMultimatcheQuery(searchAnalyzer, search_fld, content);
 
-                List<Document> matchedDocs = getMatchedDocs(query);
+                List<Document> matchedDocs = getMatchedDocs(indexSearcher, query);
                 if (matchedDocs.size() == 0) continue;
                 for (Mode m : mode) {
                     List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, slop,
@@ -148,7 +154,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         return res;
     }
 
-    private List<Document> getMatchedDocs(Query query) throws IOException {
+    private List<Document> getMatchedDocs(IndexSearcher indexSearcher, Query query) throws IOException {
         List<Document> matchedDocs = new ArrayList<>();
         TopDocs topdocs = indexSearcher.search(query, topN);
 
@@ -234,17 +240,66 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                               Map<Integer, BaseTextBox> lineTextBoxMap,
                               int slop,
                               boolean isolatedLabelsOnly) {
-        ArrayList<ExtIntervalTextBox> res = new ArrayList<>();
-        boolean useFuzzyMatching = useFuzzyMatch();
-        List<QSpan> spans = new ArrayList<>();
 
         List<QSpan> spread_spans = new ArrayList<>();
         List<QSpan> compact_spans = new ArrayList<>();
         List<QSpan> single_word_spans = new ArrayList<>();
+        searchHelper(indexSearcher, content, lineTextBoxMap, spread_spans,
+                compact_spans, single_word_spans, slop, isolatedLabelsOnly);
 
         List<QSpan> spread_negatives = new ArrayList<>();
         List<QSpan> compact_negatives = new ArrayList<>();
         List<QSpan> single_word_negatives = new ArrayList<>();
+
+        if (negativeIndexSearcher != null){
+            searchHelper(negativeIndexSearcher, content, lineTextBoxMap,
+                    spread_negatives, compact_negatives, single_word_negatives, slop, isolatedLabelsOnly);
+        }
+
+        // spans should not contain keyword other than associated label keywords
+        if (lineTextBoxMap != null) {
+            spread_spans = removeSpansWithIrrelevantKeywords(spread_spans, lineTextBoxMap);
+            compact_spans = removeSpansWithIrrelevantKeywords(compact_spans, lineTextBoxMap);
+        }
+
+        filterNegativeWTextBox(spread_spans, compact_negatives, .25f);
+        filterNegativeWTextBox(spread_spans, compact_spans, .25f);
+
+        filterNegativeWithoutTextBox(spread_spans, spread_negatives);
+        filterNegativeWTextBox(compact_spans, compact_negatives, .25f);
+
+        filterNegativeWithoutTextBox(spread_spans, single_word_negatives);
+        filterNegativeWTextBox(compact_spans, single_word_negatives, .98f);
+
+        List<QSpan> split_spread_spans = getSplitSpans(spread_spans);
+        List<QSpan> split_compact_spans = getSplitSpans(compact_spans);
+
+        List<QSpan> split_spread_negatives = getSplitSpans(spread_negatives);
+        List<QSpan> split_compact_negatives = getSplitSpans(compact_negatives);
+
+        List<QSpan> filtered = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(compact_spans, compact_negatives) :
+                getFilteredSpansWithTextBox(split_compact_spans, split_compact_negatives);
+
+        List<QSpan> filtered_spread = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(spread_spans, spread_negatives) :
+                getFilteredSpansWithTextBox(split_spread_spans, split_spread_negatives);
+
+        if (filtered_spread.size() > 0){
+            filtered.addAll(filtered_spread);
+        }
+
+        return filtered;
+    }
+
+    public void searchHelper(IndexSearcher indexSearcher,
+                             String content,
+                             Map<Integer, BaseTextBox> lineTextBoxMap,
+                             List<QSpan> spread_spans,
+                             List<QSpan> compact_spans,
+                             List<QSpan> single_word_spans,
+                             int slop,
+                             boolean isolatedLabelsOnly) {
+        ArrayList<ExtIntervalTextBox> res = new ArrayList<>();
+        boolean useFuzzyMatching = useFuzzyMatch();
 
         try {
             // This list is ordered by priorities
@@ -260,7 +315,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         minTermLength, maxEdits, prefixLength) :
                         getMultimatcheQuery(searchAnalyzer, search_fld, content);
 
-                List<Document> matchedDocs = getMatchedDocs(doc_query);
+                List<Document> matchedDocs = getMatchedDocs(indexSearcher, doc_query);
                 // run once with slop = 0
 
                 for (Mode m : mode) {
@@ -277,31 +332,16 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         qSpan.process(content);
                         String str = qSpan.getStr();
                         boolean str_is_spread = str.split("   ").length > 1;
-                        boolean isNegative = false;
-                        for (ExtIntervalTextBox ex : qSpan.getExtIntervalTextBoxes()) {
-                            if (ex.getExtInterval().getCategory().equals(DONT_CARE)) {
-                                isNegative = true;
-                                if (str_is_spread){
-                                    spread_negatives.add(qSpan);
-                                } else {
-                                    compact_negatives.add(qSpan);
-                                    single_word_negatives.add(qSpan);
-                                }
-                                break;
-                            }
-                        }
-                        if (!isNegative) {
-                            boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
-                            if (!isIsolated) continue;
+                        boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
+                        if (!isIsolated) continue;
 
-                            LineInfo lineInfo = new LineInfo(content, matches.get(i).getExtInterval());
-                            qSpan.getExtIntervalTextBoxes().get(0).getExtInterval().setLine(lineInfo.getLineNumber());
-                            if (str_is_spread){
-                                spread_spans.add(qSpan);
-                            } else {
-                                compact_spans.add(qSpan);
-                                single_word_spans.add(qSpan);
-                            }
+                        LineInfo lineInfo = new LineInfo(content, matches.get(i).getExtInterval());
+                        qSpan.getExtIntervalTextBoxes().get(0).getExtInterval().setLine(lineInfo.getLineNumber());
+                        if (str_is_spread){
+                            spread_spans.add(qSpan);
+                        } else {
+                            compact_spans.add(qSpan);
+                            single_word_spans.add(qSpan);
                         }
                     }
 
@@ -495,7 +535,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                 }
 
                                 if (qSpan.size() == tokens.length) {
-                                    boolean isNegative = false;
+            //                        boolean isNegative = false;
                                     qSpan.process(content);
                                     // check if the match is negative
                                     // we remove matches that are part of a test line
@@ -504,90 +544,35 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                         if (!isIsolated) continue;
                                     }
 
-                                    List<ExtIntervalTextBox> tmpMatch = getFragments(matchedDocs, SPAN, false, 1,
-                                            searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
-                                            search_fld, vocab_name, vocab_id, qSpan.getStr(), null);
-
-                                    for (ExtIntervalTextBox ex : tmpMatch) {
-                                        if (ex.getExtInterval().getCategory().equals(DONT_CARE)) {
-                                            isNegative = true;
-                                            compact_negatives.add(qSpan);
-                                            break;
-                                        }
-                                    }
-
-
-                                    if (!isNegative) {
-                                        ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
-                                        boolean isInCompleteSpans = false;
-                                        ListIterator<QSpan> iter = compact_spans.listIterator();
-                                        String text1 = qSpan.getStr().trim();
-                                        while (iter.hasNext()) {
-                                            QSpan qs = iter.next();
-                                            float d1 = firstPExt.getTextBox().getBase() - qs.getBase();
-                                            float d2 = firstPExt.getTextBox().getLeft() - qs.getLeft();
-                                            if (Math.abs(d1) < 2 && Math.abs(d2) < 2) {
-                                                String text2 = qs.getStr().trim();
-                                                if (text1.equals(text2)) {
-                                                    isInCompleteSpans = true;
-                                                    break;
-                                                }
+                                    ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
+                                    boolean isInCompleteSpans = false;
+                                    ListIterator<QSpan> iter = compact_spans.listIterator();
+                                    String text1 = qSpan.getStr().trim();
+                                    while (iter.hasNext()) {
+                                        QSpan qs = iter.next();
+                                        float d1 = firstPExt.getTextBox().getBase() - qs.getBase();
+                                        float d2 = firstPExt.getTextBox().getLeft() - qs.getLeft();
+                                        if (Math.abs(d1) < 2 && Math.abs(d2) < 2) {
+                                            String text2 = qs.getStr().trim();
+                                            if (text1.equals(text2)) {
+                                                isInCompleteSpans = true;
+                                                break;
                                             }
                                         }
-                                        if (!isInCompleteSpans) {
-                                            compact_spans.add(qSpan);
-                                        }
+                                    }
+                                    if (!isInCompleteSpans) {
+                                        compact_spans.add(qSpan);
                                     }
                                 }
                             }
                         }
                     }
                 }
-
-                if (spread_spans.size() == 0 && compact_spans.size() == 0) return new ArrayList<>();
-                spans.sort(comparingInt((QSpan s) -> s.getExtInterval(false).getStart()));
-            }
+           }
         } catch (Exception e) {
             e.printStackTrace();
             logger.error("Error in name search {}: query_string '{}'", e.getMessage(), content);
         }
-
-        // spans should not contain keyword other than associated label keywords
-        if (lineTextBoxMap != null) {
-            spread_spans = removeSpansWithIrrelevantKeywords(spread_spans, lineTextBoxMap);
-            compact_spans = removeSpansWithIrrelevantKeywords(compact_spans, lineTextBoxMap);
-        }
-
-
-    //    combine(spread_spans, compact_spans);
-    //    combine(spread_negatives, compact_negatives);
-
-        filterNegativeWTextBox(spread_spans, compact_negatives, .25f);
-    //    filterNegativeWTextBox(spread_spans, compact_spans, .25f);
-
-        filterNegativeWithoutTextBox(spread_spans, spread_negatives);
-        filterNegativeWTextBox(compact_spans, compact_negatives, .25f);
-
-        filterNegativeWithoutTextBox(spread_spans, single_word_negatives);
-        filterNegativeWTextBox(compact_spans, single_word_negatives, .98f);
-
-        List<QSpan> split_spread_spans = getSplitSpans(spread_spans);
-        List<QSpan> split_compact_spans = getSplitSpans(compact_spans);
-
-        List<QSpan> split_spread_negatives = getSplitSpans(spread_negatives);
-        List<QSpan> split_compact_negatives = getSplitSpans(compact_negatives);
-
-        List<QSpan> filtered = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(compact_spans, compact_negatives) :
-                getFilteredSpansWithTextBox(split_compact_spans, split_compact_negatives);
-
-        List<QSpan> filtered_spread = lineTextBoxMap == null ? getFilteredSpansWithoutTextBox(spread_spans, spread_negatives) :
-                getFilteredSpansWithTextBox(split_spread_spans, split_spread_negatives);
-
-        if (filtered_spread.size() > 0){
-            filtered.addAll(filtered_spread);
-        }
-
-        return filtered;
     }
 
 
@@ -852,11 +837,14 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                               float ratio){
         ListIterator<QSpan> iter1 = spans.listIterator();
         while (iter1.hasNext()){
-            BaseTextBox b1 = iter1.next().getTextBox();
+            QSpan qSpan = iter1.next();
+            BaseTextBox b1 = qSpan.getTextBox();
+            String str1 = qSpan.getStr();
             if (b1 == null) continue;
             for (int j = 0; j < negatives.size(); j++) {
                 BaseTextBox b2 = negatives.get(j).getTextBox();
                 if (b2 == null) continue;
+                String str2 = b2.getStr();
                 float ho = getHorizentalOverlap(b1, b2);
                 float vo = getVerticalOverlap(b1, b2);
                 if (ho > ratio && vo > ratio) {  // i completely covers j
@@ -929,7 +917,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         this.prefixLength = prefixLength;
     }
 
-    private void create() {
+    private IndexSearcher create(List<DictItm> dictItms) {
         Map<String, Analyzer> analyzerMap = new HashMap<>();
 
         for (DctSearhFld dctSearhFld : docSearchFldList) {
@@ -944,7 +932,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         try {
             IndexWriter writer = new IndexWriter(mMapDirectory, config);
 
-            for (DictItm dictItm : dictionary.getVocab()) {
+            for (DictItm dictItm : dictItms) {
                 String category = dictItm.getCategory();
                 List<String> phraseList = dictItm.getPhraseList();
                 for (String value : phraseList) {
@@ -959,10 +947,11 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             }
             writer.close();
             DirectoryReader dreader = DirectoryReader.open(mMapDirectory);
-            indexSearcher = new IndexSearcher(dreader);
+            return new IndexSearcher(dreader);
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return null;
     }
 
     private void initDocSearchFld() {

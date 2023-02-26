@@ -656,7 +656,28 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
             BaseTextBox current_box = childs.get(i);
             if ((spanStart >= current_start && spanStart <= current_end) ||
                     (spanEnd >= current_start && spanEnd <= current_end)) {
-                components.add(current_box);
+                if (spanEnd < current_end || spanStart > current_start){
+                    // in this case we adjust left and right
+                    float current_num_str = (float) (current_box.getStr().length());
+                    float current_box_length = current_box.getRight() - current_box.getLeft();
+                    float new_right = current_box.getRight();
+                    float new_left = current_box.getLeft();
+                    if (spanEnd < current_end){
+                        float diff = (float) (current_end - spanEnd);
+                        new_right = current_box.getRight() - diff/current_num_str * current_box_length;
+                    }
+
+                    if (spanStart > current_start){
+                        float diff = (float) (spanStart - current_start);
+                        new_left = current_box.getLeft() + diff/current_num_str * current_box_length;
+
+                    }
+                    BaseTextBox new_current_box = new BaseTextBox(current_box.getTop(), current_box.getBase(),
+                            new_left, new_right, current_box.getStr());
+                    components.add(new_current_box);
+                } else {
+                    components.add(current_box);
+                }
                 if (first_box_idx == -1) {
                     first_box_idx = i;
                 }
