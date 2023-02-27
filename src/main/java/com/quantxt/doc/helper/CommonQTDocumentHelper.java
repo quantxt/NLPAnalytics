@@ -9,7 +9,6 @@ import com.quantxt.model.*;
 import com.quantxt.model.Dictionary;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
-import com.quantxt.nlp.search.DctSearhFld;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.*;
 import org.apache.lucene.analysis.Analyzer;
@@ -58,7 +57,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     final private static String SpcCharacter1 =  "[0-9_\\-\\.\\/\\)\\(\\*]+";
     final private static String numAlphabet =  "(\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]+|[\\p{L}]|[\\p{L}\\-]+\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]*)";
 
-    final private static Pattern FormKey  = Pattern.compile("  (\\p{L}(?:[^\\: \\n]+ )*[^\\:\\n ]+ {0,20}[\\:](?:(?: {0,35}(?:(?:[^ \\n]*[^\\:]) ){0,4}[^ \\n]+[^\\:])))"+ end_pad);
+    final private static Pattern FormKey  = Pattern.compile("(?<=\\s{2})(\\p{L}(?:[^\\: \\n]+ )*[^\\:\\n ]+ {0,20}[\\:](?:(?: {0,35}(?:(?:[^ \\n]*[^\\:\\n]) ){0,4}[^ \\n]+[^\\:])))"+ end_pad);
     final private static Pattern TableHDR = Pattern.compile("(?<=[^A-Z]{2})((?:[A-Za-z][^\\:\\n ]+ )*[A-Za-z%#]+)(?=  |\\n)");
 
     final private static Pattern GenericDate1  = Pattern.compile(begin_pad + "((?:[1-9]|[01]\\d)[ -\\/\\.](?:[1-9]|[0123]\\d)[ -\\/\\.](?:19\\d{2}|20\\d{2}|\\d{2}))" + end_pad);  // mm dd yyyy
@@ -263,7 +262,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     }
 
     private String removeTextHeavyParts(String content){
-        Pattern p = Pattern.compile("^ *((\\[A-Za-z\\-,\\(\\)]+ {1,2})*[\\)\\(A-Za-z\\-]+) *$");
+        Pattern p = Pattern.compile("^ *(([A-Za-z\\-,\\(\\)\\.\\@\\$]+ {1,2})*[\\)\\(A-Za-z\\-,\\.\\@\\$]+) *$");
         String [] lines = content.split("\\n");
         List<String> newLines = new ArrayList<>();
         for (String line : lines) {
