@@ -56,28 +56,22 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
     final private static String SpcCharacter1 =  "[0-9_\\-\\.\\/\\)\\(\\*]+";
     final private static String numAlphabet =  "(\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]+|[\\p{L}]|[\\p{L}\\-]+\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]*)";
-
     final private static Pattern FormKey  = Pattern.compile("(?<=\\s{2})(\\p{L}(?:[^\\: \\n]+ )*[^\\:\\n ]+ {0,20}[\\:](?:(?: {0,35}(?:(?:[^ \\n]*[^\\:\\n]) ){0,4}[^ \\n]+[^\\:])))"+ end_pad);
-    final private static Pattern TableHDR = Pattern.compile("(?<=[^A-Z]{2})((?:[A-Za-z][^\\:\\n ]+ )*[A-Za-z%#]+)(?=  |\\n)");
-
     final private static Pattern GenericDate1  = Pattern.compile(begin_pad + "((?:[1-9]|[01]\\d)[ -\\/\\.](?:[1-9]|[0123]\\d)[ -\\/\\.](?:19\\d{2}|20\\d{2}|\\d{2}))" + end_pad);  // mm dd yyyy
-    final private static Pattern GenericDate2  = Pattern.compile(begin_pad + "/([12]\\d{3}[ -\\/](?:0[1-9]|1[0-2])[ -\\/](?:0[1-9]|[12]\\d|3[01]))/" + end_pad);  // YYYY-mm-dd
-    final private static Pattern Numbers       = Pattern.compile(begin_pad + "((?:\\-)?(?:\\p{Sc} {0,6})?[+\\-]{0,1}[0-9]{1,3}(?:[\\.,]?[0-9]{3})*(?:[,\\.][0-9]{2})?%?)" + end_pad);  // mm dd yyyy
+    final private static Pattern GenericDate2  = Pattern.compile(begin_pad + "([12]\\d{3}[ -\\/](?:0[1-9]|1[0-2])[ -\\/](?:0[1-9]|[12]\\d|3[01]))" + end_pad);  // YYYY-mm-dd
+    final private static Pattern GenericDate3  = Pattern.compile(begin_pad + "[A-Za-z]{3,9}[ ,]{1,3}\\d{1,2}[ ,]{1,3}\\d{4}" + end_pad);  // YYYY-mm-dd
+    final private static Pattern Numbers       = Pattern.compile(begin_pad + "((?:\\-)?(?:\\p{Sc} {0,6})?[+\\-#]{0,1}[0-9]{1,3}(?:[\\.,]?[0-9]{3})*(?:[,\\.][0-9]{2})?%?)" + end_pad);  // mm dd yyyy
     final private static Pattern Id1           = Pattern.compile(begin_pad + "(" +numAlphabet + ")"+ end_pad);
 
     final private static Pattern ShortDesc1    = Pattern.compile(begin_pad + "((?:" +SpcCharacter1 + " )*" + SpcCharacter1 +")" + end_pad);
 
-  //  final private static Pattern ShortDesc1    = Pattern.compile("(?<=  )((?:\\S+ ){0,5}\\S*[^\\:\\s])(?=$|\\n| {2,})");
-
-
     final private static Pattern Digits =  Pattern.compile("\\p{N}");
-    final private static Pattern Alphabets =  Pattern.compile("((?:[#\\p{L}]+[ \\-_\\/\\.%])*[#\\p{L}]+[\\/\\.%]*(?=$| ))");
-    final private static Pattern inParentheses =  Pattern.compile("\\([^\\)]+\\)");
+//    final private static Pattern Alphabets =  Pattern.compile("((?:[#\\p{L}]+[ \\-_\\/\\.%])*[#\\p{L}]+[\\/\\.%]*(?=$| ))");
+//    final private static Pattern inParentheses =  Pattern.compile("\\([^\\)]+\\)");
 
     final private static Pattern GenericToken = Pattern.compile("(\\S+)");
     final private static Pattern Generic = Pattern.compile("(?<=^|  )" + "((?:"+ genricPharse+" ){0,15}" + genricPharse + ")"  + end_pad);
-    final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, Numbers, ShortDesc1, Id1};
-    final private static Pattern [] AUTO_Patterns_W_Generic = new Pattern[] {GenericDate1, GenericDate2, Numbers, ShortDesc1, Id1, Generic};
+    final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, GenericDate3, Numbers, ShortDesc1, Id1};
 
     protected Analyzer analyzer;
 
@@ -444,14 +438,63 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         List<QSpan> newTblHdrs = new ArrayList<>();
         for (int i=0; i< tableHeaders.size(); i++){
             if (merged.contains(i)) continue;
-            newTblHdrs.add(tableHeaders.get(i));
+            QSpan qSpanHdr = tableHeaders.get(i);
+            qSpanHdr.setSpanType(VERTICAL_MANY);
+            newTblHdrs.add(qSpanHdr);
         }
 
         return newTblHdrs;
-
-    //    return tableHeaders;
     }
 
+    private void detectHorizentalLabels(List<QSpan> labels,
+                                        Map<Integer, BaseTextBox> lineTextBoxMap){
+        // first find labels that are aligned by left side
+        // Label 1 hfhfd
+        // Label 2 hfhfd
+
+        labels.sort((o1 , o2) -> Float.compare(o1.getBase() , o2.getBase()));
+        for (int i=0; i <labels.size(); i++){
+            QSpan qSpan1 = labels.get(i);
+            if (qSpan1.getSpanType() == VERTICAL_MANY) continue;
+            BaseTextBox bt1 = qSpan1.getTextBox();
+            if (bt1 == null) continue;
+            int line1 = qSpan1.getLine();
+            float h1 = qSpan1.getBase() - qSpan1.getTop();
+            for (int j=i+1; j < labels.size(); j++){
+                QSpan qSpan2 = labels.get(j);
+                if (qSpan2.getSpanType() == VERTICAL_MANY) continue;
+                if (qSpan2.getDict_id().equals(qSpan1.getDict_id())) continue;
+                if (qSpan2.getTop() < qSpan1.getBase()) continue;
+                int line2 = qSpan2.getLine();
+                float h2 = qSpan2.getBase() - qSpan2.getTop();
+                float dist = Math.abs(qSpan2.getTop() - qSpan1.getBase());
+                if (dist > 2*h1) break;
+                float diff_side = Math.abs(qSpan2.getLeft() - qSpan1.getLeft());
+                if (diff_side < 2f){
+                    boolean isHrzLabel = true;
+                    for (int k=line1+1; k < line2; k++){
+                        BaseTextBox bt = lineTextBoxMap.get(k);
+                        if (bt == null) continue;
+                        for (BaseTextBox bt2 : bt.getChilds()) {
+                            if (bt2 == null) continue;
+                            float vo = getHorizentalOverlap(bt1, bt2);
+                            if (vo > 0) {
+                                isHrzLabel = false;
+                                break;
+                            }
+                        }
+                        if (! isHrzLabel) break;
+                    }
+                    // check if there is any value
+                    if (isHrzLabel) {
+                        qSpan1.setSpanType(HORIZENTAL_ONE);
+                        qSpan2.setSpanType(HORIZENTAL_ONE);
+                        break;
+                    }
+                }
+            }
+        }
+    }
     @Override
     public List<ExtInterval> extract(final String content,
                                      List<DictSearch> extractDictionaries,
@@ -703,6 +746,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         // find table headers
         List<QSpan> tableHeaders = detectTableHeaders(content, allLabels, all_auto_matches, grouped_vertical_auto_matches);
+
+        // set HORIZENTAL labels
+        if (lineLabelMap != null) {
+            detectHorizentalLabels(allLabels, lineTextBoxMap);
+        }
 
         ArrayList<QSpan> finalQSpans = new ArrayList<>();
 
@@ -1745,8 +1793,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             autoValue.h_score = (float) d;
         }
 
-        if (autoValue.hValue != null && labelSpan.getSpanType() != null &&
-        ( labelSpan.getSpanType() == HORIZENTAL_MANY || labelSpan.getSpanType() == HORIZENTAL_ONE)){
+        if (labelSpan.getSpanType() == HORIZENTAL_MANY || labelSpan.getSpanType() == HORIZENTAL_ONE){
             // so we don't find vertical values if we have a valid value and label is Horizental
             return autoValue;
         }
