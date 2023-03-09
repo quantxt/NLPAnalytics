@@ -786,11 +786,14 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                                           QSpan label){
         // find closest textboxes on the right side
         BaseTextBox tb = label.getTextBox();
-        BaseTextBox newTb = new BaseTextBox(tb.getTop(), tb.getLeft(), tb.getRight(), 10000, "");
+        BaseTextBox newTb = new BaseTextBox(tb.getTop(), tb.getBase(), tb.getRight(), 10000, "");
         for (Map.Entry<Integer, BaseTextBox> e : lineTextBoxMap.entrySet()){
             int lineBoxLine = e.getKey();
+            if (e.getValue() == null) continue;
             if (Math.abs(lineBoxLine - label.getLine()) > 3) continue;
-            for (BaseTextBox bt : e.getValue().getChilds()) {
+            List<BaseTextBox> childs = e.getValue().getChilds();
+            if (childs == null || childs.size() == 0) continue;
+            for (BaseTextBox bt : childs) {
                 float vOcerlap = getVerticalOverlap(bt, tb);
                 if (vOcerlap  <= 0) continue;
                 float hOverlap = getHorizentalOverlap(bt, newTb, false);
@@ -801,6 +804,30 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         }
 
         return newTb.getRight();
+    }
+
+    public static float extendToLeftNeighbours(Map<Integer, BaseTextBox> lineTextBoxMap,
+                                           QSpan label){
+        // find closest textboxes on the right side
+        BaseTextBox tb = label.getTextBox();
+        BaseTextBox newTb = new BaseTextBox(tb.getTop(), tb.getBase(), 0, tb.getLeft(), "");
+        for (Map.Entry<Integer, BaseTextBox> e : lineTextBoxMap.entrySet()){
+            int lineBoxLine = e.getKey();
+            if (e.getValue() == null) continue;
+            if (Math.abs(lineBoxLine - label.getLine()) > 3) continue;
+            List<BaseTextBox> childs = e.getValue().getChilds();
+            if (childs == null || childs.size() == 0) continue;
+            for (BaseTextBox bt : childs) {
+                float vOcerlap = getVerticalOverlap(bt, tb);
+                if (vOcerlap  <= 0) continue;
+                float hOverlap = getHorizentalOverlap(bt, newTb, false);
+                if (hOverlap > 0 && bt.getRight() < tb.getLeft()) {
+                    newTb.setLeft(bt.getRight());
+                }
+            }
+        }
+
+        return newTb.getLeft();
     }
 
     public static float getHorizentalOverlap(BaseTextBox textBox1,

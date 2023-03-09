@@ -19,8 +19,12 @@ public class QSpan extends ExtInterval {
     protected transient List<BaseTextBox> childs = new ArrayList<>();
     protected String line_str;
     private Map<BaseTextBox, Double> neighbors = new HashMap<>();
+
     private List<ExtIntervalTextBox> extIntervalTextBoxes = new ArrayList<>();
 
+    public QSpan(){
+        super();
+    }
     public QSpan(ExtIntervalTextBox e){
         super();
         this.start = e.getExtInterval().getStart();
@@ -178,5 +182,8 @@ public class QSpan extends ExtInterval {
 
     public void setRight(float right) {
         this.right = right;
+    }
+    public void setExtIntervalTextBoxes(List<ExtIntervalTextBox> extIntervalTextBoxes) {
+        this.extIntervalTextBoxes = extIntervalTextBoxes;
     }
 }
