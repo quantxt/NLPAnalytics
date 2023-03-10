@@ -844,7 +844,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 sb.append(e.getStr()).append(" ");
             }
             sb.append("   ");
-            logger.info("HEADER -> {}", sb);
+    //        logger.info("HEADER -> {}", sb);
         }
 
 
@@ -2111,7 +2111,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             List<QSpan> lineValues = candidateValues.get(keyLine);
 
             BaseTextBox lineTexboxes = lineTextBoxMap.get(keyLine);
-            if (lineTexboxes != null) {
+            if (isAuto && lineTexboxes != null) {
                 if (lastMatchedTextBoxList.size() != 0) {
                     float total_box_overlaps = 0;
                     HashSet<Float> uniqu_line_vals = new HashSet<>();
