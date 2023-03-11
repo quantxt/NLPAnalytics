@@ -52,7 +52,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
     final private static String begin_pad = "(?<=^|[:\\s])";
     final private static String end_pad   = "(?=$|\\s)";
-    final private static String genricPharse =  "\\S+";
+    final private static String genricPharse =  "([^:\\s]+)";
 
     final private static String SpcCharacter1 =  "[0-9_\\-\\.\\/\\)\\(\\*]+";
     final private static String numAlphabet =  "(\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]+|[\\p{L}]|[\\p{L}\\-]+\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]*)";
@@ -74,7 +74,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 //    final private static Pattern inParentheses =  Pattern.compile("\\([^\\)]+\\)");
 
     final private static Pattern GenericToken = Pattern.compile("(\\S+)");
-    final private static Pattern Generic = Pattern.compile("(?<=^|  )" + "((?:"+ genricPharse+" ){0,15}" + genricPharse + ")"  + end_pad);
+    final private static Pattern Generic = Pattern.compile("(?<= )" + "((?:"+ genricPharse+" ){0,15}" + genricPharse + ")"  + "(?=$|\\:?\\s)");
     final private static Pattern [] AUTO_Patterns = new Pattern[] {GenericDate1, GenericDate2, GenericDate3, GenericDate4, Numbers, ShortDesc1, Id1};
 
     protected Analyzer analyzer;
@@ -665,6 +665,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             // Key2     val2
             // Key3     val3
 
+            /*
             for (QSpan col : cols) {
                 BaseTextBox bt2 = col.getTextBox();
                 if (bt2 == null) continue;
@@ -723,6 +724,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     }
                 }
             }
+
+             */
 
         }
 
@@ -1152,17 +1155,18 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         Map<String, DictSearch> valueNeededDictionaryMap = new HashMap<>();
-        ArrayList<ExtInterval> labelsOnly = new ArrayList<>();
+        List<ExtInterval> labelsOnly = new ArrayList<>();
+        List<QSpan> valueLabels = new ArrayList<>();
         for (DictSearch qtSearchable : extractDictionaries) {
             String dicId = qtSearchable.getDictionary().getId();
-            Collection<QSpan> extIntervals = labels.get(dicId);
-            if (extIntervals == null) continue;
+            Collection<QSpan> qSpans = labels.get(dicId);
+            if (qSpans == null) continue;
 
             Pattern ptr = qtSearchable.getDictionary().getPattern();
             String ptr_str = ptr == null ? "" : ptr.pattern();
 
             if (ptr_str.isEmpty()) {
-                for (QSpan q : extIntervals) {
+                for (QSpan q : qSpans) {
                     // Label only - fix the start and end to be local
                     ExtInterval exLabel = q.getExtInterval(false);
                     LineInfo lineInfo = new LineInfo(content, exLabel);
@@ -1175,7 +1179,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 valueNeededDictionaryMap.put(dicId, qtSearchable);
                 if (ptr_str.startsWith(AUTO) && !ptr_str.equals(AUTO)) {
                     Pattern pattern = Pattern.compile(ptr_str.replace(AUTO, ""));
-
+                    valueLabels.addAll(qSpans);
                     TreeMap<Integer, List<QSpan>> matches = findPatterns(content,
                             pattern, lineTextBoxMap, false);
                     all_matches.put(pattern.pattern(), matches);
@@ -1216,7 +1220,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             }
         }
 
-        List<TableHeader> tableHeaders = detectTableHeaders2(allLabels,
+        List<TableHeader> tableHeaders = detectTableHeaders2(valueLabels,
                 lineTextBoxMap,
                 grouped_vertical_auto_matches_generic);
 
@@ -1237,7 +1241,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             boolean isAuto = raw_ptr.equals(AUTO);
             boolean isCustomAuto = raw_ptr.startsWith(AUTO) && raw_ptr.length() > AUTO.length();
 
-    //        logger.info("{} {} {}", qSpan.getStr(), qSpan.getSpanType(), qSpan.getLine());
+   //         logger.info("{} {} {}", qSpan.getStr(), qSpan.getSpanType(), qSpan.getLine());
             if (isAuto || isCustomAuto) {
                 if (qSpan.getTextBox() == null) continue;
 
@@ -1420,7 +1424,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (hasOverlap) break;
             }
             if (hasOverlap){
-                logger.info("Removing {}", label.getStr());
+    //            logger.info("Removing {}", label.getStr());
                 iter1.remove();
             }
         }
