@@ -349,194 +349,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return labels;
     }
 
-    private List<QSpan> detectTableHeaders(String content,
-                                           Map<Integer, BaseTextBox> lineTextBoxMap,
-                                           List<QSpan> allLabels,
-                                           TreeMap<Integer, List<QSpan>> all_auto_matches,
-                                           TreeMap<Integer, List<QSpan>> grouped_vertical_auto_matches){
-
-        // find table headers
-        List<List<QSpan>> all_detected_header_labels = new ArrayList<>();
-        HashSet<Integer> detected_ids = new HashSet<>();
-        for (int i=0; i<allLabels.size(); i++){
-            if (detected_ids.contains(i)) continue;
-            QSpan qSpan1 = allLabels.get(i);
-            BaseTextBox tb1 = qSpan1.getTextBox();
-            if (tb1 == null) continue;
-            List<QSpan> headers = new ArrayList<>();
-            headers.add(qSpan1);
-            for (int j=i+1; j<allLabels.size(); j++){
-                if (detected_ids.contains(j)) continue;
-                QSpan qSpan2 = allLabels.get(j);
-                BaseTextBox tb2 = qSpan2.getTextBox();
-                if (tb2 == null) continue;
-                float vo = getVerticalOverlap(tb1, tb2);
-                if (vo > 0){
-                    headers.add(qSpan2);
-                    detected_ids.add(j);
-                }
-            }
-            if (headers.size() > 1){
-                detected_ids.add(i);
-                all_detected_header_labels.add(headers);
-            }
-        }
-
-        Collections.sort(all_detected_header_labels, Comparator.comparingInt(o -> o.get(0).getLine()));
-
-        List<QSpan> tableHeaders = new ArrayList<>();
-        // detect headers can be a subset of labels in a table header
-        // we try to extend the header if we find values expanded in a larger region
-
-        if (all_detected_header_labels.size() == 0) return tableHeaders;
-
-        /*
-        int nextLineToFindTable = 0;
-        for (Map.Entry<Integer, List<QSpan>> line : grouped_vertical_auto_matches.entrySet()){
-            // table needs to have at least two columns and two rows
-            // or at least 3 columns and 1 row
-            // so minimum 2x2 or 1x3 tables
-            int lineNumber = line.getKey();
-            if ( lineNumber < nextLineToFindTable) continue;
-
-            List<QSpan> cols = line.getValue();
-            if (cols.size() < 2) continue;
-            Collections.sort(cols, Comparator.comparingInt(o -> o.getStart()));
-
-            boolean isTable = true;
-            if (cols.size() == 2){
-                if (cols.get(0).getExtIntervalTextBoxes().size() < 2 ||
-                        cols.get(1).getExtIntervalTextBoxes().size() < 2){
-                    isTable = false;
-                }
-            }
-            if (!isTable) continue;
-            // find the column boundaries
-            List<BaseTextBox> colBts = new ArrayList<>();
-            float lastLeft = 0f;
-            for (int i=0; i< cols.size(); i++) {
-                QSpan cur = cols.get(i);
-                float right = i == cols.size() - 1 ? 10000f :
-                        TextBox.extendToNeighbours(lineTextBoxMap, cur);
-                BaseTextBox tb = new BaseTextBox(cur.getTop(), cur.getBase(),
-                        lastLeft, right, "");
-                lastLeft = cur.getRight();
-                colBts.add(tb);
-            }
-
-            for (List<QSpan> hds : all_detected_header_labels) {
-                // all boxes must have 100% overlap with table columns
-                int numPerfectOverlap = 0;
-                float t_right = 0;
-                float t_left = 10000;
-                float t_top = 10000;
-                float t_base = 0;
-
-                for (QSpan hd : hds){
-                    if (hd.getLine() > lineNumber) break;
-                    BaseTextBox hdBt = hd.getTextBox();
-                    ListIterator<BaseTextBox> iter = colBts.listIterator();
-                    while (iter.hasNext()) {
-                        BaseTextBox bt1 = iter.next();
-                        float vo = getHorizentalOverlap(bt1, hdBt);
-                        if (vo == 1f) {
-                            iter.remove();
-                            numPerfectOverlap++;
-                            t_right = Math.max(t_right, bt1.getRight());
-                            t_top = Math.min(t_top, hdBt.getRight());
-                            t_left = Math.min(t_left, bt1.getRight());
-                            t_base = Math.max(t_base, hdBt.getRight());
-                            break;
-                        }
-                    }
-
-                    if (colBts.size() == 0) break;
-                }
-
-                if (numPerfectOverlap == hds.size()){
-                    // maybe try to detect the rest of the headers that are not passed as Label?
-
-                    BaseTextBox bt = new BaseTextBox(t_top, t_base, t_left, t_right, "");
-                    ExtInterval ext = hds.get(0).getExtIntervalTextBoxes().get(0).getExtInterval();
-                    ExtIntervalTextBox eitb = new ExtIntervalTextBox(ext, bt);
-                    QSpan tblHdr = new QSpan(eitb);
-                    tableHeaders.add(tblHdr);
-                    nextLineToFindTable = cols.get(cols.size()-1).getLine() - 1;
-                }
-            }
-        }
-        */
-
-        for (List<QSpan> hds : all_detected_header_labels) {
-            QSpan tblHdr = new QSpan(hds.get(0).getExtIntervalTextBoxes().get(0));
-            for (int k = 1; k < hds.get(0).getExtIntervalTextBoxes().size(); k++) {
-                tblHdr.add(hds.get(0).getExtIntervalTextBoxes().get(k));
-            }
-
-            for (int i = 1; i < hds.size(); i++) {
-                for (ExtIntervalTextBox etb : hds.get(i).getExtIntervalTextBoxes()) {
-                    tblHdr.add(etb);
-                }
-            }
-            // now check if it includes a value
-            tblHdr.process(content);
-            BaseTextBox tb1 = tblHdr.getTextBox();
-
-            float area = (tb1.getRight() - tb1.getLeft() ) * (tb1.getBase() - tb1.getTop());
-            if (area > 0) {
-                float overlapArea1 = detectOverlapArea(all_auto_matches, tb1);
-                float overlapArea2 = detectOverlapArea(grouped_vertical_auto_matches, tb1);
-
-                float r = (overlapArea1 + overlapArea2) /area;
-                if (r < .1f) {
-                    tableHeaders.add(tblHdr);
-                    //                logger.info(tblHdr.getLine_str());
-                }
-            }
-        }
-
-
-        // also merge horizental detected rows in case of multi-line headers
-        tableHeaders.sort((QSpan s1, QSpan s2) -> Float.compare(s1.getBase(), s2.getBase()));
-
-        HashSet<Integer> merged = new HashSet<>();
-        for (int i=0; i< tableHeaders.size(); i++){
-            if (merged.contains(i)) continue;
-            QSpan qSpan1 = tableHeaders.get(i);
-            BaseTextBox bt1 = tableHeaders.get(i).getTextBox();
-            float b1 = bt1.getBase();
-            float t1 = bt1.getTop();
-            float h1 = b1 - t1;
-            for (int j=i+1; j< tableHeaders.size(); j++){
-                if (merged.contains(j)) continue;
-                QSpan qSpan2 = tableHeaders.get(j);
-                BaseTextBox bt2 = qSpan2.getTextBox();
-
-                float ho = getHorizentalOverlap(bt1, bt2);
-                if (ho > .5f){
-                    float vo = getVerticalOverlap(bt1, bt2);
-                    if (vo >0){
-                        for (ExtIntervalTextBox etb : qSpan2.getExtIntervalTextBoxes()){
-                            qSpan1.add(etb);
-                        }
-                        qSpan1.process(content);
-                        merged.add(j);
-                    }
-                }
-            }
-        }
-        List<QSpan> newTblHdrs = new ArrayList<>();
-        for (int i=0; i< tableHeaders.size(); i++){
-            if (merged.contains(i)) continue;
-            QSpan qSpanHdr = tableHeaders.get(i);
-            qSpanHdr.setSpanType(VERTICAL_MANY);
-            newTblHdrs.add(qSpanHdr);
-        }
-
-        return newTblHdrs;
-    }
-
-
     private static class TableHeader {
         int firstRow;
         final QSpan header;
@@ -659,77 +471,13 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 tableHeaders.add(tableHeader);
             }
 
-
-            // if we have headers stacked up, there are form values:
-            // Key1     val1
-            // Key2     val2
-            // Key3     val3
-
-            /*
-            for (QSpan col : cols) {
-                BaseTextBox bt2 = col.getTextBox();
-                if (bt2 == null) continue;
-
-                int num_col_that_is_label = 0;
-                int first_overlap = -1;
-                int last_overlap = -1;
-                Map<String, QSpan> candidates = new HashMap<>();
-                int num_elems = col.getExtIntervalTextBoxes().size();
-                for (int i=0; i<num_elems; i++) {
-                    ExtIntervalTextBox etb = col.getExtIntervalTextBoxes().get(i);
-                    for (QSpan qSpan : allLabels) {
-                        if (qSpan.getSpanType() != null) continue;
-                        BaseTextBox bt1 = qSpan.getTextBox();
-                        if (bt1 == null) continue;
-                        if (qSpan.getSpanType() != null) continue;
-                        // we look for labels that are not overlapping - spaced-out columns
-                        float ho = getHorizentalOverlap(bt1, etb.getTextBox());
-                        float vo = getVerticalOverlap(bt1, etb.getTextBox());
-                        if (ho > .1 && vo > .1f) {
-                            String key = getKey(qSpan);
-                            QSpan existing = candidates.putIfAbsent(key, qSpan);
-                            if (existing != null) continue;
-                            num_col_that_is_label++;
-                            if (first_overlap == -1) {
-                                first_overlap = i;
-                                last_overlap = i;
-                            } else {
-                                last_overlap = i;
-                            }
-                            break;
-                        }
-                    }
-                }
-                if (num_col_that_is_label > 1) {
-                    int diff = last_overlap - first_overlap + 1;
-                    float ratio = (float) (diff) / (float) num_col_that_is_label;
-
-                    if (num_col_that_is_label == 2){
-                        if (diff == 2){
-                            for (QSpan qs : candidates.values()) {
-                                qs.setSpanType(HORIZENTAL_ONE);
-                            }
-                        }
-                    } else if (num_col_that_is_label == 3){
-                        if (diff < 5){
-                            for (QSpan qs : candidates.values()) {
-                                qs.setSpanType(HORIZENTAL_ONE);
-                            }
-                        }
-                    }
-                    else if (ratio >= .6f){
-                        for (QSpan qs : candidates.values()) {
-                            qs.setSpanType(HORIZENTAL_ONE);
-                        }
-                    }
-                }
-            }
-
-             */
-
         }
 
         // let's find stacked up labels as well
+        // if we have headers stacked up, there are form values:
+        // Key1     val1
+        // Key2     val2
+        // Key3     val3
 
         Collections.sort(allLabels, Comparator.comparingInt(o -> o.getLine()));
         for (int i=0; i<allLabels.size(); i++){
@@ -1177,14 +925,17 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
             } else {
                 valueNeededDictionaryMap.put(dicId, qtSearchable);
-                if (ptr_str.startsWith(AUTO) && !ptr_str.equals(AUTO)) {
-                    Pattern pattern = Pattern.compile(ptr_str.replace(AUTO, ""));
+                if (ptr_str.startsWith(AUTO) ) {
                     valueLabels.addAll(qSpans);
-                    TreeMap<Integer, List<QSpan>> matches = findPatterns(content,
-                            pattern, lineTextBoxMap, false);
-                    all_matches.put(pattern.pattern(), matches);
-                    groupVerticalValues3(matches, lineLabelMap, all_auto_matches_generic, heightMult1, heightMult2);
-                    grouped_vertical_matches.put(pattern.pattern(), matches);
+                    if (!ptr_str.equals(AUTO)) {
+                        Pattern pattern = Pattern.compile(ptr_str.replace(AUTO, ""));
+
+                        TreeMap<Integer, List<QSpan>> matches = findPatterns(content,
+                                pattern, lineTextBoxMap, false);
+                        all_matches.put(pattern.pattern(), matches);
+                        groupVerticalValues3(matches, lineLabelMap, all_auto_matches_generic, heightMult1, heightMult2);
+                        grouped_vertical_matches.put(pattern.pattern(), matches);
+                    }
                 }
             }
         }
@@ -2107,10 +1858,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         List<BaseTextBox> lastMatchedTextBoxList = new ArrayList<>();
         int num_unaligned_lines = 0;
         for (int keyLine = labelLine+1 ; keyLine <= lastLine; keyLine++) {
-
-    //        if (isAuto && bestTblHeader != null) {
-    //            if (bestTblHeader.firstRow < keyLine) continue;
-    //        }
 
             List<QSpan> lineValues = candidateValues.get(keyLine);
 
