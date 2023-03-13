@@ -1300,49 +1300,29 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
             }
         }
+
+        //TODO: hack - we are filtering out duplicates stacked values but we should that before here
+        HashSet<String> unqi_founds = new HashSet<>();
+        ListIterator<ExtInterval> iter = newFoundValues.listIterator();
+        while (iter.hasNext()){
+            ExtInterval extInterval = iter.next();
+            List<Interval> list = extInterval.getExtIntervalSimples();
+            if (list == null || list.size() == 0) continue;
+            ListIterator<Interval> iter_int = list.listIterator();
+            while (iter_int.hasNext()){
+                Interval interval = iter_int.next();
+                String key = interval.getLine() + "_" + interval.getStart() + "_" + interval.getEnd() + "_" + extInterval.getDict_name();
+                if (unqi_founds.contains(key)){
+                    iter_int.remove();
+                } else {
+                    unqi_founds.add(key);
+                }
+            }
+            if (list == null || list.size() == 0) {
+                iter.remove();
+            }
+        }
         return newFoundValues;
-    }
-
-    private void cleanUp(List<ExtInterval> foundValues){
-        // if a value is assigned to more than one key, pick the closest key
-
-        Map<String, Integer> best_found_values = new HashMap<>();
-        for (ExtInterval extInterval : foundValues){
-            String vocab_id = extInterval.getDict_id();
-            List<Interval> vals = extInterval.getExtIntervalSimples();
-            if (vals == null) continue;
-            for (Interval interval : vals){
-                String key = vocab_id+interval.getStr() + "-" + interval.getStart() + "-" + interval.getEnd() + "-" + interval.getLine();
-                int dist = interval.getLine() - extInterval.getLine();
-                if (dist == 0) continue;
-                Integer d = best_found_values.get(key);
-                if (d == null || d > dist){
-                    best_found_values.put(key, dist);
-                }
-            }
-        }
-
-        ListIterator<ExtInterval> exIterator = foundValues.listIterator();
-        while (exIterator.hasNext()){
-            ExtInterval extInterval = exIterator.next();
-            List<Interval> vals = extInterval.getExtIntervalSimples();
-            String vocab_id = extInterval.getDict_id();
-            if (vals == null) continue;
-            ListIterator<Interval> iterator = vals.listIterator();
-            while (iterator.hasNext()){
-                Interval interval = iterator.next();
-                String key = vocab_id+interval.getStr() + "-" + interval.getStart() + "-" + interval.getEnd() + "-" + interval.getLine();
-                int dist = interval.getLine() - extInterval.getLine();
-                if (dist == 0) continue;
-                Integer d = best_found_values.get(key);
-                if (d == null || d != dist){
-                    iterator.remove();
-                }
-            }
-            if (vals.size() == 0){
-                exIterator.remove();
-            }
-        }
     }
 
     private static class ExtIntervalLocal extends ExtInterval {
