@@ -480,6 +480,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         // Key3     val3
 
         Collections.sort(allLabels, Comparator.comparingInt(o -> o.getLine()));
+    //    List<QSpan> v_candidates = new ArrayList<>();
         for (int i=0; i<allLabels.size(); i++){
             QSpan qSpan1 = allLabels.get(i);
             BaseTextBox bt1 = qSpan1.getTextBox();
@@ -487,8 +488,9 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             Integer lastline = qSpan1.getLine();
             //line to QSPAN
             // stacking spans can NOT be on the samle line
-            TreeMap<Integer, QSpan> candidates = new TreeMap<>();
-            candidates.put(lastline , qSpan1);
+            TreeMap<Integer, QSpan> h_candidates = new TreeMap<>();
+
+            h_candidates.put(lastline , qSpan1);
             float h = bt1.getBase() - bt1.getTop();
             for (int j=i+1; j<allLabels.size(); j++) {
             //        if (qSpan.getSpanType() != null) continue;
@@ -517,32 +519,32 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
                 if (!isCandidate) break;
                 if (Math.abs(bt2.getLeft() - bt1.getLeft()) < h) {
-                    candidates.putIfAbsent(line2, qSpan2);
+                    h_candidates.putIfAbsent(line2, qSpan2);
                 }
                 lastline = line2;
             }
-            if (candidates.size() < 2) continue;
-            int first_overlap = candidates.firstKey();
-            int last_overlap = candidates.lastKey();
+            if (h_candidates.size() < 2) continue;
+            int first_overlap = h_candidates.firstKey();
+            int last_overlap = h_candidates.lastKey();
 
             int diff = last_overlap - first_overlap + 1;
-            float ratio = (float) (candidates.size()) / (float) diff;
+            float ratio = (float) (h_candidates.size()) / (float) diff;
 
-            if (candidates.size() == 2){
+            if (h_candidates.size() == 2){
                 if (ratio == 1f){
-                    for (QSpan qs : candidates.values()) {
+                    for (QSpan qs : h_candidates.values()) {
                         qs.setSpanType(HORIZENTAL_ONE);
                     }
                 }
-            } else if (candidates.size() == 3){
+            } else if (h_candidates.size() == 3){
                 if (ratio > .65f){
-                    for (QSpan qs : candidates.values()) {
+                    for (QSpan qs : h_candidates.values()) {
                         qs.setSpanType(HORIZENTAL_ONE);
                     }
                 }
             }
             else if (ratio >= .6f){
-                for (QSpan qs : candidates.values()) {
+                for (QSpan qs : h_candidates.values()) {
                     qs.setSpanType(HORIZENTAL_ONE);
                 }
             }
@@ -1131,19 +1133,26 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
     }
 
-    private boolean spanOverlaps(Map<String, Collection<QSpan>> formKeys,
-                                 Interval interval){
+    private boolean oneSpanOverlaps(Interval interval, QSpan qSpan){
 
         int value_line = interval.getLine();
         int value_s = interval.getStart();
         int value_e = interval.getEnd();
+        if (qSpan.getLine() == value_line) {
+            if ((qSpan.getStart() >= value_s && qSpan.getStart() <= value_e) ||
+                    (value_s >= qSpan.getStart() && value_s <= qSpan.getEnd())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean spanOverlaps(Map<String, Collection<QSpan>> formKeys,
+                                 Interval interval){
         for (Collection<QSpan> fs : formKeys.values()){
             for (QSpan f : fs){
-                if (f.getLine() != value_line) continue;
-                if ( (f.getStart() >= value_s && f.getStart() <= value_e) ||
-                        (value_s >= f.getStart() && value_s <= f.getEnd())) {
-                    return true;
-                }
+                boolean overlap = oneSpanOverlaps(interval, f);
+                if (overlap) return true;
             }
         }
         return false;
@@ -1178,6 +1187,31 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     //            logger.info("Removing {}", label.getStr());
                 iter1.remove();
             }
+        }
+
+        // if vertical values overlap with another set of vertical values, then we break them
+        // so if 1 2 3 4 5 go to Label1 and 3 happens to be Label2, where it has 1 or more vertical values
+        // then we remove 3, 4 and 5 from Label1
+        for (QSpan qSpan : qSpans) {
+            List<Interval> vals = qSpan.getExtIntervalSimples();
+            if (vals == null || vals.size() == 0) continue;
+
+            ListIterator<Interval> iter = vals.listIterator();
+
+            List<Interval> newVals = new ArrayList<>();
+            while (iter.hasNext()) {
+                Interval interval = iter.next();
+                boolean overlaps = false;
+                for (QSpan label : qSpans){
+                    List<Interval> vals2 = qSpan.getExtIntervalSimples();
+                    if (vals2 == null || vals2.size() == 0) continue;
+                    overlaps = oneSpanOverlaps(interval, label);
+                    if (overlaps) break;
+                }
+                if (overlaps) break;
+                newVals.add(interval);
+            }
+            qSpan.setExtIntervalSimples(newVals);
         }
 
         // if a value is assigned to more than one key, pick the closest key
