@@ -1912,7 +1912,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         BaseTextBox btb = eitb.getTextBox();
                         if (btb == null) continue;
                         float vOverlap = getVerticalOverlap(labelSpan.getTextBox(), btb);
-                        if (vOverlap > .3) {
+                        if (vOverlap > .1) {
                             String cur_line_str = eitb.getTextBox().getLine_str();
                             if (cur_line_str.length() > eitb.getExtInterval().getStart() && eitb.getExtInterval().getStart() > r_end) {
                                 String gap = cur_line_str.substring(r_end, eitb.getExtInterval().getStart());
