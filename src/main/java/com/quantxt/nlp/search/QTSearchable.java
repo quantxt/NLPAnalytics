@@ -806,9 +806,9 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         // we remove the larger one
                         float s2 = (b2.getRight() - b2.getLeft()) * (b2.getBase() - b2.getTop());
                         if (s2 >= s1){
-                            bad_spans.add(i);
-                        } else {
                             bad_spans.add(j);
+                        } else {
+                            bad_spans.add(i);
                         }
                     } else {
                         //we take the one that is spread on less number of lines

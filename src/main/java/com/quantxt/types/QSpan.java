@@ -11,7 +11,6 @@ public class QSpan extends ExtInterval {
     public enum EXTBOXType {HORIZENTAL_ONE, HORIZENTAL_MANY, VERTICAL_ONE_BELOW, VERTICAL_ONE_ABOVE, VERTICAL_MANY}
 
     protected EXTBOXType spanType;
-
     protected float top = 100000;   // starty
     protected float base = -1;  // endy
     protected float left = 100000;  // startx
