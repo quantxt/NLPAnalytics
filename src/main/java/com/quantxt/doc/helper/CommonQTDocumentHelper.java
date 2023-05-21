@@ -961,6 +961,13 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         } else {
                             bestAutoValue = genericMatches;
                         }
+                    } else if (bestAutoValue.hValue != null){
+
+                        ExtInterval m1 = bestAutoValue.hValue.getExtInterval();
+                        QSpan m2 = all_auto_matches_generic.lookup(m1.getLine(), m1.getStart());
+                        if (m2 != null) {
+                            bestAutoValue.hValue = m2.getExtIntervalTextBoxes().get(0);
+                        }
                     }
                 } else {
                     String ptr = raw_ptr.replace(AUTO, "");
