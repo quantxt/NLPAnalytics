@@ -328,19 +328,15 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                                   QCollection vertical_matches){
 
         // find table headers
-
         List<TableHeader> tableHeaders = new ArrayList<>();
 
         int nextLineToFindTable = 0;
-   //     for (Map.Entry<Integer, List<QSpan>> line : vertical_matches.entrySet()){
         for (int lineNumber=0; lineNumber <= vertical_matches.getMax_line(); lineNumber++){
             // table needs to have at least two columns and two rows
             // or at least 3 columns and 1 row
             // so minimum 2x2 or 1x3 tables
-    //        int lineNumber = line.getKey();
             if ( lineNumber < nextLineToFindTable) continue;
 
-    //        List<QSpan> cols = line.getValue();
             List<QSpan> cols = vertical_matches.get(lineNumber);
             if (cols == null || cols.size() < 2) continue;
             Collections.sort(cols, Comparator.comparingInt(o -> o.getStart()));
@@ -422,7 +418,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             }
 
             if (hdrs.size() > 1){
-                StringBuilder sb = new StringBuilder();
                 QSpan tblHdr = new QSpan();
                 for (QSpan qs : hdrs){
                     qs.setSpanType(VERTICAL_MANY);
@@ -449,7 +444,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         // Key3     val3
 
         Collections.sort(allLabels, Comparator.comparingInt(o -> o.getLine()));
-    //    List<QSpan> v_candidates = new ArrayList<>();
         for (int i=0; i<allLabels.size(); i++){
             QSpan qSpan1 = allLabels.get(i);
             BaseTextBox bt1 = qSpan1.getTextBox();
@@ -502,18 +496,21 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             if (h_candidates.size() == 2){
                 if (ratio == 1f){
                     for (QSpan qs : h_candidates.values()) {
+            //            if (qs.getSpanType() != null) break;
                         qs.setSpanType(HORIZENTAL_ONE);
                     }
                 }
             } else if (h_candidates.size() == 3){
                 if (ratio > .65f){
                     for (QSpan qs : h_candidates.values()) {
+            //            if (qs.getSpanType() != null) break;
                         qs.setSpanType(HORIZENTAL_ONE);
                     }
                 }
             }
             else if (ratio >= .6f){
                 for (QSpan qs : h_candidates.values()) {
+            //        if (qs.getSpanType() != null) break;
                     qs.setSpanType(HORIZENTAL_ONE);
                 }
             }
@@ -539,12 +536,12 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     qSpan.setSpanType(VERTICAL_MANY);
                     uniqs.add(qSpan);
                 } else if (vo > .9f){
-                    float length = bt1.getRight() - bt1.getLeft();
-                    float dist1 = bt1.getLeft() >= btl.getRight() ?
-                            bt1.getLeft() - btl.getRight() : btl.getLeft() - bt1.getRight();
+           //         float length = bt1.getRight() - bt1.getLeft();
+           //         float dist1 = bt1.getLeft() >= btl.getRight() ?
+           //                 bt1.getLeft() - btl.getRight() : btl.getLeft() - bt1.getRight();
             //        if (dist1 < 3 * length) {
-                        qSpan.setSpanType(VERTICAL_MANY);
-                        uniqs.add(qSpan);
+                    qSpan.setSpanType(VERTICAL_MANY);
+                    uniqs.add(qSpan);
             //        }
                 }
             }
@@ -558,7 +555,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
 
         //debug//
-
+        /*
         for (TableHeader th : tableHeaders){
             StringBuilder sb = new StringBuilder();
             for (ExtIntervalTextBox ext : th.header.getExtIntervalTextBoxes()){
@@ -568,8 +565,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             sb.append("   ");
     //        logger.info("HEADER -> {}", sb);
         }
-
-
+         */
         return tableHeaders;
     }
 
@@ -1247,6 +1243,45 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     if (!hasOverlap){
                         newFoundValues.add(spread.v.getExtInterval(true));
                     }
+                }
+            }
+        }
+
+        //TODO: refactor this piece- this might be repetetive
+        Map<String, ValueDistance> verticalValue2dist = new HashMap<>();
+        for (QSpan qSpan : qSpans){
+            List<Interval> intervals = qSpan.getExtIntervalSimples();
+            if (intervals == null || intervals.size() == 0) continue;
+            for (Interval interval : intervals) {
+                String key = interval.getStart() + "-" + interval.getEnd() + "-" + interval.getLine();
+                ValueDistance vd = verticalValue2dist.get(key);
+                int dist = interval.getLine() - qSpan.getLine();
+                if (vd == null || dist < vd.dist) {
+                    verticalValue2dist.put(key, new ValueDistance(qSpan, dist));
+                }
+            }
+        }
+
+        for (QSpan qSpan : qSpans){
+            List<Interval> intervals = qSpan.getExtIntervalSimples();
+            if (intervals == null || intervals.size() == 0) continue;
+            String qspanKey = qSpan.getStart() + "-" + qSpan.getEnd() + "-" + qSpan.getLine();
+            ListIterator<Interval> iter = intervals.listIterator();
+            boolean purge = false;
+            while (iter.hasNext()) {
+                Interval interval = iter.next();
+                if (purge) {
+                    iter.remove();
+                    continue;
+                }
+                String key = interval.getStart() + "-" + interval.getEnd() + "-" + interval.getLine();
+                ValueDistance vd = verticalValue2dist.get(key);
+                if (vd == null) continue;
+                //check if the lowest distance ValueDistance has the sams qspan
+                String vdKey = vd.v.getStart() + "-" + vd.v.getEnd() + "-" + vd.v.getLine();
+                if (!vdKey.equals(qspanKey)) {
+                    iter.remove();
+                    purge = true;
                 }
             }
         }
