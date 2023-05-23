@@ -17,7 +17,6 @@ public class QSpan extends ExtInterval {
     protected float right = -1; // endx
     protected transient List<BaseTextBox> childs = new ArrayList<>();
     protected String line_str;
-    private Map<BaseTextBox, Double> neighbors = new HashMap<>();
 
     private List<ExtIntervalTextBox> extIntervalTextBoxes = new ArrayList<>();
 
@@ -81,7 +80,10 @@ public class QSpan extends ExtInterval {
         }
     }
 
-    public ExtInterval  getExtInterval(boolean useLocalLineStart){
+    public ExtInterval getExtInterval(){
+        return getExtInterval(true);
+    }
+    public ExtInterval getExtInterval(boolean useLocalLineStart){
         ExtInterval extInterval = new ExtInterval();
         extInterval.setDict_name(extIntervalTextBoxes.get(0).getExtInterval().getDict_name());
         extInterval.setDict_id(extIntervalTextBoxes.get(0).getExtInterval().getDict_id());
@@ -144,15 +146,6 @@ public class QSpan extends ExtInterval {
 
     public String getLine_str() {
         return line_str;
-    }
-
-
-    public Map<BaseTextBox, Double> getNeighbors() {
-        return neighbors;
-    }
-
-    public void setNeighbors(Map<BaseTextBox, Double> neighbors) {
-        this.neighbors = neighbors;
     }
 
     public void setLine_str(String line_str) {

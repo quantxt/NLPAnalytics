@@ -620,9 +620,13 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         if (line_text_boxes == null) return null;
 
         String line_str = line_text_boxes.getLine_str();
+        //TODO: Ideally we should pass the analyzer here
+        String norm_line_str = line_str.replaceAll("[\\p{Punct}]", " ");
+        String norm_str = str.replaceAll("[\\p{Punct}]", " ");
         BaseTextBox surronding_box = new BaseTextBox();
 
-        int str_start_1 = line_str.indexOf(str);
+    //    int str_start_1 = line_str.indexOf(str);
+        int str_start_1 = norm_line_str.indexOf(norm_str);
         if (str_start_1 < 0) {
             logger.warn("{} was not found in line_str {}", str, line_str);
             return null;
@@ -638,7 +642,9 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         for (int i = 0; i < childs.size(); i++) {
             BaseTextBox baseTextBox = childs.get(i);
             String child_str = baseTextBox.getStr();
-            index = line_str.indexOf(child_str, index);
+            String norm_child_str = child_str.replaceAll("[\\p{Punct}]", " ");
+            index = norm_line_str.indexOf(norm_child_str, index);
+        //    index = line_str.indexOf(child_str, index);
             childIdx2StrIdx[i][0] = index;
             childIdx2StrIdx[i][1] = index + child_str.length();
             index += child_str.length();
@@ -684,31 +690,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
                 last_box_idx = i;
             }
         }
-
-            /*
-            boolean added = false;
-            if (lineInfo.getLocalStart() >= current_start && lineInfo.getLocalStart() <= current_end) {
-                surronding_box.setTop(current_box.getTop());
-                surronding_box.setBase(current_box.getBase());
-                surronding_box.setLeft(current_box.getLeft());
-                components.add(current_box);
-                added = true;
-                if (first_box_idx == -1) {
-                    first_box_idx = i;
-                }
-            }
-
-            if (lineInfo.getLocalEnd() >= current_start && lineInfo.getLocalEnd() <= current_end) {
-                surronding_box.setRight(current_box.getRight());
-                if (!added) {
-                    components.add(current_box);
-                }
-                last_box_idx = i;
-                break;
-            }
-
-             */
-    //    }
 
         if (components.size() == 0) {
             logger.debug("Didn't find the associating texboxes {}", str);

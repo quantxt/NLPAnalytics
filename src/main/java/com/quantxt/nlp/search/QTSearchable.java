@@ -31,7 +31,6 @@ import java.io.Serializable;
 import java.util.*;
 
 import static com.quantxt.doc.helper.textbox.TextBox.*;
-import static com.quantxt.model.DictItm.DONT_CARE;
 import static com.quantxt.model.DictSearch.AnalyzType.STANDARD;
 import static com.quantxt.model.DictSearch.Mode.*;
 import static com.quantxt.nlp.search.DctSearhFld.*;
@@ -480,13 +479,15 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                         if (dist > 1.2 * (b2.getBase() - b1.getTop())) {
                                             if (qSpan.getEnd() < curr.getStart()) {
                                                 String gap = content.substring(qSpan.getEnd(), curr.getStart());
-                                                if (gap.trim().isEmpty() && gap.length() > 1){
+                                                if (gap.contains("  ")) break; // double space
+                                                String[] gap_tokens = tokenize(searchAnalyzer, gap);
+                                                if (gap_tokens != null && gap.length() > 0) break;
+                                        //        if (gap.trim().isEmpty() && gap.length() > 1){
                                                     // we're capturing tokens in a table header and most likely tapping
                                                     // to adjacent column
-                                                    break;
-                                                }
-                                                String[] gap_tokens = tokenize(searchAnalyzer, gap);
-                                                if (gap.length() < 5 && (gap_tokens == null || gap.length() == 0)) {
+                               //                     break;
+                                //                }
+                                                if (gap.length() < 5) {
                                                     isGood = true;
                                                 }
                                             }
@@ -521,7 +522,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     float hOverlap = getHorizentalOverlap(b1, b2);
                                     float distV = Math.abs(b1.getBase() - b2.getBase());
 
-                                    if (hOverlap > .4 && (distV < 3 * (b2.getBase() - b2.getTop()))) {
+                                    if (hOverlap > .25 && (distV < 3 * (b2.getBase() - b2.getTop()))) {
                                         // we have to make sure there no other token verticaly in-between
                                         // compute textbox in between and check if any other textbox overlaps with it
                                         // we do this only if the two candidate spans are in lines that are NOT right under each other
@@ -563,7 +564,8 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                         boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
                                         if (!isIsolated) continue;
                                     }
-
+                                    compact_spans.add(qSpan);
+                                    /*
                                     ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
                                     boolean isInCompleteSpans = false;
                                     ListIterator<QSpan> iter = compact_spans.listIterator();
@@ -583,6 +585,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     if (!isInCompleteSpans) {
                                         compact_spans.add(qSpan);
                                     }
+                                     */
                                 }
                             }
                         }
