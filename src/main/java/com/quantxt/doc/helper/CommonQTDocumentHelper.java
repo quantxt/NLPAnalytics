@@ -493,26 +493,33 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             int diff = last_overlap - first_overlap + 1;
             float ratio = (float) (h_candidates.size()) / (float) diff;
 
-            if (h_candidates.size() == 2){
+            List<QSpan> h_values = new ArrayList<>(h_candidates.values());
+            // we don't mark the last row. we have cases such as
+            //key1     val2
+            //key2     val5
+            //key3     key4     key5
+            if (h_values.size() == 2){
                 if (ratio == 1f){
-                    for (QSpan qs : h_candidates.values()) {
-            //            if (qs.getSpanType() != null) break;
-                        qs.setSpanType(HORIZENTAL_ONE);
-                    }
+                    h_values.get(0).setSpanType(HORIZENTAL_ONE);
+        //            for (QSpan qs : h_candidates.values()) {
+        //                qs.setSpanType(HORIZENTAL_ONE);
+        //            }
                 }
-            } else if (h_candidates.size() == 3){
+            } else if (h_values.size() == 3){
                 if (ratio > .65f){
-                    for (QSpan qs : h_candidates.values()) {
-            //            if (qs.getSpanType() != null) break;
-                        qs.setSpanType(HORIZENTAL_ONE);
-                    }
+                    h_values.get(0).setSpanType(HORIZENTAL_ONE);
+                    h_values.get(1).setSpanType(HORIZENTAL_ONE);
+        //            for (QSpan qs : h_candidates.values()) {
+        //                qs.setSpanType(HORIZENTAL_ONE);
+        //            }
                 }
-            }
-            else if (ratio >= .6f){
-                for (QSpan qs : h_candidates.values()) {
-            //        if (qs.getSpanType() != null) break;
-                    qs.setSpanType(HORIZENTAL_ONE);
+            } else if (ratio >= .6f){
+                for (int k=0; k<h_values.size()-1; k++ ) {
+                    h_values.get(k).setSpanType(HORIZENTAL_ONE);
                 }
+        //        for (QSpan qs : h_candidates.values()) {
+        //            qs.setSpanType(HORIZENTAL_ONE);
+        //        }
             }
         }
         // let's add left over labels to table headers
@@ -1014,8 +1021,32 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         List<QSpan> filtered = cleanUp(finalQSpans, valueNeededDictionaryMap, isolatedAugmentedlabels);
-        Collections.sort(filtered, (s1, s2) -> (s1.getStart()) - (s2.getStart()));
+        Collections.sort(filtered, Comparator.comparingInt(QSpan::getStart));
 
+        /*
+        for (QSpan f : filtered){
+            //check if there is a longer version of this
+            List<Interval> intervals = f.getExtIntervalSimples();
+            if (intervals == null) continue;
+            BaseTextBox tb1 = f.getTextBox();
+            for (Interval interval : intervals) {
+                QSpan extended = all_auto_matches_generic.lookup(interval.getLine(), interval.getStart());
+                if (extended != null){
+                    // check the overlap with label
+                    for (QSpan lbl : allLabels){
+                        BaseTextBox tb2 = lbl.getTextBox();
+                        if (tb2 == null) continue;
+                        float ho = getHorizentalOverlap(tb1, tb2);
+                        if (ho > 0 && !interval.getStr().equals(extended.getStr())){
+                            logger.info("{} -> {}", interval.getStr(), extended.getStr());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+         */
         for (QSpan qs : filtered) {
             found.add(qs.getExtInterval());
         }
