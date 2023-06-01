@@ -1160,7 +1160,9 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         // filter out table values that overlap with form values
         // and values that overlap with labels
 
-        for (QSpan qSpan : qSpans) {
+        ListIterator<QSpan> spanIter = qSpans.listIterator();
+        while (spanIter.hasNext()) {
+            QSpan qSpan = spanIter.next();
             List<Interval> vals = qSpan.getExtIntervalSimples();
             if (vals == null || vals.size() == 0) continue;
             String dictId = qSpan.getDict_id();
@@ -1190,6 +1192,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
                 uniqueVals.add(key);
             }
+            if (vals.size() == 0) spanIter.remove();
         }
 
         Map<String, List<ValueDistance>> best_found_values = new HashMap<>();
@@ -1279,7 +1282,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         //TODO: refactor this piece- this might be repetetive
         Map<String, ValueDistance> verticalValue2dist = new HashMap<>();
-        for (QSpan qSpan : qSpans){
+        for (QSpan qSpan : filtered){
             List<Interval> intervals = qSpan.getExtIntervalSimples();
             if (intervals == null || intervals.size() == 0) continue;
             for (Interval interval : intervals) {
@@ -1292,7 +1295,10 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             }
         }
 
-        for (QSpan qSpan : qSpans){
+        ListIterator<QSpan> spanIter2 = filtered.listIterator();
+
+        while (spanIter2.hasNext()){
+            QSpan qSpan = spanIter2.next();
             List<Interval> intervals = qSpan.getExtIntervalSimples();
             if (intervals == null || intervals.size() == 0) continue;
             String qspanKey = qSpan.getStart() + "-" + qSpan.getEnd() + "-" + qSpan.getLine();
@@ -1314,6 +1320,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     purge = true;
                 }
             }
+            if (intervals.size() == 0) spanIter2.remove();
         }
 
         //TODO: hack - we are filtering out duplicates stacked values but we should that before here
@@ -1707,11 +1714,12 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
             float min_horizental_d = Math.min(Math.min(d_left, d_center), d_right);
 
+            float vOverlap = getHorizentalOverlap(label_span_tb, candidate_vtb, false);
+
             if (min_overlap > 0) {
-                float vOverlap = getHorizentalOverlap(label_span_tb, candidate_vtb, false);
                 if (vOverlap < min_overlap) continue;
             } else {
-                if (min_horizental_d > height) continue;
+                if (vOverlap < .5 && min_horizental_d > height) continue;
             }
 
             float s = (float) Math.sqrt(min_horizental_d * min_horizental_d + dvtc * dvtc);
@@ -1886,7 +1894,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                         labelSpan, candidateVerticalValues, detectedHaders, max_distance_bet_lines, .1f, true, true);
                 if (vertical_1.vValue.size() == 0) {
                     float oldRight = labelSpan.getRight();
-                    float oldLeft = labelSpan.getRight();
+                    float oldLeft = labelSpan.getLeft();
                     float newRight = TextBox.extendToNeighbours(lineTextBoxMap, labelSpan);
                     float newLeft = TextBox.extendToLeftNeighbours(lineTextBoxMap, labelSpan);
                     labelSpan.setRight(newRight);
@@ -1914,29 +1922,26 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         if (r_end > -1) {
-        //    for (Map.Entry<Integer, List<QSpan>> e : candidateHorizentalValues.entrySet()) {
             for (int i=0; i<= candidateHorizentalValues.getMax_line(); i++) {
                 List<QSpan> qSpans =candidateHorizentalValues.get(i);
-                if (qSpans.size() ==0) continue;
-        //        List<QSpan> qSpans = e.getValue();
+                if (qSpans.size() == 0) continue;
                 for (QSpan qSpan : qSpans) {
                     List<ExtIntervalTextBox> eitbs = qSpan.getExtIntervalTextBoxes();
                     for (ExtIntervalTextBox eitb : eitbs) {
                         BaseTextBox btb = eitb.getTextBox();
                         if (btb == null) continue;
                         float vOverlap = getVerticalOverlap(labelSpan.getTextBox(), btb);
-                        if (vOverlap > .1) {
-                            String cur_line_str = eitb.getTextBox().getLine_str();
-                            if (cur_line_str.length() > eitb.getExtInterval().getStart() && eitb.getExtInterval().getStart() > r_end) {
-                                String gap = cur_line_str.substring(r_end, eitb.getExtInterval().getStart());
-                                //remove (some text here) pattern
-                                gap = gap.replaceAll("\\([^\\)]+\\)", "").trim();
-                                gap = gap.replaceAll("[^\\p{L}\\p{N}]", "");
-                                if (gap.length() == 0) {
-                                    double d = btb.getLeft() - labelSpan.getTextBox().getRight();
-                                    if (d >= 0) {
-                                        nearSingleMatches.put(eitb, d);
-                                    }
+                        if (vOverlap < .1) continue;
+                        String cur_line_str = eitb.getTextBox().getLine_str();
+                        if (cur_line_str.length() > eitb.getExtInterval().getStart() && eitb.getExtInterval().getStart() > r_end) {
+                            String gap = cur_line_str.substring(r_end, eitb.getExtInterval().getStart());
+                            //remove (some text here) pattern
+                            gap = gap.replaceAll("\\([^\\)]+\\)", "").trim();
+                            gap = gap.replaceAll("[^\\p{L}\\p{N}]", "");
+                            if (gap.length() == 0) {
+                                double d = btb.getLeft() - labelSpan.getTextBox().getRight();
+                                if (d >= 0) {
+                                    nearSingleMatches.put(eitb, d / vOverlap);
                                 }
                             }
                         }

@@ -470,10 +470,17 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     if (curr.getStart() < qSpan.getEnd()) continue;
                                     BaseTextBox b1 = qSpan.getTextBox();
                                     BaseTextBox b2 = curr.getTextBox();
-
-                                    float vOverlap = getVerticalOverlap(b1, b2);
+                                    float vOverlap = 0;
                                     boolean isGood = false;
-                                    boolean currIsAfterqSpan = b1.getLeft() <= b2.getRight(); // this is a sequence of words in english so next word has to be after current
+                                    boolean currIsAfterqSpan = false;
+                                    if (b2 == null || b1 == null){
+                                        if ((b1 == null && qSpan.getStr().length() < 3) || (b2 == null && curr.getStr().length() < 3)) {
+                                            isGood = true;
+                                        }
+                                    } else {
+                                        vOverlap = getVerticalOverlap(b1, b2);
+                                        currIsAfterqSpan = b1.getLeft() <= b2.getRight(); // this is a sequence of words in english so next word has to be after current
+                                    }
                                     if (vOverlap > .4 && currIsAfterqSpan) {
                                         float dist = b1.getLeft() > b2.getRight() ? b1.getLeft() - b2.getRight() : b2.getLeft() - b1.getRight();
                                         if (dist > 1.2 * (b2.getBase() - b1.getTop())) {
@@ -482,11 +489,8 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                                 if (gap.contains("  ")) break; // double space
                                                 String[] gap_tokens = tokenize(searchAnalyzer, gap);
                                                 if (gap_tokens != null && gap.length() > 0) break;
-                                        //        if (gap.trim().isEmpty() && gap.length() > 1){
-                                                    // we're capturing tokens in a table header and most likely tapping
-                                                    // to adjacent column
-                               //                     break;
-                                //                }
+                                                // we're capturing tokens in a table header and most likely tapping
+                                                // to adjacent column
                                                 if (gap.length() < 5) {
                                                     isGood = true;
                                                 }
@@ -494,7 +498,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                         } else {
                                             isGood = true;
                                         }
-
                                     }
 
                                     if (isGood) {
@@ -519,7 +522,20 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                     if (curr.getStart() < qSpan.getEnd()) continue;
                                     BaseTextBox b1 = qSpan.getTextBox();
                                     BaseTextBox b2 = curr.getTextBox();
-                                    float hOverlap = getHorizentalOverlap(b1, b2);
+
+                                    float hOverlap = 0;
+                                    if (b2 == null || b1 == null){
+                                        if ((b1 == null && qSpan.getStr().length() < 3) || (b2 == null && curr.getStr().length() < 3)) {
+                                            for (ExtIntervalTextBox eit : curr.getExtIntervalTextBoxes()) {
+                                                qSpan.add(eit);
+                                            }
+                                            qSpans.set(i, null);
+                                            qSpan.process(content);
+                                        }
+                                    } else {
+                                        hOverlap = getHorizentalOverlap(b1, b2);
+                                    }
+
                                     float distV = Math.abs(b1.getBase() - b2.getBase());
 
                                     if (hOverlap > .25 && (distV < 3 * (b2.getBase() - b2.getTop()))) {
@@ -556,7 +572,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                 }
 
                                 if (qSpan.size() == tokens.length) {
-            //                        boolean isNegative = false;
                                     qSpan.process(content);
                                     // check if the match is negative
                                     // we remove matches that are part of a test line
@@ -565,27 +580,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                         if (!isIsolated) continue;
                                     }
                                     compact_spans.add(qSpan);
-                                    /*
-                                    ExtIntervalTextBox firstPExt = qSpan.getExtIntervalTextBoxes().get(0);
-                                    boolean isInCompleteSpans = false;
-                                    ListIterator<QSpan> iter = compact_spans.listIterator();
-                                    String text1 = qSpan.getStr().trim();
-                                    while (iter.hasNext()) {
-                                        QSpan qs = iter.next();
-                                        float d1 = firstPExt.getTextBox().getBase() - qs.getBase();
-                                        float d2 = firstPExt.getTextBox().getLeft() - qs.getLeft();
-                                        if (Math.abs(d1) < 2 && Math.abs(d2) < 2) {
-                                            String text2 = qs.getStr().trim();
-                                            if (text1.equals(text2)) {
-                                                isInCompleteSpans = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    if (!isInCompleteSpans) {
-                                        compact_spans.add(qSpan);
-                                    }
-                                     */
                                 }
                             }
                         }
@@ -594,7 +588,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
            }
         } catch (Exception e) {
             e.printStackTrace();
-            logger.error("Error in name search {}: query_string '{}'", e.getMessage(), content);
+    //        logger.error("Error in name search {}: query_string '{}'", e.getMessage(), content);
         }
     }
 
@@ -682,9 +676,11 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 List<BaseTextBox> line_btbs = lineBox.getChilds();
                 // so we check if any of the other boxes on this line have major overlap with our span
                 BaseTextBox l_btb = eib.getTextBox();
+                if (l_btb == null) continue;
                 for (BaseTextBox btb : line_btbs){
                     String str = btb.getStr();
                     if (str == null || str.isEmpty() || str.replaceAll("\\p{Punct}", "").trim().isEmpty()) continue;
+                    if (btb == null) continue;
                     float vo = getVerticalOverlap(btb, l_btb);
                     float ho = getHorizentalOverlap(btb, l_btb);
                     if (ho > .95f && ho < 1.05f && vo > .95f && vo < 1.05f) {
