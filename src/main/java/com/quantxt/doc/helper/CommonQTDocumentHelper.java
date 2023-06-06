@@ -23,8 +23,8 @@ import com.quantxt.doc.QTDocumentHelper;
 import static com.quantxt.doc.helper.textbox.TextBox.*;
 import static com.quantxt.model.DictSearch.AnalyzType.SIMPLE;
 import static com.quantxt.model.DictSearch.Mode.ORDERED_SPAN;
+import static com.quantxt.model.QSpan.EXTBOXType.*;
 import static com.quantxt.nlp.search.QTSearchable.*;
-import static com.quantxt.types.QSpan.EXTBOXType.*;
 
 /**
  * Created by dejani on 1/24/18.
@@ -137,6 +137,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                                       boolean isolatedLabelsOnly) {
         int content_length = content.length();
         Map<String, Collection<QSpan>> labels = new LinkedHashMap<>();
+        boolean hasTextBoxes = lineTextBoxMap!=null;
 
         for (DictSearch dictSearch : extractDictionaries) {
             String dict_id = dictSearch.getDictionary().getId();
@@ -147,16 +148,38 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 while (cnt_idx < content_length){
                     String cnt_chunk = content.substring(cnt_idx, Math.min(cnt_idx + max_string_length_for_search, content_length));
                     findLabelsHelper(dictSearch, lineTextBoxMap, cnt_chunk, cnt_idx, slop, dicLabels, isolatedLabelsOnly);
+                    dicLabels.addAll(dictSearch.postSearch(hasTextBoxes));
                     cnt_idx += max_string_length_for_search - 1000;
                 }
             } else {
-                findLabelsHelper(dictSearch, lineTextBoxMap, content, 0, slop, dicLabels, isolatedLabelsOnly);
+    //            findLabelsHelper(dictSearch, lineTextBoxMap, content, 0, slop, dicLabels, isolatedLabelsOnly);
+                dictSearch.search(content, lineTextBoxMap, slop, isolatedLabelsOnly);
             }
             if (!dicLabels.isEmpty()) {
                 labels.put(dict_id, dicLabels);
             }
         }
-        return labels;
+        if (content_length > max_string_length_for_search){
+            //excel files, CSV, etc. stuff without textboxes
+            return labels;
+        } else {
+            for (int i=0 ; i<extractDictionaries.size(); i++) {
+                QTSearchable dictSearch1 = (QTSearchable) extractDictionaries.get(i);
+                String dict_id = dictSearch1.getDictionary().getId();
+
+                for (int j=0 ; j<extractDictionaries.size(); j++) {
+                    if (i == j) continue;
+                    QTSearchable dictSearch2 = (QTSearchable) extractDictionaries.get(j);
+                    dictSearch1.filterOverlap(dictSearch2);
+                }
+
+                List<QSpan> dicLabels = dictSearch1.postSearch(hasTextBoxes);
+                if (!dicLabels.isEmpty()) {
+                    labels.put(dict_id, dicLabels);
+                }
+            }
+            return labels;
+        }
     }
 
     private Map<Integer, BaseTextBox> getLineTextBoxMap(List<BaseTextBox> rawTextBoxes){
@@ -937,6 +960,9 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     LineInfo vLineInfo = new LineInfo(interval.getLine(), interval.getStart(), interval.getEnd());
                     BaseTextBox tb = findAssociatedTextBox(lineTextBoxMap, str, vLineInfo, false);
                     singleFormValueInterval = new ExtIntervalTextBox(new ExtIntervalLocal(interval), tb);
+                    List<BaseTextBox> tbList = new ArrayList<>();
+                    tbList.add(tb);
+                    interval.setTextBoxes(tbList);
                 }
 
                 AutoValue bestAutoValue = new AutoValue();
@@ -1406,6 +1432,9 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 continue;
             }
             textBox.setLine(lineInfo.getLineNumber());
+            List<BaseTextBox> tbList = new ArrayList<>();
+            tbList.add(textBox);
+            extInterval.setTextBoxes(tbList);
 
             /*
             List<QSpan> list = values.get(lineInfo.getLineNumber());
@@ -1664,7 +1693,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             if (vValue.size() == 1 && v_score < h_score && v_score < 30){
                 list.add(vValue.get(0).getExtInterval());
             } else if (h_score < 400 && hValue != null){
-                list.add(hValue.getExtInterval());
+                ExtInterval extInterval = hValue.getExtInterval();
+                list.add(extInterval);
             } else if (v_score < h_score) {
                 for (ExtIntervalTextBox etb : vValue) {
                     list.add(etb.getExtInterval());

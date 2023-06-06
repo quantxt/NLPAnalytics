@@ -3,9 +3,7 @@ package com.quantxt.nlp.search;
 import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
 import com.quantxt.doc.helper.ENDocumentHelper;
-import com.quantxt.model.ExtInterval;
-import com.quantxt.model.DictItm;
-import com.quantxt.model.DictSearch;
+import com.quantxt.model.*;
 import com.quantxt.model.Dictionary;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -219,9 +217,9 @@ public class QTSearchableTest {
         assertTrue(values1.get(3).getCategory().equals("V7"));
         assertTrue(values1.get(4).getCategory().equals("V6"));
 
-        assertTrue(values2.get(0).getCategory().equals("V4"));
-        assertTrue(values2.get(1).getCategory().equals("V3"));
-        assertTrue(values2.get(2).getCategory().equals("V8"));
+        assertTrue(values2.get(0).getCategory().equals("V1"));
+        assertTrue(values2.get(1).getCategory().equals("V2"));
+        assertTrue(values2.get(2).getCategory().equals("V5"));
 
     }
 

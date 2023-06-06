@@ -1,13 +1,10 @@
 package com.quantxt.nlp.search;
 
 import com.quantxt.doc.QTDocumentHelper;
-import com.quantxt.doc.helper.CommonQTDocumentHelper;
-import com.quantxt.doc.helper.ENDocumentHelper;
 import com.quantxt.model.ExtInterval;
 import com.quantxt.model.DictItm;
 import com.quantxt.model.DictSearch;
 import com.quantxt.model.Dictionary;
-import com.quantxt.types.QSpan;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.spans.SpanQuery;
 import org.junit.BeforeClass;
@@ -20,6 +17,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.quantxt.model.QSpan;
 
 import static com.quantxt.nlp.search.SearchUtils.getMatchAllQuery;
 import static com.quantxt.nlp.search.SearchUtils.getSpanQuery;

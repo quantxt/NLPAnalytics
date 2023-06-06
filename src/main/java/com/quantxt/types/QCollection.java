@@ -1,5 +1,6 @@
 package com.quantxt.types;
 
+import com.quantxt.model.QSpan;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
 import org.slf4j.Logger;
@@ -7,7 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static com.quantxt.types.QSpan.EXTBOXType.VERTICAL_MANY;
+import static com.quantxt.model.QSpan.EXTBOXType.VERTICAL_MANY;
 
 public class QCollection {
 

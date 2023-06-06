@@ -6,10 +6,8 @@ import java.util.regex.Pattern;
 
 import com.quantxt.doc.QTDocumentHelper;
 import com.quantxt.doc.helper.CommonQTDocumentHelper;
-import com.quantxt.model.DictItm;
+import com.quantxt.model.*;
 import com.quantxt.model.Dictionary;
-import com.quantxt.model.DictSearch;
-import com.quantxt.model.ExtInterval;
 import com.quantxt.nlp.search.QTSearchable;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
