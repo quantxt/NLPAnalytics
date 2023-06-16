@@ -1,8 +1,8 @@
 package com.quantxt.doc.helper.textbox;
 
-import com.quantxt.model.LineInfo;
-import com.quantxt.model.QSpan;
 import com.quantxt.model.document.BaseTextBox;
+import com.quantxt.types.LineInfo;
+import com.quantxt.types.QSpan;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -2,13 +2,13 @@ package com.quantxt.nlp.search;
 
 import com.quantxt.model.DictSearch;
 import com.quantxt.model.ExtInterval;
-import com.quantxt.model.LineInfo;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
 import com.quantxt.nlp.analyzer.QStopFilter;
 import com.quantxt.nlp.search.span.*;
 import com.quantxt.nlp.tokenizer.QLetterOnlyTokenizer;
 import com.quantxt.nlp.tokenizer.QLetterTokenizer;
+import com.quantxt.types.LineInfo;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;

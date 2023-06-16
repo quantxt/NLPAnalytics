@@ -5,6 +5,8 @@ import com.quantxt.model.*;
 import com.quantxt.model.Dictionary;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
+import com.quantxt.types.LineInfo;
+import com.quantxt.types.QSpan;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
@@ -284,6 +286,16 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             uniq_labels.add(key.toString());
         }
         return filtered;
+    }
+
+    @Override
+    public void reset() {
+        spread_spans = new ArrayList<>();
+        compact_spans = new ArrayList<>();
+        single_word_spans = new ArrayList<>();
+        spread_negatives = new ArrayList<>();
+        compact_negatives = new ArrayList<>();
+        single_word_negatives = new ArrayList<>();
     }
 
     @Override
@@ -850,6 +862,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
     public void filterOverlap(QTSearchable qtSearchable){
     //    filterNegativeWTextBoxV2(compact_spans, qtSearchable.spread_spans, .25f, false);
         filterNegativeWTextBoxV2(compact_spans, qtSearchable.compact_spans);
+        filterNegativeWTextBoxV2(compact_negatives, qtSearchable.compact_spans);
     }
 
     public static void filterNegativeWTextBox(List<QSpan> spans,

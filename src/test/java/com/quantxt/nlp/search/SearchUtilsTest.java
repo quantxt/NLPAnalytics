@@ -17,7 +17,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.quantxt.model.QSpan;
+import com.quantxt.types.QSpan;
 
 import static com.quantxt.nlp.search.SearchUtils.getMatchAllQuery;
 import static com.quantxt.nlp.search.SearchUtils.getSpanQuery;
