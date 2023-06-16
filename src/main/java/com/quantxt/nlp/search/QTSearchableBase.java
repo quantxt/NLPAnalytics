@@ -284,6 +284,16 @@ public class QTSearchableBase<T> extends DictSearch implements Serializable  {
     }
 
     @Override
+    public List postSearch(boolean hasTextboxes) {
+        return null;
+    }
+
+    @Override
+    public void reset() {
+
+    }
+
+    @Override
     public Collection search(String query_string, Map lineTextBoxMap, int slop, boolean isolatedLabelsOnly) {
         return null;
     }

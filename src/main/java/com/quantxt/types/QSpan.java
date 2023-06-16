@@ -1,30 +1,33 @@
 package com.quantxt.types;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.quantxt.model.ExtInterval;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
 
 public class QSpan extends ExtInterval {
 
     public enum EXTBOXType {HORIZENTAL_ONE, HORIZENTAL_MANY, VERTICAL_ONE_BELOW, VERTICAL_ONE_ABOVE, VERTICAL_MANY}
 
     protected EXTBOXType spanType;
-
     protected float top = 100000;   // starty
     protected float base = -1;  // endy
     protected float left = 100000;  // startx
     protected float right = -1; // endx
     protected transient List<BaseTextBox> childs = new ArrayList<>();
     protected String line_str;
-    private Map<BaseTextBox, Double> neighbors = new HashMap<>();
 
     private List<ExtIntervalTextBox> extIntervalTextBoxes = new ArrayList<>();
 
     public QSpan(){
         super();
     }
+
     public QSpan(ExtIntervalTextBox e){
         super();
         this.start = e.getExtInterval().getStart();
@@ -82,7 +85,18 @@ public class QSpan extends ExtInterval {
         }
     }
 
-    public ExtInterval  getExtInterval(boolean useLocalLineStart){
+    @JsonIgnore
+    public ExtInterval getExtInterval(){
+        List<BaseTextBox> tbList = new ArrayList<>();
+        for (ExtIntervalTextBox eitb : extIntervalTextBoxes){
+            tbList.add(eitb.getTextBox());
+        }
+
+        ExtInterval extInterval = getExtInterval(true);
+        extInterval.setTextBoxes(tbList);
+        return extInterval;
+    }
+    public ExtInterval getExtInterval(boolean useLocalLineStart){
         ExtInterval extInterval = new ExtInterval();
         extInterval.setDict_name(extIntervalTextBoxes.get(0).getExtInterval().getDict_name());
         extInterval.setDict_id(extIntervalTextBoxes.get(0).getExtInterval().getDict_id());
@@ -103,9 +117,13 @@ public class QSpan extends ExtInterval {
             } else {
                 extInterval.setEnd(extIntervalTextBoxes.get(0).getExtInterval().getEnd());
             }
-
         }
         extInterval.setLine(line);
+        List<BaseTextBox> tbList = new ArrayList<>();
+        for (ExtIntervalTextBox eitb : extIntervalTextBoxes){
+            tbList.add(eitb.getTextBox());
+        }
+        extInterval.setTextBoxes(tbList);
         extInterval.setExtIntervalSimples(getExtIntervalSimples());
 
         return extInterval;
@@ -147,15 +165,6 @@ public class QSpan extends ExtInterval {
         return line_str;
     }
 
-
-    public Map<BaseTextBox, Double> getNeighbors() {
-        return neighbors;
-    }
-
-    public void setNeighbors(Map<BaseTextBox, Double> neighbors) {
-        this.neighbors = neighbors;
-    }
-
     public void setLine_str(String line_str) {
         this.line_str = line_str;
     }
@@ -183,7 +192,12 @@ public class QSpan extends ExtInterval {
     public void setRight(float right) {
         this.right = right;
     }
+
     public void setExtIntervalTextBoxes(List<ExtIntervalTextBox> extIntervalTextBoxes) {
         this.extIntervalTextBoxes = extIntervalTextBoxes;
+    }
+
+    public void setChilds(List<BaseTextBox> childs) {
+        this.childs = childs;
     }
 }

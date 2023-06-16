@@ -1,11 +1,8 @@
 package com.quantxt.doc.helper;
 
 import com.quantxt.doc.QTDocumentHelper;
-import com.quantxt.model.DictItm;
-import com.quantxt.model.ExtInterval;
+import com.quantxt.model.*;
 import com.quantxt.nlp.search.QTSearchable;
-import com.quantxt.model.DictSearch;
-import com.quantxt.model.Dictionary;
 import org.junit.Ignore;
 import org.junit.Test;
 
