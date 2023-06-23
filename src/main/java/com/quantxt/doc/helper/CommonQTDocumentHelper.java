@@ -1100,7 +1100,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             }
         }
 
-        List<QSpan> filtered = cleanUp(finalQSpans, valueNeededDictionaryMap, isolatedAugmentedlabels);
+        List<QSpan> filtered = cleanUp(content, finalQSpans, valueNeededDictionaryMap, isolatedAugmentedlabels);
         Collections.sort(filtered, Comparator.comparingInt(QSpan::getStart));
 
         /*
@@ -1175,7 +1175,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
         return false;
     }
-    private List<QSpan> cleanUp(List<QSpan> qSpans,
+    private List<QSpan> cleanUp(String content,
+                                List<QSpan> qSpans,
                                 Map<String, DictSearch> vocabMap,
                                 Map<String, Collection<QSpan>> formKeys)
     {
@@ -1186,13 +1187,16 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             boolean hasOverlap = false;
             for (ExtIntervalTextBox eitb : label.getExtIntervalTextBoxes()) {
                 ExtInterval ext = eitb.getExtInterval();
+                LineInfo lineInfo = new LineInfo(content, ext);
+                int s = lineInfo.getLocalStart();
+                int e = lineInfo.getLocalStart();
                 for (QSpan v : qSpans) {
                     List<Interval> interval = v.getExtIntervalSimples();
                     if (interval == null) continue;
                     for (Interval inv : interval) {
                         if (inv.getLine() != ext.getLine()) continue;
-                        if ( (inv.getStart() >= ext.getStart() && inv.getStart() <= ext.getEnd()) ||
-                        (ext.getStart() >= inv.getStart() && ext.getStart() <= inv.getEnd()) ) {
+                        if ( (inv.getStart() >= s && inv.getStart() <= e) ||
+                        (s >= inv.getStart() && s <= inv.getEnd()) ) {
                             hasOverlap = true;
                             break;
                         }

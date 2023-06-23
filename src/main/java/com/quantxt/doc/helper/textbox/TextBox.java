@@ -882,6 +882,45 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         return overlap / Math.min(w1, w2);
     }
 
+    public static float getSignedHorizentalOverlap(BaseTextBox textBox1,
+                                                   BaseTextBox textBox2){
+
+        // assuming 1 is above and 2 is right
+        // is 2 overlapping with 1?
+        float l1 = textBox1.getLeft();
+        float r1 = textBox1.getRight();
+
+        float l2 = textBox2.getLeft();
+        float r2 = textBox2.getRight();
+
+        float w1 = r1 - l1;
+        float w2 = r2 - l2;
+
+
+        if (w1 == 0 || w2 == 0) return 0;
+        if (l2 >= r1) return 0;
+        if (r2 <= l1) return 0;
+
+        // w1 100% covers w2
+        if (l2 >= l1 && r2 <= r1) {
+            return 1;
+        }
+
+        // w2 100% covers w1
+        if (l2 <= l1 && r2 >= r1) {
+            return w1/w2;
+        }
+
+        float overlap = 0;
+
+        if (l1 >= l2) {
+            overlap = r2 - l1;
+        } else {
+            overlap = r1 - l2;
+        }
+        return overlap / w2;
+    }
+
     public static float getVerticalOverlap(BaseTextBox textBox1, BaseTextBox textBox2)
     {
         float t1 = textBox1.getTop();  //l=t
@@ -912,6 +951,43 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         }
 
         return overlap / Math.min(h1, h2);
+    }
+
+    public static float getSignedVerticalOverlap(BaseTextBox textBox1, BaseTextBox textBox2)
+    {
+        // assuming 1 is left and 2 is right
+        // is 2 overlappinh with 1?
+        float t1 = textBox1.getTop();  //l=t
+        float b1 = textBox1.getBase(); //r=b
+
+        float t2 = textBox2.getTop();
+        float b2 = textBox2.getBase();
+
+        float h1 = b1 - t1;     //w=h
+        float h2 = b2 - t2;
+
+        if (h2 == 0 || h1 == 0) return 0;
+
+        if (t2 >= b1) return 0;
+        if (t1 >= b2) return 0;
+
+        if (t2 >= t1 && b2 <= b1) {
+            return 1;
+        }
+
+        // h2 100% covers h1
+        if (t2 <= t1 && b2 >= b1) {
+            return h1/h2;
+        }
+
+        float overlap = 0;
+        if (t1 >= t2) {
+            overlap = b2 - t1;
+        } else {
+            overlap = b1 - t2;
+        }
+
+        return overlap / h2;
     }
 
     private static Map<Character, Float> ratios = new HashMap<>() {{
