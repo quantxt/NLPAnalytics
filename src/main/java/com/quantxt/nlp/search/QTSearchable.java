@@ -140,7 +140,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 List<Document> matchedDocs = getMatchedDocs(indexSearcher, query);
                 if (matchedDocs.size() == 0) continue;
                 for (Mode m : mode) {
-                    List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, slop,
+                    List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, true, slop,
                             searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                             search_fld, vocab_name, vocab_id, content, null);
                     if (matches.size() > 0) {
@@ -351,7 +351,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                 for (Mode m : mode) {
                     // we seach for phrases in one line only
-                    List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, slop,
+                    List<ExtIntervalTextBox> matches = getFragments(matchedDocs, m, true, isolatedLabelsOnly, slop,
                             searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                             search_fld, vocab_name, vocab_id, content, lineTextBoxMap);
 
@@ -381,7 +381,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         for (Document matchedDoc : matchedDocs) {
                             List<Document> singleMatchedDocList = new ArrayList<>();
                             singleMatchedDocList.add(matchedDoc);
-                            List<ExtIntervalTextBox> singletokenMatches = getFragments(singleMatchedDocList, PARTIAL_ORDERED_SPAN, false, 20,
+                            List<ExtIntervalTextBox> singletokenMatches = getFragments(singleMatchedDocList, PARTIAL_ORDERED_SPAN, false, false,20,
                                     searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                                     search_fld, vocab_name, vocab_id, content, lineTextBoxMap);
 

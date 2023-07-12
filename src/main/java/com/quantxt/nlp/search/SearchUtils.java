@@ -65,8 +65,8 @@ public class SearchUtils {
             @Override
             protected TokenStreamComponents createComponents(String fieldName) {
                 final Tokenizer source = new WhitespaceTokenizer();
-                final TokenStream tokenStream1 = new CachingTokenFilter(source);
-                final TokenStream tokenStream = new LowerCaseFilter(tokenStream1);
+    //            final TokenStream tokenStream1 = new CachingTokenFilter(source);
+                final TokenStream tokenStream = new LowerCaseFilter(source);
                 return new Analyzer.TokenStreamComponents(source, tokenStream);
             }
         };
@@ -148,6 +148,7 @@ public class SearchUtils {
     public static List<ExtIntervalTextBox> getFragments(final Collection<Document> matchedDocs,
                                                         final DictSearch.Mode mode,
                                                         final boolean mergeCntsFrags,
+                                                        final boolean ignorePfx,
                                                         final int slop,
                                                         final Analyzer search_analyzer,
                                                         final Analyzer keyphrase_analyzer,
@@ -185,7 +186,6 @@ public class SearchUtils {
             Fragmenter fragmenter = new QSimpleSpanFragmenter(scorer, 2000);
             highlighter.setTextFragmenter(fragmenter);
             QTextFragment[] frags = highlighter.getBestTextFragments(tokenStream, str, false, 10);
-
             ArrayList<QToken> tokenList = highlighter.getTokenList();
             if (mergeCntsFrags) {
                 ExtInterval[] merged = QTextFragment.mergeContiguousFragments(tokenList, num_tokens-1, category, vocab_name, vocab_id);
@@ -201,7 +201,7 @@ public class SearchUtils {
 
                     LineInfo lineInfo = new LineInfo(str, extInterval);
                     extInterval.setLine(lineInfo.getLineNumber());
-                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  true);
+                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  ignorePfx); // ture
                     ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
                     all_matches.add(eitb);
                 }
@@ -214,7 +214,7 @@ public class SearchUtils {
                     extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
                     LineInfo lineInfo = new LineInfo(str, extInterval);
                     extInterval.setLine(lineInfo.getLineNumber());
-                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  false);
+                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  false); // false
                     ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
                     all_matches.add(eitb);
                 }
@@ -317,8 +317,8 @@ public class SearchUtils {
                             break;
                         case EXACT_CI:
                             WhitespaceTokenizer wst = new WhitespaceTokenizer();
-                            tokenStream = new CachingTokenFilter(wst);
-                            tokenStream = new LowerCaseFilter(tokenStream);
+                      //      tokenStream = new CachingTokenFilter(wst);
+                            tokenStream = new LowerCaseFilter(wst);
                             sysfilter = new SynonymGraphFilter(tokenStream, map, true);
                             tokenStreamComponents = new TokenStreamComponents(wst, sysfilter);
                             break;
@@ -498,7 +498,7 @@ public class SearchUtils {
                                     : new SpanTermQuery(term);
                             fld = "";
                             str = new StringBuilder();
-                            queryList.add(spanQuery);
+                            if (spanQuery != null) queryList.add(spanQuery);
                         }
                     } else {
                         str.append(c);
@@ -515,7 +515,7 @@ public class SearchUtils {
                     break;
                 case '(':
                     SpanQuery spanQuery = parse(query, search_fld, slop, idx, false, is_Fuzzy, ordered);
-                    queryList.add(spanQuery);
+                    if (spanQuery != null) queryList.add(spanQuery);
                     str = new StringBuilder();
                     break;
                 case ')':
@@ -524,10 +524,10 @@ public class SearchUtils {
                         Term term = new Term(fld, q_string);
                         SpanQuery spanTQuery = is_Fuzzy && q_string.length() > 4 ? new SpanMultiTermQueryWrapper(new FuzzyQuery(term))
                             : new SpanTermQuery(term);
-                        queryList.add(spanTQuery);
+                        if (spanTQuery != null) queryList.add(spanTQuery);
                     }
                     if (queryList.size() == 0) {
-                        logger.error("This is an empty Span..");
+                        logger.error("This is an empty Span.");
                         return null;
                     } else if (queryList.size() == 1) {
                         return queryList.iterator().next();
@@ -546,7 +546,7 @@ public class SearchUtils {
             Term term = new Term(fld, q_string);
             SpanQuery spanQuery = is_Fuzzy && q_string.length() > 4 ? new SpanMultiTermQueryWrapper(new FuzzyQuery(term)) :
                     new SpanTermQuery(term);
-            queryList.add(spanQuery);
+            if (spanQuery != null)  queryList.add(spanQuery);
         }
 
         if (queryList.size() == 0) return null;
