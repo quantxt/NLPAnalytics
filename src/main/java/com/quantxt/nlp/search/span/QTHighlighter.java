@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Objects;
+
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -49,12 +50,12 @@ public class QTHighlighter {
      * Highlights chosen terms in a text, extracting the most relevant section. This is a convenience
      * method that calls {@link #getBestFragment(TokenStream, String)}
      *
-     * @param analyzer the analyzer that will be used to split <code>text</code> into chunks
-     * @param text text to highlight terms in
+     * @param analyzer  the analyzer that will be used to split <code>text</code> into chunks
+     * @param text      text to highlight terms in
      * @param fieldName Name of field used to influence analyzer's tokenization policy
      * @return highlighted text fragment or null if no terms found
      * @throws InvalidTokenOffsetsException thrown if any token's endOffset exceeds the provided
-     *     text's length
+     *                                      text's length
      */
     public final String getBestFragment(Analyzer analyzer, String fieldName, String text)
             throws IOException, InvalidTokenOffsetsException {
@@ -68,14 +69,14 @@ public class QTHighlighter {
      * fragment with the highest score is returned
      *
      * @param tokenStream a stream of tokens identified in the text parameter, including offset
-     *     information. This is typically produced by an analyzer re-parsing a document's text. Some
-     *     work may be done on retrieving TokenStreams more efficiently by adding support for storing
-     *     original text position data in the Lucene index but this support is not currently available
-     *     (as of Lucene 1.4 rc2).
-     * @param text text to highlight terms in
+     *                    information. This is typically produced by an analyzer re-parsing a document's text. Some
+     *                    work may be done on retrieving TokenStreams more efficiently by adding support for storing
+     *                    original text position data in the Lucene index but this support is not currently available
+     *                    (as of Lucene 1.4 rc2).
+     * @param text        text to highlight terms in
      * @return highlighted text fragment or null if no terms found
      * @throws InvalidTokenOffsetsException thrown if any token's endOffset exceeds the provided
-     *     text's length
+     *                                      text's length
      */
     public final String getBestFragment(TokenStream tokenStream, String text)
             throws IOException, InvalidTokenOffsetsException {
@@ -90,13 +91,13 @@ public class QTHighlighter {
      * Highlights chosen terms in a text, extracting the most relevant sections. This is a convenience
      * method that calls {@link #getBestFragments(TokenStream, String, int)}
      *
-     * @param analyzer the analyzer that will be used to split <code>text</code> into chunks
-     * @param fieldName the name of the field being highlighted (used by analyzer)
-     * @param text text to highlight terms in
+     * @param analyzer        the analyzer that will be used to split <code>text</code> into chunks
+     * @param fieldName       the name of the field being highlighted (used by analyzer)
+     * @param text            text to highlight terms in
      * @param maxNumFragments the maximum number of fragments.
      * @return highlighted text fragments (between 0 and maxNumFragments number of fragments)
      * @throws InvalidTokenOffsetsException thrown if any token's endOffset exceeds the provided
-     *     text's length
+     *                                      text's length
      */
     public final String[] getBestFragments(
             Analyzer analyzer, String fieldName, String text, int maxNumFragments)
@@ -111,11 +112,11 @@ public class QTHighlighter {
      * fragments with the highest scores are returned as an array of strings in order of score
      * (contiguous fragments are merged into one in their original order to improve readability)
      *
-     * @param text text to highlight terms in
+     * @param text            text to highlight terms in
      * @param maxNumFragments the maximum number of fragments.
      * @return highlighted text fragments (between 0 and maxNumFragments number of fragments)
      * @throws InvalidTokenOffsetsException thrown if any token's endOffset exceeds the provided
-     *     text's length
+     *                                      text's length
      */
     public final String[] getBestFragments(TokenStream tokenStream, String text, int maxNumFragments)
             throws IOException, InvalidTokenOffsetsException {
@@ -142,9 +143,9 @@ public class QTHighlighter {
      * been made public to allow visibility of score information held in TextFragment objects. Thanks
      * to Jason Calabrese for help in redefining the interface.
      *
-     * @throws IOException If there is a low-level I/O error
+     * @throws IOException                  If there is a low-level I/O error
      * @throws InvalidTokenOffsetsException thrown if any token's endOffset exceeds the provided
-     *     text's length
+     *                                      text's length
      */
     public final QTextFragment[] getBestTextFragments(
             TokenStream tokenStream, String text, boolean mergeContiguousFragments, int maxNumFragments)
@@ -172,132 +173,123 @@ public class QTHighlighter {
 
         FragmentQueue fragQueue = new FragmentQueue(maxNumFragments);
 
-        try {
 
-            String tokenText;
-            int startOffset;
-            int endOffset;
-            int lastEndOffset = 0;
-            textFragmenter.start(text, tokenStream);
+        String tokenText;
+        int startOffset;
+        int endOffset;
+        int lastEndOffset = 0;
+        textFragmenter.start(text, tokenStream);
 
-            QTokenGroup tokenGroup = new QTokenGroup(tokenStream);
+        QTokenGroup tokenGroup = new QTokenGroup(tokenStream);
 
-            int cur_pos  = 0;
-            int next_pos = 0;
-            int old_posinc = 1;
-            tokenStream.reset();
-            for (boolean next = tokenStream.incrementToken(); next && (offsetAtt.startOffset() < maxDocCharsToAnalyze); next = tokenStream.incrementToken()) {
-                if ((offsetAtt.endOffset() > text.length()) || (offsetAtt.startOffset() > text.length())) {
-                    throw new InvalidTokenOffsetsException(
-                            "Token " + termAtt.toString() + " exceeds length of provided text sized " + text.length());
-                }
-                if ((tokenGroup.getNumTokens() > 0) && (tokenGroup.isDistinct())) {
-                    // the current token is distinct from previous tokens -
-                    // markup the cached token group info
-                    startOffset = tokenGroup.getStartOffset();
-                    endOffset = tokenGroup.getEndOffset();
-                    tokenText = text.substring(startOffset, endOffset);
-
-                    int posInc = postIncAtt.getPositionIncrement();
-                    if ( posInc > 0 ) {
-                        cur_pos = next_pos;
-                        next_pos += posInc;
-                    }
-
-                    String markedUpText = formatter.highlightTerm(encoder.encodeText(tokenText), tokenGroup);
-                    if (tokenGroup.getTotalScore() > 0) {
-                        QToken qToken = new QToken(text, startOffset, endOffset, old_posinc, cur_pos);
-                        tokenList.add(qToken);
-                    }
-
-                    old_posinc = posInc;
-
-                    // store any whitespace etc from between this and last group
-                    if (startOffset > lastEndOffset)
-                        newText.append(encoder.encodeText(text.substring(lastEndOffset, startOffset)));
-                    newText.append(markedUpText);
-                    lastEndOffset = Math.max(endOffset, lastEndOffset);
-
-                    // check if current token marks the start of a new fragment
-                    if (textFragmenter.isNewFragment()) {
-                        currentFrag.setScore(fragmentScorer.getFragmentScore());
-                        // record stats for a new fragment
-                        currentFrag.textEndPos = newText.length();
-                        currentFrag = new QTextFragment(newText, newText.length(),
-                                docFrags.size(), startOffset, endOffset);
-
-                        fragmentScorer.startFragment(currentFrag);
-                        docFrags.add(currentFrag);
-                    }
-                    tokenGroup.clear();
-                }
-
-                tokenGroup.addToken(fragmentScorer.getTokenScore());
+        int cur_pos = 0;
+        int next_pos = 0;
+        int old_posinc = 1;
+        tokenStream.reset();
+        for (boolean next = tokenStream.incrementToken(); next && (offsetAtt.startOffset() < maxDocCharsToAnalyze); next = tokenStream.incrementToken()) {
+            if ((offsetAtt.endOffset() > text.length()) || (offsetAtt.startOffset() > text.length())) {
+                tokenStream.end();
+                tokenStream.close();
+                throw new InvalidTokenOffsetsException(
+                        "Token " + termAtt.toString() + " exceeds length of provided text sized " + text.length());
             }
-
-            currentFrag.setScore(fragmentScorer.getFragmentScore());
-
-            if (tokenGroup.getNumTokens() > 0) {
-                // flush the accumulated text (same code as in above loop)
+            if ((tokenGroup.getNumTokens() > 0) && (tokenGroup.isDistinct())) {
+                // the current token is distinct from previous tokens -
+                // markup the cached token group info
                 startOffset = tokenGroup.getStartOffset();
                 endOffset = tokenGroup.getEndOffset();
                 tokenText = text.substring(startOffset, endOffset);
-                String markedUpText = formatter.highlightTerm(encoder.encodeText(tokenText), tokenGroup);
 
+                int posInc = postIncAtt.getPositionIncrement();
+                if (posInc > 0) {
+                    cur_pos = next_pos;
+                    next_pos += posInc;
+                }
+
+                String markedUpText = formatter.highlightTerm(encoder.encodeText(tokenText), tokenGroup);
                 if (tokenGroup.getTotalScore() > 0) {
                     QToken qToken = new QToken(text, startOffset, endOffset, old_posinc, cur_pos);
                     tokenList.add(qToken);
                 }
+
+                old_posinc = posInc;
+
                 // store any whitespace etc from between this and last group
                 if (startOffset > lastEndOffset)
                     newText.append(encoder.encodeText(text.substring(lastEndOffset, startOffset)));
                 newText.append(markedUpText);
-                lastEndOffset = Math.max(lastEndOffset, endOffset);
-            }
+                lastEndOffset = Math.max(endOffset, lastEndOffset);
 
-            // Test what remains of the original text beyond the point where we stopped analyzing
-            if (
-                //          if there is text beyond the last token considered..
-                    (lastEndOffset < text.length())
-                            &&
-                            //          and that text is not too large...
-                            (text.length() <= maxDocCharsToAnalyze)) {
-                // append it to the last fragment
-                newText.append(encoder.encodeText(text.substring(lastEndOffset)));
-            }
+                // check if current token marks the start of a new fragment
+                if (textFragmenter.isNewFragment()) {
+                    currentFrag.setScore(fragmentScorer.getFragmentScore());
+                    // record stats for a new fragment
+                    currentFrag.textEndPos = newText.length();
+                    currentFrag = new QTextFragment(newText, newText.length(),
+                            docFrags.size(), startOffset, endOffset);
 
-            currentFrag.textEndPos = newText.length();
-
-            // sort the most relevant sections of the text
-            for (Iterator<QTextFragment> i = docFrags.iterator(); i.hasNext(); ) {
-                currentFrag = i.next();
-                fragQueue.insertWithOverflow(currentFrag);
-            }
-
-            // return the most relevant fragments
-            QTextFragment[] frag = new QTextFragment[fragQueue.size()];
-            for (int i = frag.length - 1; i >= 0; i--) {
-                frag[i] = fragQueue.pop();
-            }
-
-            // merge any contiguous fragments to improve readability
-            if (mergeContiguousFragments) {
-                frag = mergeContiguousFragments(frag);
-            }
-
-            return frag;
-
-        } finally {
-            if (tokenStream != null) {
-                try {
-                    tokenStream.end();
-                    tokenStream.close();
-                } catch (
-                        @SuppressWarnings("unused")
-                                Exception e) {
+                    fragmentScorer.startFragment(currentFrag);
+                    docFrags.add(currentFrag);
                 }
+                tokenGroup.clear();
             }
+
+            tokenGroup.addToken(fragmentScorer.getTokenScore());
         }
+
+        tokenStream.end();
+        tokenStream.close();
+
+        currentFrag.setScore(fragmentScorer.getFragmentScore());
+
+        if (tokenGroup.getNumTokens() > 0) {
+            // flush the accumulated text (same code as in above loop)
+            startOffset = tokenGroup.getStartOffset();
+            endOffset = tokenGroup.getEndOffset();
+            tokenText = text.substring(startOffset, endOffset);
+            String markedUpText = formatter.highlightTerm(encoder.encodeText(tokenText), tokenGroup);
+
+            if (tokenGroup.getTotalScore() > 0) {
+                QToken qToken = new QToken(text, startOffset, endOffset, old_posinc, cur_pos);
+                tokenList.add(qToken);
+            }
+            // store any whitespace etc from between this and last group
+            if (startOffset > lastEndOffset)
+                newText.append(encoder.encodeText(text.substring(lastEndOffset, startOffset)));
+            newText.append(markedUpText);
+            lastEndOffset = Math.max(lastEndOffset, endOffset);
+        }
+
+        // Test what remains of the original text beyond the point where we stopped analyzing
+        if (
+            //          if there is text beyond the last token considered..
+                (lastEndOffset < text.length())
+                        &&
+                        //          and that text is not too large...
+                        (text.length() <= maxDocCharsToAnalyze)) {
+            // append it to the last fragment
+            newText.append(encoder.encodeText(text.substring(lastEndOffset)));
+        }
+
+        currentFrag.textEndPos = newText.length();
+
+        // sort the most relevant sections of the text
+        for (Iterator<QTextFragment> i = docFrags.iterator(); i.hasNext(); ) {
+            currentFrag = i.next();
+            fragQueue.insertWithOverflow(currentFrag);
+        }
+
+        // return the most relevant fragments
+        QTextFragment[] frag = new QTextFragment[fragQueue.size()];
+        for (int i = frag.length - 1; i >= 0; i--) {
+            frag[i] = fragQueue.pop();
+        }
+
+        // merge any contiguous fragments to improve readability
+        if (mergeContiguousFragments) {
+            frag = mergeContiguousFragments(frag);
+        }
+        return frag;
     }
 
     private QTextFragment[] mergeContiguousFragments(QTextFragment[] frag) {
@@ -381,12 +373,12 @@ public class QTHighlighter {
      * record hit statistics across the document. After accumulating stats, the fragments with the
      * highest scores are returned in order as "separator" delimited strings.
      *
-     * @param text text to highlight terms in
+     * @param text            text to highlight terms in
      * @param maxNumFragments the maximum number of fragments.
-     * @param separator the separator used to intersperse the document fragments (typically "...")
+     * @param separator       the separator used to intersperse the document fragments (typically "...")
      * @return highlighted text
      * @throws InvalidTokenOffsetsException thrown if any token's endOffset exceeds the provided
-     *     text's length
+     *                                      text's length
      */
     public final String getBestFragments(
             TokenStream tokenStream, String text, int maxNumFragments, String separator)
@@ -418,7 +410,9 @@ public class QTHighlighter {
         textFragmenter = Objects.requireNonNull(fragmenter);
     }
 
-    /** @return Object used to score each text fragment */
+    /**
+     * @return Object used to score each text fragment
+     */
     public QScorer getFragmentScorer() {
         return fragmentScorer;
     }
@@ -439,7 +433,7 @@ public class QTHighlighter {
      * Throws an IllegalArgumentException with the provided message if 'argument' is null.
      *
      * @param argument the argument to be null-checked
-     * @param message the message of the exception thrown if argument == null
+     * @param message  the message of the exception thrown if argument == null
      */
     private static void ensureArgumentNotNull(Object argument, String message) {
         if (argument == null) {
