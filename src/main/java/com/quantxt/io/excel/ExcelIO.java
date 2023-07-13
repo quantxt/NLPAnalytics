@@ -6,6 +6,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.function.Function;
 
+import com.quantxt.converter.WorkbookConverter;
+import org.apache.poi.hssf.OldExcelFormatException;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.extractor.ExtractorFactory;
 import org.apache.poi.ooxml.extractor.POIXMLTextExtractor;
@@ -63,33 +65,38 @@ public class ExcelIO implements Writer<WorkbookData>, Reader<File, WorkbookData>
                 || name.endsWith(".xlsx")
                 || name.endsWith(".xlsb")
                 || name.endsWith(".xlsm"))) {
-            return null;
+            throw new RuntimeException("File extension is not supported.");
         }
         log.info("Processing file: {}", name);
         FileInputStream inputStream = new FileInputStream(file);
         Workbook workbook = null;
-        if (name.endsWith(".xlsb")) {
-            workbook = getXLSBWorkbook(inputStream);
-        } else {
-            try {
+        try {
+            if (name.endsWith(".xlsb")) {
+                workbook = getXLSBWorkbook(inputStream);
+            } else {
                 workbook = new HSSFWorkbook(inputStream);
-            } catch (OfficeXmlFileException e) {
-                log.debug("office 2010 file");
-                inputStream = new FileInputStream(file);
-                workbook = new XSSFWorkbook(inputStream);
-            } catch (Exception e) {
-                log.error("Workbook can not be created: {}", name);
-                return null;
             }
+
+        }catch (OfficeXmlFileException e) {
+            log.debug("office 2010 file");
+            inputStream = new FileInputStream(file);
+            workbook = new XSSFWorkbook(inputStream);
+
+        }finally{
+            inputStream.close();
         }
-        inputStream.close();
         return workbook;
     }
 
     public static WorkbookData getWorkbookData(File file) throws Exception {
         String name = file.getName().toLowerCase().trim();
-        Workbook workbook = getWorkbook(file);
-        return new WorkbookData(WorkbookFactory.create(workbook), name);
+        try{
+            Workbook workbook = getWorkbook(file);
+            return new WorkbookData(WorkbookFactory.create(workbook), name);
+        }catch (OldExcelFormatException e) {
+            jxl.Workbook jxlWorkbook = jxl.Workbook.getWorkbook(new File(file.toURI()));
+            return new WorkbookData(new WorkbookConverter().from(jxlWorkbook), name);
+        }
     }
 
     public static Workbook getXLSBWorkbook(InputStream inputStream) throws Exception {
