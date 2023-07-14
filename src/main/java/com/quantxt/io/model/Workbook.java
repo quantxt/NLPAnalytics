@@ -1,5 +1,6 @@
 package com.quantxt.io.model;
 
+import javax.naming.OperationNotSupportedException;
 import java.util.Iterator;
 
 public interface Workbook extends Iterable<Sheet> {
@@ -19,7 +20,7 @@ public interface Workbook extends Iterable<Sheet> {
 
     Sheet createSheet(String sheetName);
 
-    default boolean isSheetVeryHidden(int sheetIndex) {
+    default boolean isSheetVeryHidden(int sheetIndex) throws OperationNotSupportedException {
         return false;
     }
 
