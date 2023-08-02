@@ -668,16 +668,19 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         for (Map.Entry<String, Collection<QSpan>> e1 : labels.entrySet()){
             List<QSpan> newSpans = new ArrayList<>();
             List<QSpan> qSpans = new ArrayList<>(e1.getValue());
+            boolean[] dups = new boolean[qSpans.size()];
+            Arrays.fill(dups, false);
             for (int i=0; i<qSpans.size(); i++) {
                 QSpan qSpan1 = qSpans.get(i);
+                if (dups[i]) continue;
                 BaseTextBox bt1 = qSpan1.getTextBox();
                 if (bt1 == null) {
                     newSpans.add(qSpan1);
+                    dups[i] = true;  // so we won't compare this element with others
                     continue;
                 }
-                boolean isUniq = true;
-                for (int j=0; j<qSpans.size(); j++) {
-                    if (i == j) continue;
+                for (int j=i+1; j<qSpans.size(); j++) {
+                    if (dups[j]) continue;
                     QSpan qSpan2 = qSpans.get(j);
                     BaseTextBox bt2 = qSpan2.getTextBox();
                     if (bt2 == null) continue;
@@ -686,16 +689,17 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     if (ho == 1f && vo == 1f){
                         float s1 = getArea(bt1);
                         float s2 = getArea(bt2);
-                        if (s2 > s1) {
+                        if (s2 >= s1) {
 //                             logger.info("{} has overlap with {}", qSpan1.getStr(), qSpan2.getStr());
-                            isUniq = false;
-                            break;
+                            dups[j] = true;
                         }
                     }
                 }
-                if (isUniq){
-                    newSpans.add(qSpan1);
-                }
+            }
+            for (int j=0; j<qSpans.size(); j++) {
+                if (dups[j]) continue;
+                QSpan qSpan1 = qSpans.get(j);
+                newSpans.add(qSpan1);
             }
             if (newSpans.size() >0){
                 filtered.put(e1.getKey(), newSpans);
@@ -971,6 +975,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         ArrayList<QSpan> finalQSpans = new ArrayList<>();
+        //dedup allLabels
 
 
         for (QSpan qSpan : allLabels) {
