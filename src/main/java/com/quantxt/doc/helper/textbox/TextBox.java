@@ -921,6 +921,26 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         return overlap / w2;
     }
 
+    public static float getProjectedXLength(List<BaseTextBox> textBoxes){
+        if (textBoxes.size() == 0) return  0;
+        Collections.sort(textBoxes, Comparator.comparingDouble(o -> o.getLeft()));
+        float l = 0;
+        float last_start = textBoxes.get(0).getLeft();
+        float last_end = textBoxes.get(0).getRight();
+        if (textBoxes.size() == 1) return  last_end - last_start;
+        for (int i=1; i< textBoxes.size(); i++){
+            BaseTextBox btb = textBoxes.get(i);
+            float cur_start = btb.getLeft();
+            float cur_end = btb.getRight();
+            if (cur_start > last_end){
+                l += (last_end - last_start);
+                last_start = cur_start;
+            }
+            last_end = Math.max(cur_end, last_end);
+        }
+        l += (last_end - last_start);
+        return l;
+    }
     public static float getVerticalOverlap(BaseTextBox textBox1, BaseTextBox textBox2)
     {
         float t1 = textBox1.getTop();  //l=t

@@ -12,24 +12,24 @@ import static com.quantxt.types.QSpan.EXTBOXType.VERTICAL_MANY;
 public class QCollection {
 
     final private static Logger logger = LoggerFactory.getLogger(QCollection.class);
-
-
     // line -> start
-    Map<Integer, Map<Integer, QSpan>> items;
+    Map<Integer, Map<Integer, QSpan>> columns;
+    Map<Integer, Map<Integer, QSpan>> rows;
     int max_line = 0;
 
     public QCollection(){
-        items = new HashMap<>();
+        rows = new HashMap<>();
+        columns = new HashMap<>();
     }
 
     public List<QSpan> get(int line){
-        Map<Integer, QSpan> line_items = items.get(line);
+        Map<Integer, QSpan> line_items = columns.get(line);
         if (line_items == null || line_items.size() == 0) return new ArrayList<>();
         return new ArrayList(line_items.values());
     }
 
     public QSpan lookup(int line, int start){
-        Map<Integer, QSpan> line_items = items.get(line);
+        Map<Integer, QSpan> line_items = columns.get(line);
         if (line_items == null || line_items.size() == 0) return null;
         return line_items.get(start);
     }
@@ -38,10 +38,10 @@ public class QCollection {
         int line = qSpan.getLine();
         int start = qSpan.getStart();
         int end = qSpan.getEnd();
-        Map<Integer, QSpan> line_items = items.get(line);
+        Map<Integer, QSpan> line_items = columns.get(line);
         if (line_items == null){
             line_items = new HashMap<>();
-            items.put(line, line_items);
+            columns.put(line, line_items);
         }
         // check if we already have something here
         QSpan existing = line_items.get(start);
@@ -62,7 +62,7 @@ public class QCollection {
 
     public QCollection combine(QCollection newItems, boolean overwrite){
         QCollection uniqNewItems = new QCollection();
-        for (Map.Entry<Integer, Map<Integer, QSpan>> e : newItems.items.entrySet()){
+        for (Map.Entry<Integer, Map<Integer, QSpan>> e : newItems.columns.entrySet()){
             Integer line = e.getKey();
             Map<Integer, QSpan> line_map = e.getValue();
             for (Map.Entry<Integer, QSpan> ee : line_map.entrySet()){
@@ -83,7 +83,7 @@ public class QCollection {
     }
 
     public int size(){
-        return items.size();
+        return columns.size();
     }
 
     public void groupVertically(QCollection generic_matches,
@@ -91,7 +91,7 @@ public class QCollection {
                                 float heightMult1, // between header and first cell
                                 float heightMult2){
 
-        Iterator<Map.Entry<Integer, Map<Integer, QSpan>>> iter1 = items.entrySet().iterator();
+        Iterator<Map.Entry<Integer, Map<Integer, QSpan>>> iter1 = columns.entrySet().iterator();
 
         while (iter1.hasNext()) {
             Map.Entry<Integer, Map<Integer, QSpan>> line_map1 = iter1.next();
@@ -114,15 +114,7 @@ public class QCollection {
 
                 for (int line2 = line1 + 1; line2 <= max_line; line2++) {
                     List<QSpan> etbList2 = get(line2);
-                    if (etbList2.size() == 0){
-
-        //                List<QSpan> etbList_generic = generic_matches.get(line2);
-        //                if (etbList_generic == null) continue;
-
-        //                ExtIntervalTextBox alignedGenericValues = detectBestAlignedValue(tb1, etbList_generic, numv,
-       //                         b1, char_width, heightMult1, heightMult2);
-        //                if (alignedGenericValues != null) break;
-
+                    if (etbList2.size() == 0) {
                         // check if we are hitting a label
                         List<ExtIntervalTextBox> labels = lineLabelMap.get(line2);
                         if (labels == null) continue;
@@ -135,6 +127,71 @@ public class QCollection {
                         continue;
                     }
 
+                    ExtIntervalTextBox alignedValues = detectBestAlignedValue(tb1, etbList2, b1, char_width);
+
+                    if (alignedValues != null){
+                        BaseTextBox tb2 = alignedValues.getTextBox();
+                        if (tb2 != null) {
+                            float t2 = tb2.getTop();
+                            float dist_from_prev = t2 - b1;
+                            float h2 = tb2.getBase() - t2;
+                            if (numv == 1) {
+                                if (dist_from_prev > heightMult1 * h2) break;
+                            } else {
+                                if (dist_from_prev > heightMult2 * h2) break;
+                            }
+                        }
+
+                        etb1.add(alignedValues);
+                        // we add one value in every line
+                        b1 = alignedValues.getTextBox().getBase();
+                        numv++;
+                    }
+                }
+            }
+        }
+    }
+
+    public void groupHorizontally(QCollection generic_matches,
+                                Map<Integer, List<ExtIntervalTextBox>> lineLabelMap,
+                                float heightMult1, // between header and first cell
+                                float heightMult2){
+
+        Iterator<Map.Entry<Integer, Map<Integer, QSpan>>> iter1 = columns.entrySet().iterator();
+
+        while (iter1.hasNext()) {
+            Map.Entry<Integer, Map<Integer, QSpan>> line_map1 = iter1.next();
+            if (line_map1.getValue() == null || line_map1.getValue().size() == 0){
+                continue;
+            }
+            int line1 = line_map1.getKey();
+
+            Iterator<Map.Entry<Integer, QSpan>> iter11 = line_map1.getValue().entrySet().iterator();
+            while (iter11.hasNext()){
+
+                Map.Entry<Integer, QSpan> next = iter11.next();
+                QSpan etb1 = next.getValue();
+                BaseTextBox tb1 = etb1.getTextBox();
+                int numv = etb1.getExtIntervalTextBoxes().size();
+                float b1 = tb1.getBase();
+                float l1 = tb1.getLeft();
+                float r1 = tb1.getRight();
+                float char_width = (r1 - l1) / etb1.getExtInterval(true).getStr().length();
+
+                for (int line2 = line1 + 1; line2 <= max_line; line2++) {
+                    List<QSpan> etbList2 = get(line2);
+                    if (etbList2.size() == 0) {
+                        // check if we are hitting a label
+                        List<ExtIntervalTextBox> labels = lineLabelMap.get(line2);
+                        if (labels == null) continue;
+                        List<QSpan> label_spans = new ArrayList<>();
+                        for (ExtIntervalTextBox eit : labels){
+                            label_spans.add(new QSpan(eit));
+                        }
+                        ExtIntervalTextBox alignedLabels = detectBestAlignedValue(tb1, label_spans, b1, char_width);
+                        if (alignedLabels != null) break;
+                        continue;
+                    }
 
                     ExtIntervalTextBox alignedValues = detectBestAlignedValue(tb1, etbList2, b1, char_width);
 
@@ -162,7 +219,7 @@ public class QCollection {
     }
 
     public void markVM(){
-        for (Map.Entry<Integer, Map<Integer, QSpan>> e : items.entrySet()){
+        for (Map.Entry<Integer, Map<Integer, QSpan>> e : columns.entrySet()){
             Map<Integer, QSpan> line_map = e.getValue();
             if (line_map.size() < 2) continue;
             for (Map.Entry<Integer, QSpan> ee : line_map.entrySet()) {
