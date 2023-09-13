@@ -19,6 +19,7 @@ public class QSpan extends ExtInterval {
     protected float base = -1;  // endy
     protected float left = 100000;  // startx
     protected float right = -1; // endx
+    protected float area = -1; // endx
     protected transient List<BaseTextBox> childs = new ArrayList<>();
     protected String line_str;
 
@@ -199,5 +200,13 @@ public class QSpan extends ExtInterval {
 
     public void setChilds(List<BaseTextBox> childs) {
         this.childs = childs;
+    }
+
+    public float getArea() {
+        return area;
+    }
+
+    public void setArea(float area) {
+        this.area = area;
     }
 }
