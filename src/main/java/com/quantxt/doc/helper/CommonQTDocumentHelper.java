@@ -1326,7 +1326,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     }
                 }
 
-                List<Interval> best = bestAutoValue.getBest(allLabels, isAuto);
+                List<Interval> best = bestAutoValue.getBest(allLabels, qSpan, isAuto);
                 if (best.size() > 0) {
                     qSpan.setExtIntervalSimples(best);
                     finalQSpans.add(qSpan);
@@ -1953,7 +1953,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             }
         }
 
-        public List<Interval> getBest(List<QSpan> labels, boolean isAuto){
+        public List<Interval> getBest(List<QSpan> labels, QSpan qSpan, boolean isAuto){
 
             if (!isAuto){
                 checkValuesAgainestLabels(labels);
@@ -1963,9 +1963,16 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
     //        if (vValue.size() == 1 && v_score < h_score && v_score < 30){
             if (vValue.size() == 1 && hValue != null){
-                list.add(vValue.get(0).getExtInterval());
-                ExtInterval extInterval = hValue.getExtInterval();
-                list.add(extInterval);
+                ExtInterval vv = vValue.get(0).getExtInterval();
+                ExtInterval hv = hValue.getExtInterval();
+                if (h_score < 20){
+                    list.add(hv);
+                } else {
+                    if ((vv.getLine() - qSpan.getLine()) < 6 && (vv.getStart() - qSpan.getStart()) > -10) {
+                        list.add(vv);
+                    }
+                    list.add(hv);
+                }
             } else if (h_score < 400 && hValue != null){
                 ExtInterval extInterval = hValue.getExtInterval();
                 list.add(extInterval);
