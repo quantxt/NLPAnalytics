@@ -20,6 +20,7 @@ public class QSpan extends ExtInterval {
     protected float left = 100000;  // startx
     protected float right = -1; // endx
     protected float area = -1; // endx
+    protected int num_lines = 1; // endx
     protected transient List<BaseTextBox> childs = new ArrayList<>();
     protected String line_str;
 
@@ -65,11 +66,12 @@ public class QSpan extends ExtInterval {
         StringBuilder sb = new StringBuilder();
         extIntervalTextBoxes.sort(Comparator.comparingInt(o -> o.getExtInterval().getStart()));
 
+        HashSet<Integer> lines = new HashSet<>();
         for (ExtIntervalTextBox ext : extIntervalTextBoxes){
             sb.append(ext.getExtInterval().getStr()).append(" ");
             start = Math.min(ext.getExtInterval().getStart(), start);
             end = Math.max(ext.getExtInterval().getEnd(), end);
-
+            lines.add(ext.getExtInterval().getLine());
             BaseTextBox baseTextBox = ext.getTextBox();
             if (baseTextBox == null) continue;
             //get the largest fitting box
@@ -78,7 +80,7 @@ public class QSpan extends ExtInterval {
             right = Math.max(baseTextBox.getRight(), right);
             base = Math.max(baseTextBox.getBase(), base);
         }
-
+        num_lines = lines.size();
         str = sb.toString().trim();
         if (content != null) {
             LineInfo lineInfo = new LineInfo(content, extIntervalTextBoxes.get(0).getExtInterval());
@@ -208,5 +210,9 @@ public class QSpan extends ExtInterval {
 
     public void setArea(float area) {
         this.area = area;
+    }
+
+    public int getNum_lines() {
+        return num_lines;
     }
 }

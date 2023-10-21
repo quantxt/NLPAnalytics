@@ -869,12 +869,17 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             float area1 = qSpan1.getArea();
             if (area1 <= 0) continue;
             BaseTextBox bt1 = qSpan1.getTextBox();
+            String str1 = qSpan1.getStr();
+            boolean hasLongSpace1 = str1.split("  ").length > 1;
             for (int j=i+1; j < labels.size(); j++){
                 QSpan qSpan2 = labels.get(j);
                 float area2 = qSpan2.getArea();
                 if (area2 <= 0) continue;
                 String id2 = qSpan2.getDict_id();
                 BaseTextBox bt2 = qSpan2.getTextBox();
+                String str2 = qSpan2.getStr();
+                boolean hasLongSpace2 = str2.split("  ").length > 1;
+                if ((hasLongSpace1 && !hasLongSpace2) || (!hasLongSpace1 && hasLongSpace2) ) continue;
                 float ho = getHorizentalOverlap(bt1, bt2);
                 float vo = getVerticalOverlap(bt1, bt2);
                 if (ho == 1f && vo == 1f){
@@ -1053,7 +1058,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         // we dedup labels - If a label is fully (100%) overlapped by another label we remove it
 
         labels = removeOverlappingLabels2(labels, extractDictionaries);
-    //    labels = removeOverlappingLabels(labels);
 
         String content_wt_form_vals = content;
         Map<Integer, List<ExtIntervalTextBox>> lineLabelMap = getLocalLineAndTextBox3(labels);
@@ -1514,10 +1518,10 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         while (spanIter.hasNext()) {
             QSpan qSpan = spanIter.next();
             List<Interval> vals = qSpan.getExtIntervalSimples();
-            if (vals == null || vals.size() == 0) continue;
-            if ((vals.get(0).getLine() - qSpan.getLine()) == 0) continue;
-            qSpan.setSpanType(null); // we do this so we can re-detect the headers
-            headerLabels.add(qSpan);
+            if ((vals == null || vals.size() == 0 || (vals.get(0).getLine() - qSpan.getLine()) > 0) ) {
+                qSpan.setSpanType(null); // we do this so we can re-detect the headers
+                headerLabels.add(qSpan);
+            }
         }
 
         List<TableHeader> verified_header = detectTableHeadersHelper(headerLabels, all_auto_matches, .65f);
@@ -1567,7 +1571,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 ExtInterval ext = eitb.getExtInterval();
                 LineInfo lineInfo = new LineInfo(content, ext);
                 int s = lineInfo.getLocalStart();
-                int e = lineInfo.getLocalStart();
+                int e = lineInfo.getLocalEnd();
                 for (QSpan v : qSpans) {
                     List<Interval> interval = v.getExtIntervalSimples();
                     if (interval == null) continue;
@@ -1908,7 +1912,22 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 List<QSpan> testSpans = new ArrayList<>();
                 testSpans.add(hSpan);
                 if (hValue.getTextBox() != null){
-                    filterNegativeWTextBox(testSpans, labels, .2f, false);
+                    BaseTextBox b1 = hValue.getTextBox();
+                    float s1 = (b1.getRight() - b1.getLeft()) * (b1.getBase() - b1.getTop());
+                    for (QSpan qs : labels){
+                        BaseTextBox b2 = qs.getTextBox();
+                        float s2 = qs.getArea();
+                        if (s1 == 0 || s2 == 0) continue;
+                        float r = s1/s2;
+                        if (r > 1) r = 1/r;
+                        float ho = getHorizentalOverlap(b1, b2);
+                        float vo = getVerticalOverlap(b1, b2);
+                        if (ho > .95 && vo >.95 && r >.9){
+                            testSpans.clear();
+                            break;
+                        }
+                    }
+            //        filterNegativeWTextBox(testSpans, labels, .8f, false);
                 } else {
                     filterNegativeWithoutTextBox(testSpans, labels);
                 }
@@ -1925,12 +1944,25 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 List<QSpan> testSpans = new ArrayList<>();
                 testSpans.add(hSpan);
                 if (vValue.get(0).getTextBox() != null){
-                    filterNegativeWTextBox(testSpans, labels, .2f, false);
+                    BaseTextBox b1 = vValue.get(0).getTextBox();
+                    float s1 = (b1.getRight() - b1.getLeft()) * (b1.getBase() - b1.getTop());
+                    for (QSpan qs : labels){
+                        BaseTextBox b2 = qs.getTextBox();
+                        float s2 = qs.getArea();
+                        if (s1 == 0 || s2 == 0) continue;
+                        float r = s1/s2;
+                        if (r > 1) r = 1/r;
+                        float ho = getHorizentalOverlap(b1, b2);
+                        float vo = getVerticalOverlap(b1, b2);
+                        if (ho > .95 && vo >.95 && r >.9){
+                            testSpans.clear();
+                            break;
+                        }
+                    }
+    //                filterNegativeWTextBox(testSpans, labels, .2f, false);
                 } else {
                     filterNegativeWithoutTextBox(testSpans, labels);
                 }
-            //    List <QSpan> filtered = vValue.get(0).getTextBox() != null  ? getFilteredSpansWithTextBox(testSpans, labels) :
-            //            getFilteredSpansWithoutTextBox(testSpans, labels);
                 if (testSpans.size() == 0) {
                     vValue = new ArrayList<>();
                     v_score = 100000f;
