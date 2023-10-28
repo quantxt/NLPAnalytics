@@ -106,6 +106,7 @@ public class QCollection {
                 Map.Entry<Integer, QSpan> next = iter11.next();
                 QSpan etb1 = next.getValue();
                 BaseTextBox tb1 = etb1.getTextBox();
+                if (tb1 == null) continue;
                 int numv = etb1.getExtIntervalTextBoxes().size();
                 float b1 = tb1.getBase();
                 float l1 = tb1.getLeft();

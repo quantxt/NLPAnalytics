@@ -454,6 +454,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                             logger.debug("Total Comb {}, tokens {}", sequences.size(), tokens.length);
 
+                            List<QSpan> pre_compact_spans = new ArrayList<>();
                             for (byte[] seq : sequences) {
                                 ExtIntervalTextBox prev = singletokenMatches.get(seq[0]);
                                 if (prev == null) continue;
@@ -597,8 +598,32 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                                         boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
                                         if (!isIsolated) continue;
                                     }
-                                    compact_spans.add(qSpan);
+                                    pre_compact_spans.add(qSpan);
                                 }
+                            }
+                            // check pre_compact_spans and if there are one-line and multi-lines matches,
+                            // remove multi-lines
+                            // Case:   School Tax
+                            //         City Tax
+                            // We don't want "school tax" to pick up "tax" from second line
+                            Map<Integer, List<QSpan>> numLine2Match= new HashMap<>();
+                            for (QSpan  qSpan : pre_compact_spans){
+                                HashSet<Integer> num_lines = new HashSet<>();
+                                for (ExtIntervalTextBox eit : qSpan.getExtIntervalTextBoxes()){
+                                    num_lines.add(eit.getExtInterval().getLine());
+                                }
+                                int nm = num_lines.size();
+                                List<QSpan> list = numLine2Match.get(nm);
+                                if (list == null) {
+                                    list = new ArrayList<>();
+                                    numLine2Match.put(nm, list);
+                                }
+                                list.add(qSpan);
+                            }
+                            if (numLine2Match.containsKey(1) && numLine2Match.size() > 1){
+                                compact_spans.addAll(numLine2Match.get(1));
+                            } else {
+                                compact_spans.addAll(pre_compact_spans);
                             }
                         }
                     }
@@ -778,6 +803,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         for (int i = 0; i < spans.size(); i++) {
             if (bad_spans.contains(i)) continue;
             QSpan qSpan1 = spans.get(i);
+            int l1 = qSpan1.getNum_lines();
             BaseTextBox b1 = qSpan1.getTextBox();
             if (b1 == null) continue;
             for (int j = i + 1; j < spans.size(); j++) {
@@ -785,13 +811,25 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 QSpan qSpan2 = spans.get(j);
                 BaseTextBox b2 = qSpan2.getTextBox();
                 if (b2 == null) continue;
+                int l2 = qSpan2.getNum_lines();
 
                 float ho2 = getSignedHorizentalOverlap(b2, b1);
-                float vo2 = getSignedVerticalOverlap(b2, b1);
+                float vo2 = getVerticalOverlap(b2, b1);
 
-                if (ho2 > .98 && vo2 > .98) {
-                    bad_spans.add(j);
+                if (ho2 > .95 && vo2 > .1) {
+                    if (qSpan2.getStr().equals(qSpan1.getStr())){
+                        if (l1 == 1 && l2 != 1){
+                            bad_spans.add(j);
+                        } else if (l1 != 1 && l2 == 1){
+                            bad_spans.add(i);
+                        } else {
+                            bad_spans.add(j);
+                        }
+                    } else {
+                        bad_spans.add(j);
+                    }
                 }
+
             }
         }
 
