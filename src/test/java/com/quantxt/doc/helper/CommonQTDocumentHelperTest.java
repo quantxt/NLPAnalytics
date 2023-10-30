@@ -39,7 +39,7 @@ public class CommonQTDocumentHelperTest {
 
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", null,
-                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("^(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]+)"), new int [] {1});
+                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]*\\.\\d+)"), new int [] {1});
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -72,7 +72,7 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", null,
-                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("^(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]+)"), new int [] {1});
+                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]+)"), new int [] {1});
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
@@ -105,7 +105,7 @@ public class CommonQTDocumentHelperTest {
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Expense", REGEX,
-                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("^(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]+)"), new int [] {1});
+                null, Pattern.compile("^[\\$\\s\\(\\)]*$"), Pattern.compile("(?:\\(\\d\\))?[\\$\\s\\(\\)]+([\\d\\.]+)"), new int [] {1});
 
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         CommonQTDocumentHelper helper = new ENDocumentHelper();
