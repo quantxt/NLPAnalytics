@@ -1233,8 +1233,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         ArrayList<QSpan> finalQSpans = new ArrayList<>();
         //dedup allLabels
 
+        Collections.sort(allLabels, Comparator.comparingInt(QSpan::getStart));
+        int all_labels_size = allLabels.size();
 
-        for (QSpan qSpan : allLabels) {
+        for (int i=0; i<all_labels_size; i++) {
+            QSpan qSpan = allLabels.get(i);
             String dictId = qSpan.getDict_id();
             DictSearch dictSearch = valueNeededDictionaryMap.get(dictId);
             if (dictSearch == null) continue;
@@ -1242,8 +1245,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             String raw_ptr = dictSearch.getDictionary().getPattern().pattern();
             boolean isAuto = raw_ptr.equals(AUTO);
             boolean isCustomAuto = raw_ptr.startsWith(AUTO) && raw_ptr.length() > AUTO.length();
-
-    //        logger.info("{} {} {}", qSpan.getStr(), qSpan.getSpanType(), qSpan.getLine());
 
             if (isAuto || isCustomAuto) {
                 if (qSpan.getTextBox() == null) continue;
@@ -1258,9 +1259,9 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 qSpan.setLine_str(line_str);
 
                 if (line_str.length() < offset){
-                    logger.info("shorter ...");
                     continue;
                 }
+
                 String sub_str = line_str.substring(offset);
                 Matcher m = simple_form_val.matcher(sub_str);
                 ExtIntervalTextBox singleFormValueInterval = null;
@@ -1284,7 +1285,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
                 if (isAuto) {
 
-                     AutoValue autoValue = findBestValue(content, lineTextBoxMap, lineLabelMap, labels, qSpan, all_auto_matches,
+                    AutoValue autoValue = findBestValue(content, lineTextBoxMap, lineLabelMap, labels, qSpan, all_auto_matches,
                              grouped_vertical_auto_matches, tableHeaders, max_distance_bet_lines, true);
                     boolean hasOverlapWithLabels  = hasOvelapWLabels(autoValue, allLabels);
                     if (!hasOverlapWithLabels) {
@@ -1337,8 +1338,12 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
 
             } else {
-                //TODO: extinterval has global positions for start and end of the line
-                List<Interval> rowValues = findAllHorizentalMatches(content, dictSearch, qSpan.getExtInterval(false));
+                //extinterval has global positions for start and end of the line
+                int start_srch = qSpan.getExtInterval(false).getEnd();
+                int end_srch = -1;
+            //    int end_srch = i < all_labels_size-1 ? allLabels.get(i+1).getExtInterval(false).getStart()
+            //            : -1;
+                List<Interval> rowValues = findAllHorizentalMatches(content, dictSearch, start_srch, end_srch);
                 if (searchVertical && rowValues.size() == 0) {
                     rowValues = findAllVerticalMatches(content, lineTextBoxMap, dictSearch, qSpan.getExtInterval(false));
                 }
@@ -1993,7 +1998,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
             List<Interval> list = new ArrayList<>();
 
-    //        if (vValue.size() == 1 && v_score < h_score && v_score < 30){
             if (vValue.size() == 1 && hValue != null){
                 ExtInterval vv = vValue.get(0).getExtInterval();
                 ExtInterval hv = hValue.getExtInterval();
@@ -2307,8 +2311,9 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return (textBox.getBase() - textBox.getTop()) * (textBox.getRight() - textBox.getLeft());
     }
 
-    private boolean addShiftedValues(String content,
+    private void addShiftedValues(String content,
                                      int start_search_shift,
+                                     int end_search_shift,
                                      Pattern match_pattern,
                                      int group,
                                      Analyzer analyzer,
@@ -2316,54 +2321,58 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                                      List<Interval> matches)
     {
 
-        String string_to_search = content.substring(start_search_shift);
+        String string_to_search = end_search_shift > start_search_shift ?
+                content.substring(start_search_shift, end_search_shift) : content.substring(start_search_shift);
         Matcher m = match_pattern.matcher(string_to_search);
 
-        if (!m.find()) return false;
+        int pad_start = start_search_shift;
 
-        int start_of_match = m.start();
+        while (m.find()) {
+            int pad_end = start_search_shift + m.start();
+            boolean match_is_valid = matches.size() == 0 ? true:
+                    validateFoundValue(content, pad_start, pad_end, analyzer,
+                    gap_pattern);
 
-        boolean match_is_valid = validateFoundValue(content, start_search_shift,
-                start_of_match + start_search_shift, analyzer,
-                gap_pattern);
+            if (!match_is_valid) return;
+            pad_start = start_search_shift + m.end();
+            // start and end should be shifted to match with the position of the match in
+            // content
+            int start_match = m.start(group);
+            int end_match = m.end(group);
+            Interval ext = new Interval(start_match + start_search_shift, end_match + start_search_shift);
+            String extractionStr = string_to_search.substring(start_match, end_match);
+            ext.setStr(extractionStr);
 
-        if (!match_is_valid) return false;
-
-        // start and end should be shifted to match with the position of the match in
-        // content
-        int start_match = m.start(group);
-        int end_match = m.end(group);
-        Interval ext = new Interval(start_match + start_search_shift, end_match + start_search_shift);
-        String extractionStr = string_to_search.substring(start_match, end_match);
-        ext.setStr(extractionStr);
-
-        matches.add(ext);
-        return true;
-
+            matches.add(ext);
+        }
     }
     private boolean validateFoundValue(String content,
                                        int start,
                                        int end,
                                        Analyzer analyzer,
                                        Pattern gapPattern){
-        if (gapPattern == null) return true;
-
         String gap_between = content.substring(start, end);
-        if (gap_between.length() == 0) return true;
-        //first tokenize the gap
-        if (analyzer != null) {
-            gap_between = tokenize(analyzer, gap_between);
-            if (gap_between.isEmpty()) return true;
+        if (gap_between.trim().length() == 0) return true;
+
+        if (gapPattern != null) {
+            Matcher gapmatcher = gapPattern.matcher(gap_between);
+            if (!gapmatcher.find()) return false;
+            return true;
         }
 
-        Matcher gapmatcher = gapPattern.matcher(gap_between);
-        if (!gapmatcher.find()) return false;
+        //first tokenize the gap
+        if (analyzer != null) {
+            String tokenized = tokenize(analyzer, gap_between);
+            if (!tokenized.isEmpty()) return false;
+        }
+
         return true;
     }
 
     private List<Interval> findAllHorizentalMatches(String content,
                                                     DictSearch dictSearch,
-                                                    Interval labelInterval)
+                                                    int start_srch,
+                                                    int end_srch)
     {
         List<Interval> results = new ArrayList<>();
         Dictionary dictionary = dictSearch.getDictionary();
@@ -2372,19 +2381,20 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         // Find the lowest priority analyzer to tokenize the gaps
         // list of DctSearhFld is the same for all fields so we get the first one
 
-        int start_search_shift = labelInterval.getEnd();
         int group = (dictionary.getGroups() == null || dictionary.getGroups().length == 0 )  ? 0 : dictionary.getGroups()[0];
         Pattern pattern = dictionary.getPattern();
         //field matching. One value for field
-        boolean canContinueSearchForValue = addShiftedValues(content, start_search_shift,
-                pattern, group, analyzer, padding_between_key_value, results);
+        addShiftedValues(content, start_srch, end_srch,
+                pattern, group, analyzer, padding_between_values, results);
 
         //Now find more than one value
+        /*
         while (canContinueSearchForValue && padding_between_values != null) {
             start_search_shift = results.get(results.size() - 1).getEnd();
             canContinueSearchForValue = addShiftedValues(content, start_search_shift,
                     pattern, group, null, padding_between_values, results);
         }
+         */
 
         return results;
     }

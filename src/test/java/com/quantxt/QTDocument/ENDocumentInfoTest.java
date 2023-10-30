@@ -68,10 +68,8 @@ public class ENDocumentInfoTest {
             ArrayList<DictItm> items = new ArrayList<>();
             items.add(new DictItm("FEIN OR SOC SEC", "FEIN OR SOC SEC"));
 
-            Pattern keyPaddingPattern = Pattern.compile("^.{20,130}$");
-
             Dictionary dictionary = new Dictionary(items, null,"FEIN", REGEX,
-                    keyPaddingPattern, null, Pattern.compile("(\\d+\\-\\d+)"), new int []{1});
+                    null, null, Pattern.compile("\\s(\\d{2}\\-\\d{7})\\s"), new int []{1});
             QTSearchable qtSearchable = new QTSearchable(dictionary);
             String content = result.toString("UTF-8");
 
@@ -112,7 +110,7 @@ public class ENDocumentInfoTest {
                     Pattern.compile("^[A-Za-z\\-\\n ]{20,600}$"), Pattern.compile("^ *$"), Pattern.compile("(\\d[,\\d]+\\d|\\d+)"), null);
 
             Dictionary dictionary_2 = new Dictionary(items, null,"AREA", REGEX,
-                    keyVerticalPaddingPattern, null,Pattern.compile("(\\d[,\\d]+\\d|\\d+)"), null);
+                    keyVerticalPaddingPattern, null,Pattern.compile("^(\\d[,\\d]+\\d|\\d+)"), null);
 
             QTSearchable qtSearchable = new QTSearchable(dictionary_1);
             QTSearchable qtSearchableVertical = new QTSearchable(dictionary_2);
@@ -219,7 +217,7 @@ public class ENDocumentInfoTest {
         // GIVEN
         String content = "Bloomberg Barclays exposure to 10 yr : 5.6% 6.4% 9.8%";
         Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", REGEX,
-                null, padding_bet_values, Pattern.compile("^[ \\:%]+([\\d\\.]+)%"), new int [] {1});
+                null, padding_bet_values, Pattern.compile("([\\d\\.]+)%"), new int [] {1});
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         List<DictSearch> qtSearchableList = new ArrayList<>();
@@ -238,11 +236,11 @@ public class ENDocumentInfoTest {
     @Test
     public void findExppsureTable2() {
         // GIVEN
-        String content = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% 9.8%";
+        String content = "Bloomberg Barclays exposure to 10 yr: 5.6% 6.4% and there is also 9.8%";
         Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", REGEX,
-                null, padding_bet_values, Pattern.compile("^[ \\:%]+([\\d\\.]+)%"), new int [] {1});
+                null, padding_bet_values, Pattern.compile("([\\d\\.]+)%"), new int [] {1});
 
-        CommonQTDocumentHelper helper = new ENDocumentHelper();
+        CommonQTDocumentHelper helper = new CommonQTDocumentHelper();
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
         qtSearchableList.add(qtSearchable);
@@ -252,7 +250,7 @@ public class ENDocumentInfoTest {
 
         String res = helper.convertValues2titleTable(values);
         // THEN
-        assertEquals(res, "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
+        assertEquals(res, "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td></tr></table>");
 
     }
 
@@ -273,7 +271,7 @@ public class ENDocumentInfoTest {
         assertFalse(values == null);
 
         String res = helper.convertValues2titleTable(values);
-        assertEquals(res, "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td><td>6.4</td><td>9.8</td></tr></table>");
+        assertEquals(res, "<table width=\"100%\"><tr><td>10 Year Exposure</td><td>5.6</td></tr></table>");
     }
 
     @Test
@@ -282,7 +280,7 @@ public class ENDocumentInfoTest {
         String content = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
         Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", REGEX,
-                padding_bet_key_value, padding_bet_values, Pattern.compile("^(?:\\(\\d+\\))?[ \\:%]+([\\d\\-\\.]+)%"), new int [] {1});
+                padding_bet_key_value, padding_bet_values, Pattern.compile("([\\d\\-\\.]+)%"), new int [] {1});
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         List<DictSearch> qtSearchableList = new ArrayList<>();
@@ -303,7 +301,7 @@ public class ENDocumentInfoTest {
         String content = "Bloomberg Barclays exposure to 10 yr(2) 5.6% -6.4% 9.8%";
 
         Dictionary dictionary = new Dictionary(global_dict.getVocab(), null, "test", REGEX,
-                padding_bet_key_value, padding_bet_values, Pattern.compile("^(?:\\(\\d+\\))?[ \\:%]+([\\d\\-\\.]+)%"), new int [] {1});
+                padding_bet_key_value, padding_bet_values, Pattern.compile("([\\d\\-\\.]+)%"), new int [] {1});
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         List<DictSearch> qtSearchableList = new ArrayList<>();
@@ -514,9 +512,9 @@ public class ENDocumentInfoTest {
                 "Current assets: \n" +
                 "Cash and cash equivalents \n" +
                 "$ \n" +
-                "62,458 \n" +
+                "62,458.00 \n" +
                 "$ \n" +
-                "73,329 \n";
+                "73,329.00 \n";
 
         ArrayList<DictItm> dictItms = new ArrayList<>();
 
@@ -525,7 +523,7 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Warrant liability" , "Warrant liability"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Company", null,
-                null, Pattern.compile("^[\\s\\$]*$"), Pattern.compile("^[\\$\\s]+([\\d\\,]+)"), new int [] {1});
+                null, Pattern.compile("^[\\s\\$]*$"), Pattern.compile("[\\$\\s]*([\\d\\,]*\\.\\d+)"), new int [] {1});
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);
@@ -536,7 +534,7 @@ public class ENDocumentInfoTest {
 
         String res = helper.convertValues2titleTable(values);
         assertEquals(res,
-                "<table width=\"100%\"><tr><td>Cash and cash equivalents</td><td>62,458</td><td>73,329</td></tr></table>");
+                "<table width=\"100%\"><tr><td>Cash and cash equivalents</td><td>62,458.00</td><td>73,329.00</td></tr></table>");
 
     }
 
@@ -562,7 +560,7 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Company", null,
-                null, Pattern.compile("^[\\s\\$\\)\\(]*$"), Pattern.compile("^[\\$\\s\\)\\(]+([\\d\\.]+)"), new int [] {1});
+                null, Pattern.compile("^[\\s\\$\\)\\(]*$"), Pattern.compile("[\\$\\s\\)\\(]+([\\d\\.]*\\.\\d+)"), new int [] {1});
 
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         List<DictSearch> qtSearchableList = new ArrayList<>();
@@ -600,7 +598,7 @@ public class ENDocumentInfoTest {
         dictItms.add(new DictItm("Total selling, general and administrative expense" , "Total selling, general and administrative expense"));
 
         Dictionary dictionary = new Dictionary(dictItms, null, "Company", REGEX,
-                null, Pattern.compile("^[\\s\\$\\)\\(]*$"), Pattern.compile("^(?:\\(\\d\\))?[\\$\\s\\)\\(]+([\\d\\.]+)"), new int [] {1});
+                null, Pattern.compile("^[\\s\\$\\)\\(]*$"), Pattern.compile("(?:\\(\\d\\))?[\\$\\s\\)\\(]+([\\d,]*\\.\\d+)"), new int [] {1});
         CommonQTDocumentHelper helper = new ENDocumentHelper();
         List<DictSearch> qtSearchableList = new ArrayList<>();
         QTSearchable qtSearchable = new QTSearchable(dictionary);

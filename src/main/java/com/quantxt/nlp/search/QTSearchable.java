@@ -606,32 +606,49 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                             // Case:   School Tax
                             //         City Tax
                             // We don't want "school tax" to pick up "tax" from second line
-                            Map<Integer, List<QSpan>> numLine2Match= new HashMap<>();
+                            Map<String, Map<Integer, List<QSpan>>> numLine2Match= new HashMap<>();
                             for (QSpan  qSpan : pre_compact_spans){
                                 HashSet<Integer> num_lines = new HashSet<>();
-                                for (ExtIntervalTextBox eit : qSpan.getExtIntervalTextBoxes()){
+                                List<ExtIntervalTextBox> eits = qSpan.getExtIntervalTextBoxes();
+                                for (ExtIntervalTextBox eit : eits){
                                     num_lines.add(eit.getExtInterval().getLine());
                                 }
                                 int nm = num_lines.size();
-                                List<QSpan> list = numLine2Match.get(nm);
-                                if (list == null) {
-                                    list = new ArrayList<>();
-                                    numLine2Match.put(nm, list);
+                                String key = qSpan.getStart() + "_" + qSpan.getLine();
+                                Map<Integer, List<QSpan>> numLine2list = numLine2Match.get(key);
+                                List<QSpan> list = new ArrayList<>();
+                                if (numLine2list == null) {
+                                    numLine2list = new HashMap<>();
+                                    numLine2list.put(nm, list);
+                                    numLine2Match.put(key, numLine2list);
+                                } else {
+                                    List<QSpan> alist = numLine2list.get(nm);
+                                    if (alist != null){
+                                        list = alist;
+                                    } else {
+                                        numLine2list.put(nm, list);
+                                    }
                                 }
                                 list.add(qSpan);
                             }
-                            if (numLine2Match.containsKey(1) && numLine2Match.size() > 1){
-                                compact_spans.addAll(numLine2Match.get(1));
-                            } else {
-                                compact_spans.addAll(pre_compact_spans);
+
+                            for (Map.Entry<String, Map<Integer, List<QSpan>>> e : numLine2Match.entrySet()){
+                                Map<Integer, List<QSpan>> numList2List = e.getValue();
+                                if (numList2List.containsKey(1) && numList2List.size() > 1){
+                                    compact_spans.addAll(numList2List.get(1));
+                                } else {
+                                    for (Map.Entry<Integer, List<QSpan>> l : numList2List.entrySet()){
+                                        compact_spans.addAll(l.getValue());
+                                    }
+                                }
                             }
                         }
                     }
                 }
            }
         } catch (Exception e) {
-            e.printStackTrace();
-    //        logger.error("Error in name search {}: query_string '{}'", e.getMessage(), content);
+    //        e.printStackTrace();
+            logger.error("Error in name search {}: query_string '{}'", e.getMessage(), content);
         }
     }
 
