@@ -571,4 +571,46 @@ public class CommonQTDocumentHelperTest {
 
         List<ExtInterval> values = helper.extract(content, searchableList, null, true);
     }
+
+    @Test
+    public void free_text_search_mulyi_keys() {
+        // GIVEN
+        String content = "Amazon inc reportred $123,456.00 as revenue and profit of $34,345.00 on its annual 10K";
+
+        ArrayList<DictItm> dictItms = new ArrayList<>();
+        dictItms.add(new DictItm("Revenue", "amazon" ));
+
+        Dictionary dictionary = new Dictionary(dictItms,  null,"test", REGEX,
+                null, null, Pattern.compile("[^\n]+ (\\$?[\\d\\.,]+\\.\\d\\d)"), new int [] {1});
+
+
+        QTSearchable qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
+
+
+        List<DictSearch> searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+
+        CommonQTDocumentHelper helper = new ENDocumentHelper();
+
+        List<ExtInterval> values = helper.extract(content, searchableList, null, true);
+
+
+        assertTrue(values.size() == 1);
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("$34,345.00"));
+
+        //add new entity
+
+        dictItms.add(new DictItm("Profit", "profit" ));
+        qtSearchable = new QTSearchable(dictionary, QTDocumentHelper.Language.ENGLISH, null, null,
+                DictSearch.Mode.ORDERED_SPAN, DictSearch.AnalyzType.SIMPLE);
+        searchableList = new ArrayList<>();
+        searchableList.add(qtSearchable);
+        values = helper.extract(content, searchableList, null, true);
+
+
+        assertTrue(values.size() == 2);
+        assertTrue(values.get(0).getExtIntervalSimples().get(0).getStr().equals("$123,456.00"));
+
+    }
 }

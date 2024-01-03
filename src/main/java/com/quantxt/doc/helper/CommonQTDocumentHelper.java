@@ -1010,6 +1010,59 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             // otherwise we drop the value
         }
     }
+
+    private int findNextValidFullTextSearchLabel(int start,
+                                                 List<QSpan> freeTextLabels){
+        if (start == freeTextLabels.size()-1) return -1;
+        for (int i = start+1; i < freeTextLabels.size(); i++){
+            QSpan qSpan = freeTextLabels.get(i);
+            if (qSpan.getCategory().equals("__DONTCARE__") || qSpan.getDict_name().equals("_others") ) continue;
+            return qSpan.getExtInterval(false).getStart();
+        }
+        return -1;
+    }
+    private ArrayList<QSpan> getFreeTextValues(String content,
+                                               List<DictSearch> extractDictionaries,
+                                               List<QSpan> freeTextLabels,
+                                               boolean searchVertical){
+        ArrayList<QSpan> freeTextSearchSpans = new ArrayList<>();
+        Map<String,  DictSearch> voacbId2dic = new HashMap<>();
+        for (DictSearch e : extractDictionaries){
+            voacbId2dic.put(e.getDictionary().getId(), e);
+        }
+
+        Collections.sort(freeTextLabels, Comparator.comparingInt(QSpan::getStart));
+
+        int total = freeTextLabels.size();
+        for (int i=0; i<total; i++) {
+            QSpan qSpan = freeTextLabels.get(i);
+            int start_srch = qSpan.getExtInterval(false).getEnd();
+            DictSearch dictSearch = voacbId2dic.get(qSpan.getDict_id());
+            int end_srch = i < total - 1 ? freeTextLabels.get(i + 1).getExtInterval(false).getStart() : -1;
+            List<Interval> rowValues = findAllHorizentalMatches(content, dictSearch, start_srch, end_srch);
+
+            if (searchVertical && rowValues.size() == 0) {
+                rowValues = findAllVerticalMatches(content, dictSearch, qSpan.getExtInterval(false));
+            }
+
+            if (rowValues.size() > 0) {
+                for (Interval eis : rowValues) {
+                    LineInfo extIntervalLineInfo = new LineInfo(content, eis);
+                    eis.setEnd(extIntervalLineInfo.getLocalEnd());
+                    eis.setStart(extIntervalLineInfo.getLocalStart());
+                    eis.setLine(extIntervalLineInfo.getLineNumber());
+                }
+
+                qSpan.setExtIntervalSimples(rowValues);
+                LineInfo lineInfo = new LineInfo(content, qSpan.getExtInterval(false));
+                qSpan.setStart(lineInfo.getLocalStart());
+                qSpan.setEnd(lineInfo.getLocalEnd());
+                qSpan.setLine(lineInfo.getLineNumber());
+                freeTextSearchSpans.add(qSpan);
+            }
+        }
+        return freeTextSearchSpans;
+    }
     @Override
     public List<ExtInterval> extract(final String content,
                                      List<DictSearch> extractDictionaries,
@@ -1032,12 +1085,16 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         List<DictSearch> isolated = new ArrayList<>();
         List<DictSearch> nonIsolated = new ArrayList<>();
+        HashSet<String> freeTextSearchVocabs = new HashSet<>();
 
         for (DictSearch qtSearchable : extractDictionaries) {
             Pattern ptr = qtSearchable.getDictionary().getPattern();
             if (ptr != null && ptr.pattern().equals(AUTO)) {
                 isolated.add(qtSearchable);
             } else {
+                if (ptr != null && !ptr.pattern().startsWith(AUTO)){
+                    freeTextSearchVocabs.add(qtSearchable.getDictionary().getId());
+                }
                 nonIsolated.add(qtSearchable);
             }
         }
@@ -1207,9 +1264,13 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         List<QSpan> allLabels = new ArrayList<>();
+        List<QSpan> freeTextLabels = new ArrayList<>();
         TreeMap<Integer, List<QSpan>> allLabelsTreeMap = new TreeMap<>();
         for (Map.Entry<String, Collection<QSpan>> e : labels.entrySet()) {
             allLabels.addAll(e.getValue());
+            if (freeTextSearchVocabs.contains(e.getKey())){
+                freeTextLabels.addAll(e.getValue());
+            }
             for (QSpan sp : e.getValue()){
                 LineInfo lineInfo = new LineInfo(content, sp.getExtInterval(false));
                 int line = lineInfo.getLineNumber();
@@ -1235,6 +1296,14 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         Collections.sort(allLabels, Comparator.comparingInt(QSpan::getStart));
         int all_labels_size = allLabels.size();
+
+        // let's fine freetext search values
+        ArrayList<QSpan> freeTextSearchSpans = getFreeTextValues(content, extractDictionaries,
+                freeTextLabels, searchVertical);
+
+        if (freeTextLabels.size() > 0) {
+            finalQSpans.addAll(freeTextSearchSpans);
+        }
 
         for (int i=0; i<all_labels_size; i++) {
             QSpan qSpan = allLabels.get(i);
@@ -1339,13 +1408,12 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
             } else {
                 //extinterval has global positions for start and end of the line
+                /*
                 int start_srch = qSpan.getExtInterval(false).getEnd();
                 int end_srch = -1;
-            //    int end_srch = i < all_labels_size-1 ? allLabels.get(i+1).getExtInterval(false).getStart()
-            //            : -1;
                 List<Interval> rowValues = findAllHorizentalMatches(content, dictSearch, start_srch, end_srch);
                 if (searchVertical && rowValues.size() == 0) {
-                    rowValues = findAllVerticalMatches(content, lineTextBoxMap, dictSearch, qSpan.getExtInterval(false));
+                    rowValues = findAllVerticalMatches(content, dictSearch, qSpan.getExtInterval(false));
                 }
 
                 if (rowValues.size() > 0) {
@@ -1363,6 +1431,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     qSpan.setLine(lineInfo.getLineNumber());
                     finalQSpans.add(qSpan);
                 }
+
+                 */
             }
         }
 
@@ -2399,7 +2469,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return results;
     }
     private List<Interval> findAllVerticalMatches(String content,
-                                                  Map<Integer, BaseTextBox> lineTextBoxMap,
                                                   DictSearch dictSearch,
                                                   Interval labelInterval)
     {
