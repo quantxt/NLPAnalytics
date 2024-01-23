@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.quantxt.nlp</groupId>
     <artifactId>doc-analytics</artifactId>
-    <version>3.3.2</version>
+    <version>3.3.4</version>
     <packaging>jar</packaging>
 
     <name>Quantxt NLP Library</name>
@@ -17,7 +17,7 @@
 
     <properties>
         <lucene.version>8.9.0</lucene.version>
-        <qt-core.version>2.14.0</qt-core.version>
+        <qt-core.version>2.16.0</qt-core.version>
     </properties>
 
     <licenses>
@@ -198,7 +198,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.3</version>
+            <version>1.4.14</version>
             <scope>test</scope>
         </dependency>
 

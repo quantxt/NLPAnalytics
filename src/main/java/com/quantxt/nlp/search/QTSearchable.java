@@ -811,6 +811,13 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             if (b == null) continue;
             float s = (b.getRight() - b.getLeft()) * (b.getBase() - b.getTop());
             qSpan.setArea(s);
+            float occupied_area = 0;
+            for (ExtIntervalTextBox bt : qSpan.getExtIntervalTextBoxes()){
+                BaseTextBox ob = bt.getTextBox();
+                float oc = (ob.getRight() - ob.getLeft()) * (ob.getBase() - ob.getTop());
+                occupied_area += oc;
+            }
+            qSpan.setOcc_area(occupied_area);
         }
 
         HashSet<Integer> bad_spans = new HashSet<>();
@@ -823,6 +830,8 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             int l1 = qSpan1.getNum_lines();
             BaseTextBox b1 = qSpan1.getTextBox();
             if (b1 == null) continue;
+            float left1 = b1.getLeft();
+            float right1 = b1.getRight();
             for (int j = i + 1; j < spans.size(); j++) {
                 if (bad_spans.contains(j)) continue;
                 QSpan qSpan2 = spans.get(j);
@@ -830,11 +839,23 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 if (b2 == null) continue;
                 int l2 = qSpan2.getNum_lines();
 
-                float ho2 = getSignedHorizentalOverlap(b2, b1);
+                // b1 can be bigger than b2
+            //    float ho2 = getSignedHorizentalOverlap(b1, b2);
+
+                float left2 = b2.getLeft();
+                float right2 = b2.getRight();
+                boolean hasHorizentalOverlap = left1 <= left2 && right1 >= right2;
+                if (!hasHorizentalOverlap) continue;
                 float vo2 = getVerticalOverlap(b2, b1);
 
-                if (ho2 > .95 && vo2 > .1) {
+                if (vo2 > .1) {
                     if (qSpan2.getStr().equals(qSpan1.getStr())){
+                        if (qSpan1.getOcc_area() > qSpan2.getOcc_area()){
+                            bad_spans.add(i);
+                        } else {
+                            bad_spans.add(j);
+                        }
+                        /*
                         if (l1 == 1 && l2 != 1){
                             bad_spans.add(j);
                         } else if (l1 != 1 && l2 == 1){
@@ -842,6 +863,8 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         } else {
                             bad_spans.add(j);
                         }
+
+                         */
                     } else {
                         bad_spans.add(j);
                     }
