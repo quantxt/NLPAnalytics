@@ -20,6 +20,10 @@ public class QSpan extends ExtInterval {
     protected float left = 100000;  // startx
     protected float right = -1; // endx
     protected float area = -1; // endx
+    /*
+            occupied area exclduing white paddings
+         */
+    protected float occ_area = -1; // //occupied area exclduing white pads
     protected int num_lines = 1; // endx
     protected transient List<BaseTextBox> childs = new ArrayList<>();
     protected String line_str;
@@ -214,5 +218,13 @@ public class QSpan extends ExtInterval {
 
     public int getNum_lines() {
         return num_lines;
+    }
+
+    public float getOcc_area() {
+        return occ_area;
+    }
+
+    public void setOcc_area(float occ_area) {
+        this.occ_area = occ_area;
     }
 }
