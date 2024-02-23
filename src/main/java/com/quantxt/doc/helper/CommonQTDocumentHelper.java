@@ -9,6 +9,7 @@ import com.quantxt.model.*;
 import com.quantxt.model.Dictionary;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
+import com.quantxt.model.search.QTSearchDictionary;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.*;
 import org.apache.lucene.analysis.Analyzer;
@@ -1535,6 +1536,9 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         List<QSpan> headerLabels = new ArrayList<>();
         ListIterator<QSpan> spanIter = qSpans.listIterator();
 
+        // find per-line values
+        Map<Integer, Map<String, Interval>> line_values = new HashMap<>();
+
         while (spanIter.hasNext()) {
             QSpan qSpan = spanIter.next();
             List<Interval> vals = qSpan.getExtIntervalSimples();
@@ -1542,15 +1546,39 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 qSpan.setSpanType(null); // we do this so we can re-detect the headers
                 headerLabels.add(qSpan);
             }
+
+            if (vals != null && vals.size() > 0 && (vals.get(0).getLine() - qSpan.getLine()) > 0){
+                String vocab = qSpan.getDict_name();
+                for (Interval e : vals){
+                    Map<String, Interval> line_map = line_values.get(e.getLine());
+                    if (line_map == null){
+                        line_map = new HashMap<>();
+                        line_values.put(e.getLine(), line_map);
+                    }
+                    line_map.put(vocab, e);
+                }
+            }
         }
 
         List<TableHeader> verified_header = detectTableHeadersHelper(headerLabels, all_auto_matches, .65f);
+        ListIterator<TableHeader> tbl_iter = verified_header.listIterator();
+        while (tbl_iter.hasNext()){
+            TableHeader tableHeader = tbl_iter.next();
+            int tbl_line = tableHeader.firstRow;
+            Map<String, Interval> values_in_line = line_values.get(tbl_line);
+            if (values_in_line != null && values_in_line.size() > 2) {
+                logger.info("Removed Verified header in line {}", tbl_line);
+                tbl_iter.remove();
+            }
+        }
         verified_header.sort(comparingInt(qs -> qs.firstRow));
 
+        // let's find value rows
         if (verified_header.size() > 1) {
             for (int i = 0; i < verified_header.size() - 1; i++) {
                 TableHeader curr = verified_header.get(i);
                 TableHeader next = verified_header.get(i + 1);
+                int next_line = next.firstRow;
                 spanIter = qSpans.listIterator();
                 while (spanIter.hasNext()) {
                     QSpan qSpan = spanIter.next();
@@ -1571,7 +1599,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     while (iter.hasNext()) {
                         Interval interval = iter.next();
                         int value_line = interval.getLine();
-                        if (value_line >= next.firstRow) {
+                        if (value_line >= next_line) {
                             iter.remove();
                         }
                     }
