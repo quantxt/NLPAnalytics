@@ -24,6 +24,7 @@ import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.memory.MemoryIndex;
 import org.apache.lucene.queries.CommonTermsQuery;
 import org.apache.lucene.queries.function.FunctionScoreQuery;
+import org.apache.lucene.queries.spans.*;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.BoostQuery;
@@ -42,7 +43,6 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.highlight.OffsetLimitTokenFilter;
 import org.apache.lucene.search.highlight.TermVectorLeafReader;
 import org.apache.lucene.search.highlight.TokenStreamFromTermVector;
-import org.apache.lucene.search.spans.*;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.IOUtils;
 
