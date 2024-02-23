@@ -9,19 +9,16 @@ import com.quantxt.model.*;
 import com.quantxt.model.Dictionary;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
-import com.quantxt.model.search.QTSearchDictionary;
 import com.quantxt.nlp.search.QTSearchable;
 import com.quantxt.types.*;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.ClassicAnalyzer;
+import org.apache.lucene.analysis.classic.ClassicAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.quantxt.doc.QTDocumentHelper;
-
-import javax.swing.text.TabExpander;
 
 import static com.quantxt.doc.helper.textbox.TextBox.*;
 import static com.quantxt.doc.helper.textbox.TextBox.getProjectedXLength;
