@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.quantxt.util.ExceptionUtil;
+import org.apache.poi.ss.formula.CollaboratingWorkbooksEnvironment.WorkbookNotFoundException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
@@ -90,9 +92,9 @@ public class WorkbookFactory {
     }
 
     private static String evalCell(Cell c, FormulaEvaluator fevaluator) {
+        String value = null;
         try {
             CellValue cellValue = fevaluator.evaluate(c);
-            String value = null;
             if (cellValue.getCellType() == CellType.BOOLEAN) {
                 value = String.valueOf(cellValue.getBooleanValue());
             } else if (cellValue.getCellType() == CellType.NUMERIC) {
@@ -100,11 +102,18 @@ public class WorkbookFactory {
             } else if (cellValue.getCellType() == CellType.STRING) {
                 value = cellValue.getStringValue();
             }
-            return value;
+
         } catch (RuntimeException re){
-            logger.error("Error in formula evaluator " + re.getMessage());
+            logger.warn("Formula can not be evaluated for the cell with the column index {}, and the row index",
+                    c.getColumnIndex(), c.getRowIndex(), re);
+            if(ExceptionUtil.getRootCause(re) instanceof WorkbookNotFoundException
+                    && c.getCachedFormulaResultType() == CellType.NUMERIC){
+                value = String.valueOf(new BigDecimal(c.getNumericCellValue()));
+                logger.warn("Retrieved cached value.");
+            }
         }
-        return null;
+
+        return value;
     }
 
 }
