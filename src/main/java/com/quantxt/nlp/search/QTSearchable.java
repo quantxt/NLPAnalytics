@@ -55,6 +55,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
     private List<QSpan> spread_spans = new ArrayList<>();
     private List<QSpan> compact_spans = new ArrayList<>();
     private List<QSpan> single_word_spans = new ArrayList<>();
+
     private List<QSpan> spread_negatives = new ArrayList<>();
     private List<QSpan> compact_negatives = new ArrayList<>();
     private List<QSpan> single_word_negatives = new ArrayList<>();
@@ -254,7 +255,6 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         filterNegativeWTextBox(compact_spans, single_word_negatives, .98f, false);
 
         filterNegativeWTextBox(compact_spans, spread_negatives, .98f, false);
-
 
         compact_spans = removeSmallOverlappingSpans(compact_spans);
         compact_negatives = removeSmallOverlappingSpans(compact_negatives);
@@ -863,8 +863,8 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         } else {
                             bad_spans.add(j);
                         }
-
                          */
+
                     } else {
                         bad_spans.add(j);
                     }
@@ -1046,7 +1046,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
     }
 
     public static void filterNegativeWTextBoxV2(List<QSpan> spans,
-                                              List<QSpan> negatives){
+                                               List<QSpan> negatives){
         List<BaseTextBox> oneLineNegatives = new ArrayList<>();
         for (QSpan qSpan : negatives) {
             if (qSpan.getTextBox() == null) continue;
@@ -1080,6 +1080,45 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 }
             }
         }
+    }
+
+    public static void filterMultiTokenMultiLineSpans(List<QSpan> spans,
+                                                      List<QSpan> oneLineSpans)
+    {
+        List<QSpan> good_spans = new ArrayList<>();
+        for (int i=0; i<spans.size(); i++){
+            QSpan qSpan = spans.get(i);
+            int num_tokens = qSpan.getExtIntervalTextBoxes().size();
+            int num_lines = qSpan.getNum_lines();
+
+            if (num_tokens == 1 || num_lines == 1) {
+                good_spans.add(qSpan);
+                continue;
+            }
+            BaseTextBox b1 = qSpan.getTextBox();
+            if (b1 == null) {
+                good_spans.add(qSpan);
+                continue;
+            }
+            boolean isGood = true;
+            for (QSpan qSpan1 : oneLineSpans) {
+                BaseTextBox b2 = qSpan1.getTextBox();
+                if (b2 == null) continue;
+                float ho = getHorizentalOverlap(b1, b2);
+                float vo = getVerticalOverlap(b1, b2);
+                if (ho > .99 && vo > .99) continue; // it's the same qspan
+                if (ho >= .1 && vo >= .1) {
+                    logger.info("Filtering {} with {}", qSpan.getStr(), qSpan1.getStr());
+                    isGood = false;
+                    break;
+                }
+            }
+            if (isGood) {
+                good_spans.add(qSpan);
+            }
+        }
+        spans.clear();
+        spans.addAll(good_spans);
     }
     public static List<QSpan> getFilteredSpansWithTextBox(List<QSpan> spans,
                                                           List<QSpan> negatives) {
@@ -1194,5 +1233,29 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public List<QSpan> getSpread_spans() {
+        return spread_spans;
+    }
+
+    public List<QSpan> getCompact_spans() {
+        return compact_spans;
+    }
+
+    public List<QSpan> getSingle_word_spans() {
+        return single_word_spans;
+    }
+
+    public List<QSpan> getSpread_negatives() {
+        return spread_negatives;
+    }
+
+    public List<QSpan> getCompact_negatives() {
+        return compact_negatives;
+    }
+
+    public List<QSpan> getSingle_word_negatives() {
+        return single_word_negatives;
     }
 }

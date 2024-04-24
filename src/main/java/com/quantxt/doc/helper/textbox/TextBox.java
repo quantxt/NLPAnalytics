@@ -798,7 +798,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
     }
 
     public static float extendToNeighbours(Map<Integer, BaseTextBox> lineTextBoxMap,
-                                          QSpan label){
+                                           QSpan label){
         // find closest textboxes on the right side
         BaseTextBox tb = label.getTextBox();
         BaseTextBox newTb = new BaseTextBox(tb.getTop(), tb.getBase(), tb.getRight(), 10000, "");
@@ -822,7 +822,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
     }
 
     public static float extendToLeftNeighbours(Map<Integer, BaseTextBox> lineTextBoxMap,
-                                           QSpan label){
+                                               QSpan label){
         // find closest textboxes on the right side
         BaseTextBox tb = label.getTextBox();
         BaseTextBox newTb = new BaseTextBox(tb.getTop(), tb.getBase(), 0, tb.getLeft(), "");
@@ -916,6 +916,35 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         return overlap / Math.min(w1, w2);
     }
 
+    private static double detectRotation(List<BaseTextBox> lineBoxes) {
+
+        List<Double> tangents = new ArrayList<>();
+        for (BaseTextBox lineTb : lineBoxes) {
+            List<BaseTextBox> c_boxes = lineTb.getChilds();
+            if (c_boxes.size() < 2) continue;
+            double x1 = c_boxes.get(0).getLeft();
+            double x2 = c_boxes.get(c_boxes.size() - 1).getLeft();
+            if (Math.abs(x1 - x2) < 1) continue;
+            double y1 = -1 * c_boxes.get(0).getBase();
+            double y2 = -1 * c_boxes.get(c_boxes.size() - 1).getBase();
+            double gradient = (y2 - y1) / (x2 - x1);
+            tangents.add(gradient);
+        }
+
+        int num = tangents.size();
+        double medianTan = 0;
+        if (num > 3) {
+            Collections.sort(tangents);
+            int middle = num / 2;
+            if (num % 2 == 0) {
+                medianTan = tangents.get(middle);
+            } else {
+                medianTan = .5 * (tangents.get(middle-1) + tangents.get(middle+1) );
+            }
+        }
+        return medianTan;
+    }
+
     public static float getSignedHorizentalOverlap(BaseTextBox textBox1,
                                                    BaseTextBox textBox2){
 
@@ -975,6 +1004,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         l += (last_end - last_start);
         return l;
     }
+
     public static float getVerticalOverlap(BaseTextBox textBox1, BaseTextBox textBox2)
     {
         float t1 = textBox1.getTop();  //l=t
