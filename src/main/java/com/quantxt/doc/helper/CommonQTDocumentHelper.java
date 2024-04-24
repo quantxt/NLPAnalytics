@@ -168,15 +168,43 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             //excel files, CSV, etc. stuff without textboxes
             return labels;
         } else {
+
+            List<QSpan> all_one_line_positive_multi_token_spans = new ArrayList<>();
+            List<QSpan> all_one_line_negative_multi_token_spans = new ArrayList<>();
+            // find all one liner multi token matches
+            for (int i = 0; i < extractDictionaries.size(); i++) {
+                QTSearchable dictSearch = (QTSearchable) extractDictionaries.get(i);
+                for (QSpan qsp : dictSearch.getCompact_spans()){
+                    int num_lines = qsp.getNum_lines();
+                    int num_tokens = qsp.getExtIntervalTextBoxes().size();
+                    if (num_lines == 1 && num_tokens > 1){
+                        all_one_line_positive_multi_token_spans.add(qsp);
+                    }
+                }
+
+                for (QSpan qsp : dictSearch.getCompact_negatives()){
+                    int num_lines = qsp.getNum_lines();
+                    int num_tokens = qsp.getExtIntervalTextBoxes().size();
+                    if (num_lines == 1 && num_tokens > 1){
+                        all_one_line_negative_multi_token_spans.add(qsp);
+                    }
+                }
+            }
+
             for (int i = 0; i < extractDictionaries.size(); i++) {
                 QTSearchable dictSearch1 = (QTSearchable) extractDictionaries.get(i);
                 String dict_id = dictSearch1.getDictionary().getId();
 
+                filterMultiTokenMultiLineSpans(dictSearch1.getCompact_spans(), all_one_line_positive_multi_token_spans);
+                filterMultiTokenMultiLineSpans(dictSearch1.getCompact_negatives(), all_one_line_negative_multi_token_spans);
+
+                /*
                 for (int j = 0; j < extractDictionaries.size(); j++) {
                     if (i == j) continue;
                     QTSearchable dictSearch2 = (QTSearchable) extractDictionaries.get(j);
                     dictSearch1.filterOverlap(dictSearch2);
                 }
+                 */
 
                 List<QSpan> dicLabels = dictSearch1.postSearch(hasTextBoxes);
                 if (!dicLabels.isEmpty()) {
@@ -778,7 +806,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 sb.append(e.getStr()).append(" ");
             }
             sb.append("   ");
-            logger.info("HEADER -> {}", sb);
+            logger.debug("HEADER -> {}", sb);
         }
 
         return tableHeaders;
@@ -891,7 +919,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     } else {
                         if (!id1.equals(id2)) {
                             dups[i] = true;  // span1 is smaller
-                        }
+                    }
                     }
 
                 }
@@ -1001,7 +1029,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     int s = ext.getStart();
                     int e = ext.getStart();
                     if ((s >= start && s <= end) || (start >= s && start <= e)) {
-                        logger.info(" {} --> {}", str, ext.getStr());
+                        logger.debug(" {} --> {}", str, ext.getStr());
                     }
                 }
             }
