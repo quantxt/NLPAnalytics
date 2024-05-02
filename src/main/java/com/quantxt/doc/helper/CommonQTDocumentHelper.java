@@ -1144,8 +1144,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         // we dedup labels - If a label is fully (100%) overlapped by another label we remove it
-
-        labels = removeOverlappingLabels2(labels, extractDictionaries);
+    //    labels = removeOverlappingLabels2(labels, extractDictionaries);
 
         String content_wt_form_vals = content;
         Map<Integer, List<ExtIntervalTextBox>> lineLabelMap = getLocalLineAndTextBox3(labels);
