@@ -385,17 +385,24 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                     if (lineTextBoxMap != null) {
 
                         for (Document matchedDoc : matchedDocs) {
+                            String string_value = matchedDoc.getField(search_fld).stringValue();
+                            String[] tokens = tokenize(searchAnalyzer, string_value);
+                            if (tokens.length > 127) continue;
+                            if (tokens.length == 1) continue;
+
                             List<Document> singleMatchedDocList = new ArrayList<>();
                             singleMatchedDocList.add(matchedDoc);
+
                             List<ExtIntervalTextBox> singletokenMatches = getFragments(singleMatchedDocList, PARTIAL_ORDERED_SPAN, false, false,20,
                                     searchAnalyzer, dctSearhFld.getMirror_synonym_search_analyzer(),
                                     search_fld, vocab_name, vocab_id, content, lineTextBoxMap);
 
-                            singletokenMatches.sort(comparingInt((ExtIntervalTextBox s) -> s.getExtInterval().getStart()));
+                            if (singletokenMatches.size() > 127){
+                                logger.info("Too long for single token concatenation", singletokenMatches.size(), string_value);
+                                continue;
+                            }
 
-                            String[] tokens = tokenize(searchAnalyzer, matchedDoc.getField(search_fld).stringValue());
-                            if (tokens.length > 127) continue;
-                            if (tokens.length == 1) continue;
+                            singletokenMatches.sort(comparingInt((ExtIntervalTextBox s) -> s.getExtInterval().getStart()));
 
                             Map<String, List<Byte>> tokenIndex = new HashMap<>();
 
@@ -479,7 +486,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
 
                                 QSpan qSpan = qSpans.get(0);
 
-                                // merge horientally
+                                // merge horizentally
                                 for (int i = 1; i < seq.length; i++) {
                                     QSpan curr = qSpans.get(i);
                                     // we read tokens in wrriting order/ left to right - top to bottom
@@ -647,8 +654,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 }
            }
         } catch (Exception e) {
-    //        e.printStackTrace();
-            logger.error("Error in name search {}: query_string '{}'", e.getMessage(), content);
+            logger.error("Error in name search {}", e.getMessage());
         }
     }
 
