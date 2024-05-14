@@ -916,6 +916,63 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         return overlap / Math.min(w1, w2);
     }
 
+
+    public static float getOverlapPerc(BaseTextBox textBox1,
+                                       BaseTextBox textBox2){
+        float l1 = textBox1.getLeft();
+        float r1 = textBox1.getRight();
+
+        float l2 = textBox2.getLeft();
+        float r2 = textBox2.getRight();
+
+        if (l2 >= r1) return 0;
+        if (l1 >= r2) return 0;
+
+        float w1 = r1 - l1;
+        float w2 = r2 - l2;
+
+        if (w1 == 0 || w2 == 0) return 0;
+
+        float t1 = textBox1.getTop();
+        float b1 = textBox1.getBase();
+
+        float t2 = textBox2.getTop();
+        float b2 = textBox2.getBase();
+
+        if (t2 >= b1) return 0;
+        if (t1 >= b2) return 0;
+
+        float h1 = b1 - t1;
+        float h2 = b2 - t2;
+
+        if (h1 == 0 || h2 == 0) return 0;
+
+        float max_w = Math.max(r1, r2) - Math.min(l1, l2);
+        float max_h = Math.max(b1, b2) - Math.min(t1, t2);
+        if (max_w >= (w1 + w2)) return 0;
+        if (max_h >= (h1 + h2)) return 0;
+
+        // find what percecentage of 1 is covered by 2
+        // w1 100% covers w2
+        float[] X = new float[]{ l1, r1, l2, r2};
+        float[] Y = new float[]{ t1, b1, t2, b2};
+
+        Arrays.sort(X);
+        Arrays.sort(Y);
+
+        float w12 = X[2] - X[1];
+        float h12 = Y[2] - Y[1];
+        float inner_ov = w12 * h12;
+
+    //    float w03 = X[3] - X[0];
+    //    float h03 = Y[3] - Y[0];
+    //    float outter_ov = w03 * h03;
+
+        float area1 = w1 * h1;
+    //    float area2 = w2 * h2;
+        return inner_ov / area1;
+    }
+
     private static double detectRotation(List<BaseTextBox> lineBoxes) {
 
         List<Double> tangents = new ArrayList<>();

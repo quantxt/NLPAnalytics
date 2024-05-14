@@ -1120,12 +1120,12 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         for (DictSearch qtSearchable : extractDictionaries) {
             Pattern ptr = qtSearchable.getDictionary().getPattern();
-            if (ptr != null && ptr.pattern().equals(AUTO)) {
+            if (ptr != null && ptr.pattern().indexOf(AUTO) < 0 ) {
+                freeTextSearchVocabs.add(qtSearchable.getDictionary().getId());
+            }
+            if (ptr != null && ptr.pattern().indexOf(AUTO) >=0) {
                 isolated.add(qtSearchable);
             } else {
-                if (ptr != null && !ptr.pattern().startsWith(AUTO)) {
-                    freeTextSearchVocabs.add(qtSearchable.getDictionary().getId());
-                }
                 nonIsolated.add(qtSearchable);
             }
         }
@@ -1142,9 +1142,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         for (Map.Entry<String, Collection<QSpan>> e : nonIsolatedlabels.entrySet()) {
             labels.putIfAbsent(e.getKey(), e.getValue());
         }
-
-        // we dedup labels - If a label is fully (100%) overlapped by another label we remove it
-    //    labels = removeOverlappingLabels2(labels, extractDictionaries);
 
         String content_wt_form_vals = content;
         Map<Integer, List<ExtIntervalTextBox>> lineLabelMap = getLocalLineAndTextBox3(labels);

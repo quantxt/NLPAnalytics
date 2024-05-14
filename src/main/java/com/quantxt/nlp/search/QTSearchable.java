@@ -368,10 +368,10 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                         }
                         qSpan.process(content);
                         String str = qSpan.getStr();
-                        boolean str_is_spread = str.split("   ").length > 1;
                         boolean isIsolated = isIsolated(qSpan, searchAnalyzer);
-                        if (!isIsolated) continue;
+                        if (isolatedLabelsOnly && !isIsolated) continue;
 
+                        boolean str_is_spread = str.split("   ").length > 1;
                         LineInfo lineInfo = new LineInfo(content, matches.get(i).getExtInterval());
                         qSpan.getExtIntervalTextBoxes().get(0).getExtInterval().setLine(lineInfo.getLineNumber());
                         if (str_is_spread){
@@ -1110,13 +1110,19 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
             for (QSpan qSpan1 : oneLineSpans) {
                 BaseTextBox b2 = qSpan1.getTextBox();
                 if (b2 == null) continue;
-                float ho = getHorizentalOverlap(b1, b2);
-                float vo = getVerticalOverlap(b1, b2);
-                if (ho > .99 && vo > .99) continue; // it's the same qspan
-                if (ho >= .1 && vo >= .1) {
+                float ov = getOverlapPerc(b1, b2);
+                if (ov > .99) continue; // it's the same qspan
+                if (ov > .1){
                     logger.info("Filtering {} with {}", qSpan.getStr(), qSpan1.getStr());
                     isGood = false;
                     break;
+        //        float ho = getHorizentalOverlap(b1, b2);
+        //        float vo = getVerticalOverlap(b1, b2);
+        //        if (ho > .99 && vo > .99) continue; // it's the same qspan
+        //        if (ho >= .1 && vo >= .1) {
+        //            logger.info("Filtering {} with {}", qSpan.getStr(), qSpan1.getStr());
+        //            isGood = false;
+        //            break;
                 }
             }
             if (isGood) {
