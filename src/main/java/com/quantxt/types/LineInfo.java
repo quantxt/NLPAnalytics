@@ -20,6 +20,9 @@ public class LineInfo {
         int mostRecentNewLineIndex = 0;
         int str_length = str.length();
 
+    //    String phrase = str.substring(interval.getStart(), interval.getEnd());
+        //let's find out if this is a multi-line phrase
+    //    int num_lines = phrase.split("[\\n\\r]").length;
         for (int i = 0; i < interval.getStart() && i < str_length; i++) {
             if (str.charAt(i) == NewLine) {
                 mostRecentNewLineIndex = i;

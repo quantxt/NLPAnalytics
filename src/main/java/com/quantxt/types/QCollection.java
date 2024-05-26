@@ -1,5 +1,6 @@
 package com.quantxt.types;
 
+import com.quantxt.model.Interval;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
 import org.slf4j.Logger;
@@ -87,7 +88,7 @@ public class QCollection {
     }
 
     public void groupVertically(QCollection generic_matches,
-                                Map<Integer, List<ExtIntervalTextBox>> lineLabelMap,
+                                Map<Integer, List<Interval>> lineLabelMap,
                                 float heightMult1, // between header and first cell
                                 float heightMult2){
 
@@ -107,7 +108,7 @@ public class QCollection {
                 QSpan etb1 = next.getValue();
                 BaseTextBox tb1 = etb1.getTextBox();
                 if (tb1 == null) continue;
-                int numv = etb1.getExtIntervalTextBoxes().size();
+                int numv = etb1.getKeys().size();
                 float b1 = tb1.getBase();
                 float l1 = tb1.getLeft();
                 float r1 = tb1.getRight();
@@ -117,10 +118,10 @@ public class QCollection {
                     List<QSpan> etbList2 = get(line2);
                     if (etbList2.size() == 0) {
                         // check if we are hitting a label
-                        List<ExtIntervalTextBox> labels = lineLabelMap.get(line2);
+                        List<Interval> labels = lineLabelMap.get(line2);
                         if (labels == null) continue;
                         List<QSpan> label_spans = new ArrayList<>();
-                        for (ExtIntervalTextBox eit : labels){
+                        for (Interval eit : labels){
                             label_spans.add(new QSpan(eit));
                         }
                         ExtIntervalTextBox alignedLabels = detectBestAlignedValue(tb1, label_spans, b1, char_width);
@@ -231,14 +232,14 @@ public class QCollection {
         }
     }
 
-    private ExtIntervalTextBox detectBestAlignedValue(BaseTextBox tb1,
-                                                      List<QSpan> etbList2,
+    private Interval detectBestAlignedValue(BaseTextBox tb1,
+                                                      List<Interval> etbList2,
                                                       float b1,
                                                       float char_width)
     {
-        ListIterator<QSpan> iter2 = etbList2.listIterator();
+        ListIterator<Interval> iter2 = etbList2.listIterator();
         while (iter2.hasNext()) {
-            QSpan etb2 = iter2.next();
+            Interval etb2 = iter2.next();
             BaseTextBox tb2 = etb2.getTextBox();
             if (tb2 == null) continue;
             float b2 = tb2.getBase();

@@ -2,6 +2,7 @@ package com.quantxt.types;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.quantxt.model.ExtInterval;
+import com.quantxt.model.Interval;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
 
@@ -10,86 +11,65 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 
-public class QSpan extends ExtInterval {
+public class QSpan {
 
     public enum EXTBOXType {HORIZENTAL_ONE, HORIZENTAL_MANY, VERTICAL_ONE_BELOW, VERTICAL_ONE_ABOVE, VERTICAL_MANY}
-
     protected EXTBOXType spanType;
+
+    private String category;
+    private String dict_name;
+    private String dict_id;
     protected float top = 100000;   // starty
     protected float base = -1;  // endy
     protected float left = 100000;  // startx
     protected float right = -1; // endx
     protected float area = -1; // endx
     /*
-            occupied area exclduing white paddings
-         */
+        occupied area exclduing white paddings
+    */
     protected float occ_area = -1; // //occupied area exclduing white pads
     protected int num_lines = 1; // endx
-    protected transient List<BaseTextBox> childs = new ArrayList<>();
+//    protected transient List<BaseTextBox> childs = new ArrayList<>();
     protected String line_str;
 
-    private List<ExtIntervalTextBox> extIntervalTextBoxes = new ArrayList<>();
+    private List<Interval> keys = new ArrayList<>();
+    private List<Interval> values = new ArrayList<>();
 
     public QSpan(){
-        super();
     }
 
-    public QSpan(ExtIntervalTextBox e){
-        super();
-        this.start = e.getExtInterval().getStart();
-        this.end = e.getExtInterval().getEnd();
-        this.line = e.getExtInterval().getLine();
-        this.str = e.getExtInterval().getStr();
-        this.setDict_id(e.getExtInterval().getDict_id());
-        this.setDict_name(e.getExtInterval().getDict_name());
-        this.setCategory(e.getExtInterval().getCategory());
+    public QSpan(ExtInterval e) {
+        dict_name = e.getDict_name();
+        dict_id = e.getDict_id();
+        category = e.getCategory();
         add(e);
-        if (e.getTextBox() != null) {
-            top = e.getTextBox().getTop();
-            left = e.getTextBox().getLeft();
-            right = e.getTextBox().getRight();
-            base = e.getTextBox().getBase();
-            childs = e.getTextBox().getChilds();
-            line_str = e.getTextBox().getLine_str();
-        }
     }
 
-    public List<ExtIntervalTextBox> getExtIntervalTextBoxes() {
-        return extIntervalTextBoxes;
-    }
-
-    public void add(ExtIntervalTextBox e){
-        extIntervalTextBoxes.add(e);
+    public void add(Interval e){
+        keys.add(e);
+        keys.sort(Comparator.comparingInt(o -> o.getStart()));
     }
 
     public int size(){
-        return extIntervalTextBoxes.size();
+        return keys.size();
     }
 
     public void process(String content){
-        StringBuilder sb = new StringBuilder();
-        extIntervalTextBoxes.sort(Comparator.comparingInt(o -> o.getExtInterval().getStart()));
 
         HashSet<Integer> lines = new HashSet<>();
-        for (ExtIntervalTextBox ext : extIntervalTextBoxes){
-            sb.append(ext.getExtInterval().getStr()).append(" ");
-            start = Math.min(ext.getExtInterval().getStart(), start);
-            end = Math.max(ext.getExtInterval().getEnd(), end);
-            lines.add(ext.getExtInterval().getLine());
-            BaseTextBox baseTextBox = ext.getTextBox();
-            if (baseTextBox == null) continue;
+        for (Interval ext : keys){
+            lines.add(ext.getLine());
+            List<BaseTextBox> tbList = ext.getTextBoxes();
+            if (tbList == null) continue;
             //get the largest fitting box
-            top = Math.min(baseTextBox.getTop(), top);
-            left = Math.min(baseTextBox.getLeft(), left);
-            right = Math.max(baseTextBox.getRight(), right);
-            base = Math.max(baseTextBox.getBase(), base);
+            for (BaseTextBox tb : tbList) {
+                top = Math.min(tb.getTop(), top);
+                left = Math.min(tb.getLeft(), left);
+                right = Math.max(tb.getRight(), right);
+                base = Math.max(tb.getBase(), base);
+            }
         }
         num_lines = lines.size();
-        str = sb.toString().trim();
-        if (content != null) {
-            LineInfo lineInfo = new LineInfo(content, extIntervalTextBoxes.get(0).getExtInterval());
-            line = lineInfo.getLineNumber();
-        }
     }
 
     @JsonIgnore
@@ -142,7 +122,7 @@ public class QSpan extends ExtInterval {
         if (line != null) {
             tb.setLine(line);
         }
-        tb.setChilds(childs);
+    //    tb.setChilds(childs);
         tb.setLine_str(line_str);
         return tb;
     }
@@ -162,10 +142,6 @@ public class QSpan extends ExtInterval {
 
     public float getRight() {
         return right;
-    }
-
-    public List<BaseTextBox> getChilds() {
-        return childs;
     }
 
     public String getLine_str() {
@@ -200,14 +176,6 @@ public class QSpan extends ExtInterval {
         this.right = right;
     }
 
-    public void setExtIntervalTextBoxes(List<ExtIntervalTextBox> extIntervalTextBoxes) {
-        this.extIntervalTextBoxes = extIntervalTextBoxes;
-    }
-
-    public void setChilds(List<BaseTextBox> childs) {
-        this.childs = childs;
-    }
-
     public float getArea() {
         return area;
     }
@@ -227,4 +195,69 @@ public class QSpan extends ExtInterval {
     public void setOcc_area(float occ_area) {
         this.occ_area = occ_area;
     }
+
+    public int getStart(){
+        return keys.get(0).getStart();
+    }
+
+    public int getEnd(){
+        return keys.get(keys.size() -1).getEnd();
+    }
+
+    public List<Interval> getKeys(){
+        return keys;
+    }
+
+    public String getStr(){
+        List<String> list = new ArrayList<>();
+        for (Interval k : keys) {
+            list.add(k.getStr());
+        }
+        return String.join(" ", list);
+    }
+
+    public int getLine(){
+        return keys.get(0).getLine();
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getDict_name() {
+        return dict_name;
+    }
+
+    public void setDict_name(String dict_name) {
+        this.dict_name = dict_name;
+    }
+
+    public String getDict_id() {
+        return dict_id;
+    }
+
+    public void setDict_id(String dict_id) {
+        this.dict_id = dict_id;
+    }
+
+    public void setNum_lines(int num_lines) {
+        this.num_lines = num_lines;
+    }
+
+    public void setKeys(List<Interval> keys) {
+        this.keys = keys;
+    }
+
+    public List<Interval> getValues() {
+        return values;
+    }
+
+    public void setValues(List<Interval> values) {
+        this.values = values;
+    }
+
 }

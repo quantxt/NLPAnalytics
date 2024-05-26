@@ -2,6 +2,7 @@ package com.quantxt.nlp.search;
 
 import com.quantxt.model.DictSearch;
 import com.quantxt.model.ExtInterval;
+import com.quantxt.model.Interval;
 import com.quantxt.model.document.BaseTextBox;
 import com.quantxt.model.document.ExtIntervalTextBox;
 import com.quantxt.nlp.analyzer.QStopFilter;
@@ -145,18 +146,18 @@ public class SearchUtils {
         return new IndexSearcher(dreader);
     }
 
-    public static List<ExtIntervalTextBox> getFragments(final Collection<Document> matchedDocs,
-                                                        final DictSearch.Mode mode,
-                                                        final boolean mergeCntsFrags,
-                                                        final boolean ignorePfx,
-                                                        final int slop,
-                                                        final Analyzer search_analyzer,
-                                                        final Analyzer keyphrase_analyzer,
-                                                        final String searchField,
-                                                        final String vocab_name, //group_name
-                                                        final String vocab_id, //group_id
-                                                        final String str,
-                                                        final Map<Integer, BaseTextBox> lineTextBoxMap) throws Exception {
+    public static List<ExtInterval> getFragments(final Collection<Document> matchedDocs,
+                                                 final DictSearch.Mode mode,
+                                                 final boolean mergeCntsFrags,
+                                                 final boolean ignorePfx,
+                                                 final int slop,
+                                                final Analyzer search_analyzer,
+                                                final Analyzer keyphrase_analyzer,
+                                                final String searchField,
+                                                final String vocab_name, //group_name
+                                                final String vocab_id, //group_id
+                                                final String str,
+                                                final Map<Integer, BaseTextBox> lineTextBoxMap) throws Exception {
 
         boolean isFuzzy = mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_FUZZY_SPAN || mode ==  PARTIAL_FUZZY_ORDERED_SPAN
                 || mode == FUZZY_SPAN;
@@ -164,14 +165,13 @@ public class SearchUtils {
         boolean isMatchAll = mode == ORDERED_SPAN || mode == SPAN || mode == FUZZY_ORDERED_SPAN
                 || mode == FUZZY_SPAN;
 
-        List<ExtIntervalTextBox> all_matches = new ArrayList<>();
+        List<ExtInterval> all_matches = new ArrayList<>();
 
         for (Document matchedDoc : matchedDocs) {
             String query_string_raw = matchedDoc.getField(searchField).stringValue();
             // how many tokens in the query?
             String [] tokens =  tokenize(search_analyzer, query_string_raw);
             if (tokens == null) continue;
-            int num_tokens = tokens.length;
 
             SpanQuery query = getSpanQuery(keyphrase_analyzer, searchField, query_string_raw,
                     slop, isFuzzy, ordered, isMatchAll);
@@ -187,79 +187,98 @@ public class SearchUtils {
             highlighter.setTextFragmenter(fragmenter);
             QTextFragment[] frags = highlighter.getBestTextFragments(tokenStream, str, false, 10);
             ArrayList<QToken> tokenList = highlighter.getTokenList();
-            if (mergeCntsFrags) {
-                ExtInterval[] merged = QTextFragment.mergeContiguousFragments(tokenList, num_tokens-1, category, vocab_name, vocab_id);
+            if (tokenList.size() == 0) continue;
+    //        if (mergeCntsFrags) {
+    //            ExtInterval[] merged = QTextFragment.mergeContiguousFragments(tokenList, num_tokens-1, category, vocab_name, vocab_id);
 
-                for (ExtInterval extInterval : merged) {
-                    if (extInterval == null) continue;
-                    extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
-                    if (slop == 0 && num_tokens > 1 && extInterval.getStr().indexOf('\n') > 0){
-                        // when searching for multi token that is split in mutiple lines
-                        // make sure it is a paragraph and not random form fields
-                        if (extInterval.getStr().indexOf("   ") > 0) continue;
-                    }
+            List<BaseTextBox> tb_list = new ArrayList<>();
+            ExtInterval extInterval = new ExtInterval();
+            int start_pharse = tokenList.get(0).getStart();
+            int end_pharse = tokenList.get(tokenList.size()-1).getEnd();
+            extInterval.setCategory(category);
+            extInterval.setDict_name(vocab_name);
+            extInterval.setDict_id(vocab_id);
+            extInterval.setStr(str.substring(start_pharse, end_pharse));
+            List<Interval> partitions = new ArrayList<>();
+            for (QToken qToken : tokenList) {
+                Interval interval = new Interval();
+                interval.setStart(qToken.getStart());
+                interval.setEnd(qToken.getEnd());
+                interval.setStr(qToken.getStr());
+                LineInfo lineInfo = new LineInfo(str, interval);
+                interval.setLine(lineInfo.getLineNumber());
+                partitions.add(interval);
+                BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, qToken.getStr(), lineInfo,  ignorePfx); // ture
+                if (btb != null) {
+                    tb_list.add(btb);
+                }
+                extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
+    //            if (slop == 0 && num_tokens > 1 && extInterval.getStr().indexOf('\n') > 0){
+                    // when searching for multi token that is split in mutiple lines
+                    // make sure it is a paragraph and not random form fields
+    //                if (extInterval.getStr().indexOf("   ") > 0) continue;
+    //            }
 
-                    LineInfo lineInfo = new LineInfo(str, extInterval);
-                    extInterval.setLine(lineInfo.getLineNumber());
-                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  ignorePfx); // ture
-                    ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
-                    all_matches.add(eitb);
-                }
-            } else {
-                for (QToken qToken : tokenList) {
-                    ExtInterval extInterval = new ExtInterval(qToken.getStart(), qToken.getEnd());
-                    extInterval.setCategory(category);
-                    extInterval.setDict_name(vocab_name);
-                    extInterval.setDict_id(vocab_id);
-                    extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
-                    LineInfo lineInfo = new LineInfo(str, extInterval);
-                    extInterval.setLine(lineInfo.getLineNumber());
-                    BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  false); // false
-                    ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
-                    all_matches.add(eitb);
-                }
+    //            LineInfo lineInfo = new LineInfo(str, extInterval);
+    //            extInterval.setLine(lineInfo.getLineNumber());
+    //            BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  ignorePfx); // ture
             }
+    //        ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
+            extInterval.setTextBoxes(tb_list);
+            all_matches.add(extInterval);
+//         } else {
+//             for (QToken qToken : tokenList) {
+//                 ExtInterval extInterval = new ExtInterval(qToken.getStart(), qToken.getEnd());
+   //                 extInterval.setCategory(category);
+   //                 extInterval.setDict_name(vocab_name);
+   //                 extInterval.setDict_id(vocab_id);
+   //                 extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
+   //                 LineInfo lineInfo = new LineInfo(str, extInterval);
+   //                 extInterval.setLine(lineInfo.getLineNumber());
+   //                 BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  false); // false
+   //                 ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
+   //                 all_matches.add(eitb);
+   //             }
+   //         }
         }
 
-        List<ExtIntervalTextBox> noOverlapOutput = getNonOverlappingIntervals(all_matches);
+        List<ExtInterval> noOverlapOutput = getNonOverlappingIntervals(all_matches);
         return noOverlapOutput;
     }
 
-    public static List<ExtIntervalTextBox> getNonOverlappingIntervals(List<ExtIntervalTextBox> allMatches){
+    public static List<ExtInterval> getNonOverlappingIntervals(List<ExtInterval> allMatches){
 
-        ArrayList<ExtIntervalTextBox> matchs_sorted_by_length = new ArrayList<>(allMatches);
-        matchs_sorted_by_length.sort((ExtIntervalTextBox s1, ExtIntervalTextBox s2)-> (s2.getExtInterval().getEnd() - s2.getExtInterval().getStart()) - (s1.getExtInterval().getEnd() - s1.getExtInterval().getStart()));
+        ArrayList<ExtInterval> matchs_sorted_by_length = new ArrayList<>(allMatches);
+        matchs_sorted_by_length.sort((ExtInterval s1, ExtInterval s2)-> (s2.getEnd() - s2.getStart()) - (s1.getEnd() - s1.getStart()));
 
         boolean [] overlaps = new boolean[matchs_sorted_by_length.size()];
 
         for (int i = 0; i < matchs_sorted_by_length.size(); i++) {
             if (overlaps[i]) continue;
-            final ExtIntervalTextBox firstMatch = matchs_sorted_by_length.get(i);
-            ExtInterval firstExtInterval = firstMatch.getExtInterval();
+            ExtInterval firstExtInterval = matchs_sorted_by_length.get(i);
             boolean isFirstNegative = firstExtInterval.getCategory().equals(DONT_CARE);
             int firstMatchStart = firstExtInterval.getStart();
             int firstMatchEnd   = firstExtInterval.getEnd();
             for (int j = i+1; j < matchs_sorted_by_length.size(); j++) {
                 if (overlaps[j]) continue;
-                final ExtIntervalTextBox otherMatch = matchs_sorted_by_length.get(j);
-                ExtInterval otherExtInterval = otherMatch.getExtInterval();
+                ExtInterval otherExtInterval = matchs_sorted_by_length.get(j);
                 boolean isOtherNegative = otherExtInterval.getCategory().equals(DONT_CARE);
                 if ((isFirstNegative && !isOtherNegative) || (!isFirstNegative && isOtherNegative) )continue;
                 int otherMatchStart = otherExtInterval.getStart();
                 int otherMatchEnd   = otherExtInterval.getEnd();
                 if ((otherMatchStart >= firstMatchStart) && (otherMatchEnd <= firstMatchEnd) &&
-                        firstMatch.getExtInterval().getDict_id().equals(otherMatch.getExtInterval().getDict_id())) {
+                        firstExtInterval.getDict_id().equals(otherExtInterval.getDict_id())) {
                     overlaps[j] = true;
                 }
             }
         }
 
-        ArrayList<ExtIntervalTextBox> noOverlapOutput = new ArrayList<>();
+        ArrayList<ExtInterval> noOverlapOutput = new ArrayList<>();
         for (int i = 0; i < matchs_sorted_by_length.size(); i++){
             if (overlaps[i]) continue;
             noOverlapOutput.add(matchs_sorted_by_length.get(i));
         }
-        noOverlapOutput.sort((ExtIntervalTextBox s1, ExtIntervalTextBox s2)-> (s2.getExtInterval().getEnd() - s2.getExtInterval().getStart()) - (s1.getExtInterval().getEnd() - s1.getExtInterval().getStart()));
+        noOverlapOutput.sort((ExtInterval s1, ExtInterval s2)-> (s2.getEnd() - s2.getStart()) - (s1.getEnd() - s1.getStart()));
 
         return noOverlapOutput;
     }

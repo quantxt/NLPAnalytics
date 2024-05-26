@@ -31,7 +31,7 @@ import static java.util.Comparator.comparingInt;
 
 /**
  * Created by dejani on 1/24/18.
- */
+ * */
 
 public class CommonQTDocumentHelper implements QTDocumentHelper {
 
@@ -62,8 +62,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     final private static Pattern GenericDate3 = Pattern.compile(begin_pad + "[A-Za-z]{3,9}[ ,]{1,3}\\d{1,2}[ ,]{1,3}\\d{4}" + end_pad);  // YYYY-mm-dd
     // 12 Dec 2013
     private static Pattern GenericDate4 = Pattern.compile(begin_pad + "\\d{1,2}[ ,]{1,3}[A-Za-z]{3,9}[ ,]{1,3}\\d{4}" + end_pad);  // YYYY-mm-dd
-
-    //   final private static Pattern Numbers       = Pattern.compile(begin_pad + "((?:\\-)?(?:\\p{Sc} {0,6})?[+\\-#]{0,1}[0-9]{1,3}(?:[\\.,]?[0-9]{3})*(?:(?:\\S+ ){0,4}\\S*))(?=  |\\n)");  // mm dd yyyy
 
     final private static Pattern Numbers = Pattern.compile(begin_pad + "((?:\\-)?(?:\\p{Sc} {0,6})?[+\\-#]{0,1}[0-9]{1,3}(?:[\\.,]?[0-9]{3})*(?:[,\\.][0-9]{2})?%?)" + end_pad);  // mm dd yyyy
     final private static Pattern Id1 = Pattern.compile(begin_pad + "(" + numAlphabet + ")" + end_pad);
@@ -176,7 +174,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 QTSearchable dictSearch = (QTSearchable) extractDictionaries.get(i);
                 for (QSpan qsp : dictSearch.getCompact_spans()){
                     int num_lines = qsp.getNum_lines();
-                    int num_tokens = qsp.getExtIntervalTextBoxes().size();
+                    int num_tokens = qsp.getKeys().size();
                     if (num_lines == 1 && num_tokens > 1){
                         all_one_line_positive_multi_token_spans.add(qsp);
                     }
@@ -184,7 +182,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
                 for (QSpan qsp : dictSearch.getCompact_negatives()){
                     int num_lines = qsp.getNum_lines();
-                    int num_tokens = qsp.getExtIntervalTextBoxes().size();
+                    int num_tokens = qsp.getKeys().size();
                     if (num_lines == 1 && num_tokens > 1){
                         all_one_line_negative_multi_token_spans.add(qsp);
                     }
@@ -229,17 +227,16 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         return lineTextBoxes;
     }
 
-    private Map<Integer, List<ExtIntervalTextBox>> getLocalLineAndTextBox3(Map<String, Collection<QSpan>> labels) {
-        Map<Integer, List<ExtIntervalTextBox>> lineTolabelsWithLineAndTextbox = new HashMap<>();
+    private Map<Integer, List<Interval>> getLocalLineAndTextBox3(Map<String, Collection<QSpan>> labels) {
+        Map<Integer, List<Interval>> lineTolabelsWithLineAndTextbox = new HashMap<>();
         for (Map.Entry<String, Collection<QSpan>> e : labels.entrySet()) {
             for (QSpan qSpan : e.getValue()) {
-                ExtIntervalTextBox eitb = new ExtIntervalTextBox(qSpan.getExtInterval(true), qSpan.getTextBox());
-                List<ExtIntervalTextBox> tbList = lineTolabelsWithLineAndTextbox.get(qSpan.getLine());
+                List<Interval> tbList = lineTolabelsWithLineAndTextbox.get(qSpan.getLine());
                 if (tbList == null) {
                     tbList = new ArrayList<>();
                     lineTolabelsWithLineAndTextbox.put(qSpan.getLine(), tbList);
                 }
-                tbList.add(eitb);
+                tbList.addAll(qSpan.getKeys());
             }
         }
         return lineTolabelsWithLineAndTextbox;
@@ -338,10 +335,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         for (Map.Entry<String, Collection<QSpan>> entry : labels.entrySet()) {
             for (QSpan l : entry.getValue()) {
-                if (l.getExtIntervalTextBoxes() == null) continue;
-                for (ExtIntervalTextBox etb : l.getExtIntervalTextBoxes()) {
-                    int s = etb.getExtInterval().getStart();
-                    int e = etb.getExtInterval().getEnd();
+                List<Interval> e_labels = l.getKeys();
+                if (e_labels == null) continue;
+                for (Interval etb : e_labels) {
+                    int s = etb.getStart();
+                    int e = etb.getEnd();
                     for (int c = s; c < e; c++) {
                         stripped[c] = PAD_CH;
                     }
@@ -416,7 +414,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             tableHeader.headerList.addAll(hdrs);
             for (QSpan qs : hdrs) {
                 qs.setSpanType(VERTICAL_MANY);
-                for (ExtIntervalTextBox ext : qs.getExtIntervalTextBoxes()) {
+                for (Interval ext : qs.getKeys()) {
                     tblHdr.add(ext);
                 }
             }
@@ -448,10 +446,11 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             List<BaseTextBox> detected_areas_tbs = new ArrayList<>();
             List<BaseTextBox> overlaping_header_tbs = new ArrayList<>();
 
-            for (ExtIntervalTextBox etb : table_hdrs.get(table_hdrs.size() - 1).getExtIntervalTextBoxes()) {
-                BaseTextBox btb = etb.getTextBox();
-                detected_areas_tbs.add(etb.getTextBox());
-                overlaping_header_tbs.add(btb);
+            for (Interval etb : table_hdrs.get(table_hdrs.size() - 1).getKeys()) {
+                List<BaseTextBox> btbList = etb.getTextBoxes();
+                if (btbList == null) continue;
+                detected_areas_tbs.addAll(btbList);
+                overlaping_header_tbs.addAll(btbList);
             }
 
             for (int i = 0; i < table_hdrs.size() - 1; i++) {
@@ -459,9 +458,10 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 QSpan next = table_hdrs.get(i + 1);
                 BaseTextBox gap = new BaseTextBox(top, base, cur.getRight(), next.getLeft(), "");
 
-                for (ExtIntervalTextBox etb : cur.getExtIntervalTextBoxes()) {
-                    BaseTextBox btb = etb.getTextBox();
-                    overlaping_header_tbs.add(btb);
+                for (Interval etb : cur.getKeys()) {
+                    List<BaseTextBox> btbList = etb.getTextBoxes();
+                    if (btbList == null) continue;
+                    overlaping_header_tbs.addAll(btbList);
                 }
 
                 boolean valueDetected = false;
@@ -475,7 +475,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     }
                 }
                 if (!valueDetected) {
-                    for (ExtIntervalTextBox etb : cur.getExtIntervalTextBoxes()) {
+                    for (Interval etb : cur.getKeys()) {
                         BaseTextBox btb = etb.getTextBox();
                         detected_areas_tbs.add(etb.getTextBox());
                         overlaping_header_tbs.add(btb);
@@ -578,8 +578,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
             boolean isTable = true;
             if (cols.size() == 2) {
-                if (cols.get(0).getExtIntervalTextBoxes().size() < 2 ||
-                        cols.get(1).getExtIntervalTextBoxes().size() < 2) {
+                if (cols.get(0).getKeys().size() < 2 ||
+                        cols.get(1).getKeys().size() < 2) {
                     isTable = false;
                 }
             }
@@ -588,19 +588,19 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             // so it is either a vertical header or horizontal column
             // we look for labels that are not overlapping - spaced-out columns
             for (QSpan col : cols) {
-                List<ExtIntervalTextBox> eitbs = col.getExtIntervalTextBoxes();
+                List<Interval> eitbs = col.getKeys();
                 if (eitbs == null) continue;
                 int rows = eitbs.size();
                 if (rows < 2) continue;
                 int numOverlaps = 0;
                 boolean labelHasOverlap = false;
                 List<QSpan> hdrs_cols = new ArrayList<>();
-                for (ExtIntervalTextBox etb : eitbs) {
-                    BaseTextBox bt2 = etb.getTextBox();
-                    if (bt2 == null) continue;
-                    ExtInterval ext = etb.getExtInterval();
+                for (Interval etb : eitbs) {
+                    List<BaseTextBox> bt2List = etb.getTextBoxes();
+                    if (bt2List == null) continue;
+                    BaseTextBox bt2 = bt2List.get(0);
                     for (QSpan qSpan : allLabels) {
-                        if (Math.abs(ext.getLine() - qSpan.getLine()) > 5) continue;
+                        if (Math.abs(etb.getLine() - qSpan.getLine()) > 5) continue;
                         BaseTextBox bt1 = qSpan.getTextBox();
                         if (bt1 == null) continue;
                         float ho = getHorizentalOverlap(bt1, bt2);
@@ -656,7 +656,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 QSpan tblHdr = new QSpan();
                 for (QSpan qs : hdrs) {
                     qs.setSpanType(VERTICAL_MANY);
-                    for (ExtIntervalTextBox ext : qs.getExtIntervalTextBoxes()) {
+                    for (Interval ext : qs.getKeys()) {
                         tblHdr.add(ext);
                     }
                 }
@@ -788,9 +788,9 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 }
             }
             if (uniqs.size() > 0) {
-                List<ExtIntervalTextBox> eitbs = th.header.getExtIntervalTextBoxes();
+                List<Interval> eitbs = th.header.getKeys();
                 for (QSpan qs : uniqs) {
-                    eitbs.addAll(qs.getExtIntervalTextBoxes());
+                    eitbs.addAll(qs.getKeys());
                 }
                 th.header.process(null);
             }
@@ -801,9 +801,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         for (TableHeader th : tableHeaders) {
             StringBuilder sb = new StringBuilder();
-            for (ExtIntervalTextBox ext : th.header.getExtIntervalTextBoxes()) {
-                ExtInterval e = ext.getExtInterval();
-                sb.append(e.getStr()).append(" ");
+            for (Interval ext : th.header.getKeys()) {
+                sb.append(ext.getStr()).append(" ");
             }
             sb.append("   ");
             logger.debug("HEADER -> {}", sb);
@@ -864,128 +863,12 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
     private String getKey(QSpan qSpan) {
         StringBuilder sb = new StringBuilder();
-        for (ExtIntervalTextBox eib : qSpan.getExtIntervalTextBoxes()) {
-            ExtInterval ext = eib.getExtInterval();
-            sb.append(ext.getLine() + "_" + ext.getStart() + "_" + ext.getEnd() + "_");
+        for (Interval eib : qSpan.getKeys()) {
+            sb.append(eib.getLine() + "_" + eib.getStart() + "_" + eib.getEnd() + "_");
         }
 
         return sb.toString();
     }
-
-    private Map<String, Collection<QSpan>> removeOverlappingLabels2(Map<String, Collection<QSpan>> id2labels,
-                                                                    List<DictSearch> extractDictionaries) {
-
-        Map<String, Collection<QSpan>> filtered = new HashMap<>();
-
-        List<QSpan> labels = new ArrayList<>();
-        for (Map.Entry<String, Collection<QSpan>> e1 : id2labels.entrySet()) {
-            labels.addAll(e1.getValue());
-        }
-
-        for (QSpan qs : labels) {
-            float s = getArea(qs.getTextBox());
-            qs.setArea(s);
-        }
-
-        boolean[] dups = new boolean[labels.size()];
-        Arrays.fill(dups, false);
-
-        labels.sort(comparingDouble((QSpan s) -> s.getArea()));
-
-        for (int i = 0; i < labels.size(); i++) {
-            QSpan qSpan1 = labels.get(i);
-            String id1 = qSpan1.getDict_id();
-            float area1 = qSpan1.getArea();
-            if (area1 <= 0) continue;
-            BaseTextBox bt1 = qSpan1.getTextBox();
-            String str1 = qSpan1.getStr();
-            boolean hasLongSpace1 = str1.split("  ").length > 1;
-            for (int j = i + 1; j < labels.size(); j++) {
-                QSpan qSpan2 = labels.get(j);
-                float area2 = qSpan2.getArea();
-                if (area2 <= 0) continue;
-                String id2 = qSpan2.getDict_id();
-                BaseTextBox bt2 = qSpan2.getTextBox();
-                String str2 = qSpan2.getStr();
-                boolean hasLongSpace2 = str2.split("  ").length > 1;
-                if ((hasLongSpace1 && !hasLongSpace2) || (!hasLongSpace1 && hasLongSpace2)) continue;
-                float ho = getHorizentalOverlap(bt1, bt2);
-                float vo = getVerticalOverlap(bt1, bt2);
-                if (ho == 1f && vo == 1f) {
-                    if (area2 == area1) {
-                        if (id1.equals(id2)) {
-                            dups[i] = true;  // span1 is smaller
-                        }
-                    } else {
-                        if (!id1.equals(id2)) {
-                            dups[i] = true;  // span1 is smaller
-                    }
-                    }
-
-                }
-            }
-        }
-        for (int i = 0; i < labels.size(); i++) {
-            if (dups[i]) continue;
-            QSpan qSpan = labels.get(i);
-            Collection<QSpan> list = filtered.get(qSpan.getDict_id());
-            if (list == null) {
-                list = new ArrayList<>();
-            }
-            list.add(qSpan);
-            filtered.put(qSpan.getDict_id(), list);
-        }
-
-        return filtered;
-    }
-
-
-    private Map<String, Collection<QSpan>> removeOverlappingLabels(Map<String, Collection<QSpan>> labels) {
-
-        Map<String, Collection<QSpan>> filtered = new HashMap<>();
-
-        for (Map.Entry<String, Collection<QSpan>> e1 : labels.entrySet()) {
-            List<QSpan> newSpans = new ArrayList<>();
-            for (QSpan qSpan1 : e1.getValue()) {
-                BaseTextBox bt1 = qSpan1.getTextBox();
-                if (bt1 == null) {
-                    newSpans.add(qSpan1);
-                    continue;
-                }
-                String key1 = getKey(qSpan1);
-                boolean isUniq = true;
-                for (Map.Entry<String, Collection<QSpan>> e2 : labels.entrySet()) {
-                    for (QSpan qSpan2 : e2.getValue()) {
-                        BaseTextBox bt2 = qSpan2.getTextBox();
-                        if (bt2 == null) continue;
-                        String key2 = getKey(qSpan2);
-                        if (key1.equals(key2)) continue;
-                        float ho = getHorizentalOverlap(bt1, bt2);
-                        float vo = getVerticalOverlap(bt1, bt2);
-                        if (ho == 1f && vo == 1f) {
-                            float s1 = getArea(bt1);
-                            float s2 = getArea(bt2);
-                            //        if (s2 >= s1) {
-                            if (s2 > s1) {
-                                //                             logger.info("{} has overlap with {}", qSpan1.getStr(), qSpan2.getStr());
-                                isUniq = false;
-                                break;
-                            }
-                        }
-                    }
-                    if (!isUniq) break;
-                }
-                if (isUniq) {
-                    newSpans.add(qSpan1);
-                }
-            }
-            if (newSpans.size() > 0) {
-                filtered.put(e1.getKey(), newSpans);
-            }
-        }
-        return filtered;
-    }
-
     private void reviseVerticals(String content,
                                  QCollection all_auto_matches,
                                  QCollection all_auto_matches_generic,
@@ -1011,8 +894,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (lineValues != null) {
                     boolean validValueFollows = false;
                     for (QSpan qs : lineValues) {
-                        ExtInterval ext = qs.getExtInterval();
-                        int s = ext.getStart();
+                        int s = qs.getStart();
                         if (s == end + 1) {
                             validValueFollows = true;
                             break;
@@ -1025,11 +907,10 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 List<QSpan> lineGenerics = all_auto_matches_generic.get(line);
                 if (lineGenerics == null) continue;
                 for (QSpan qs : lineGenerics) {
-                    ExtInterval ext = qs.getExtInterval();
-                    int s = ext.getStart();
-                    int e = ext.getStart();
+                    int s = qs.getStart();
+                    int e = qs.getEnd();
                     if ((s >= start && s <= end) || (start >= s && start <= e)) {
-                        logger.debug(" {} --> {}", str, ext.getStr());
+                        logger.debug(" {} --> {}", str, qs.getStr());
                     }
                 }
             }
@@ -1038,17 +919,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             // The phrase must have at least one more value associated with the table header
             // otherwise we drop the value
         }
-    }
-
-    private int findNextValidFullTextSearchLabel(int start,
-                                                 List<QSpan> freeTextLabels) {
-        if (start == freeTextLabels.size() - 1) return -1;
-        for (int i = start + 1; i < freeTextLabels.size(); i++) {
-            QSpan qSpan = freeTextLabels.get(i);
-            if (qSpan.getCategory().equals("__DONTCARE__") || qSpan.getDict_name().equals("_others")) continue;
-            return qSpan.getExtInterval(false).getStart();
-        }
-        return -1;
     }
 
     private ArrayList<QSpan> getFreeTextValues(String content,
@@ -1144,7 +1014,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         String content_wt_form_vals = content;
-        Map<Integer, List<ExtIntervalTextBox>> lineLabelMap = getLocalLineAndTextBox3(labels);
+        Map<Integer, List<Interval>> lineLabelMap = getLocalLineAndTextBox3(labels);
         Map<String, Collection<QSpan>> isolatedAugmentedlabels = new HashMap<>();
         boolean formValsRemoved = textBoxes != null && content.length() < 15000;
         String lean_content = content;
@@ -1156,14 +1026,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             isolatedAugmentedlabels = findLabels(allFormFields, null, lean_content, 0, true);
 
             content_wt_form_vals = removeLabels(lean_content, isolatedAugmentedlabels);
-
-            for (Map.Entry<String, Collection<QSpan>> e : isolatedAugmentedlabels.entrySet()) {
-                for (QSpan qs : e.getValue()) {
-                    LineInfo lineInfo = new LineInfo(content, qs.getExtInterval(false));
-                    qs.setStart(lineInfo.getLocalStart());
-                    qs.setEnd(lineInfo.getLocalEnd());
-                }
-            }
         }
 
         Map<String, QCollection> grouped_vertical_matches = new HashMap<>();
@@ -1346,13 +1208,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             if (!isAuto && !isCustomAuto) continue;
 
             //TODO:improve this
-            LineInfo lineInfo = new LineInfo(content, qSpan.getExtInterval(false));
-            String line_str = lineTextBoxMap.get(lineInfo.getLineNumber()).getLine_str();
-            int offset = lineInfo.getLocalEnd();
-            qSpan.setStart(lineInfo.getLocalStart());
-            qSpan.setEnd(lineInfo.getLocalEnd());
-            qSpan.setLine(lineInfo.getLineNumber());
-            qSpan.setLine_str(line_str);
+            String line_str = qSpan.getLine_str();
+            int offset = qSpan.getEnd();
 
             if (line_str.length() < offset) {
                 continue;
@@ -1409,7 +1266,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     ExtInterval m1 = bestAutoValue.hValue.getExtInterval();
                     QSpan m2 = all_auto_matches_generic.lookup(m1.getLine(), m1.getStart());
                     if (m2 != null) {
-                        bestAutoValue.hValue = m2.getExtIntervalTextBoxes().get(0);
+                        bestAutoValue.hValue = m2.getValues().get(0);
                     }
                 }
             } else {
@@ -1429,7 +1286,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
             List<Interval> best = bestAutoValue.getBest(allLabels, qSpan, isAuto);
             if (best.size() > 0) {
-                qSpan.setExtIntervalSimples(best);
+                qSpan.setValues(best);
                 finalQSpans.add(qSpan);
             }
         }
@@ -1453,36 +1310,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         }
 
         return found;
-    }
-
-
-    private static boolean findLineItemsLcl(List<ExtInterval> list,
-                                            Map<Integer, Item> lineItems,
-                                            String vocabName,
-                                            boolean createNew) {
-
-        ListIterator<ExtInterval> iter = list.listIterator();
-        boolean added = false;
-        while (iter.hasNext()) {
-            ExtInterval extInterval = iter.next();
-            String vocab_name = extInterval.getDict_name();  // input field name
-            if (!vocab_name.equals(vocabName)) continue;
-
-            int line = extInterval.getLine();
-            Item lineItem = lineItems.get(line);
-            if (lineItem == null) {
-                if (!createNew) continue;
-                lineItem = new Item();
-                lineItems.put(line, lineItem);
-                added = true;
-            }
-            if (lineItem.getFields().get(vocab_name) != null) continue;
-
-            iter.remove();
-            lineItem.getFields().put(vocab_name, extInterval);
-        }
-
-        return added;
     }
 
     private static class ValueDistance {
@@ -1603,7 +1430,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 spanIter = qSpans.listIterator();
                 while (spanIter.hasNext()) {
                     QSpan qSpan = spanIter.next();
-                    List<Interval> vals = qSpan.getExtIntervalSimples();
+                    List<Interval> vals = qSpan.getValues();
                     if (vals == null || vals.size() < 2) continue;
                     String dictId = qSpan.getDict_id();
                     DictSearch dictSearch = vocabMap.get(dictId);
@@ -1666,7 +1493,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         // so if 1 2 3 4 5 go to Label1 and 3 happens to be Label2, where it has 1 or more vertical values
         // then we remove 3, 4 and 5 from Label1
         for (QSpan qSpan : qSpans) {
-            List<Interval> vals = qSpan.getExtIntervalSimples();
+            List<Interval> vals = qSpan.getValues();
             if (vals == null || vals.size() == 0) continue;
 
             boolean isStacked = isStacked(qSpan);
@@ -1678,7 +1505,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 Interval interval = iter.next();
                 boolean overlaps = false;
                 for (QSpan label : qSpans) {
-                    List<Interval> vals2 = qSpan.getExtIntervalSimples();
+                    List<Interval> vals2 = qSpan.getValues();
                     if (vals2 == null || vals2.size() == 0) continue;
                     boolean isLStacked = isStacked(label);
                     if (!isLStacked) continue;
@@ -1688,7 +1515,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 if (overlaps) break;
                 newVals.add(interval);
             }
-            qSpan.setExtIntervalSimples(newVals);
+            qSpan.setValues(newVals);
         }
 
         // if a value is assigned to more than one key, pick the closest key
@@ -1698,7 +1525,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         spanIter = qSpans.listIterator();
         while (spanIter.hasNext()) {
             QSpan qSpan = spanIter.next();
-            List<Interval> vals = qSpan.getExtIntervalSimples();
+            List<Interval> vals = qSpan.getValues();
             if (vals == null || vals.size() == 0) continue;
             String dictId = qSpan.getDict_id();
             DictSearch dictSearch = vocabMap.get(dictId);
@@ -1733,7 +1560,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         Map<String, List<ValueDistance>> best_found_values = new HashMap<>();
         for (QSpan qSpan : qSpans) {
-            List<Interval> vals = qSpan.getExtIntervalSimples();
+            List<Interval> vals = qSpan.getValues();
             if (vals == null || vals.size() == 0) continue;
             Interval interval = vals.get(0);
             String key = interval.getStart() + "-" + interval.getEnd() + "-" + interval.getLine();
@@ -1819,7 +1646,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         //TODO: refactor this piece- this might be repetetive
         Map<String, ValueDistance> verticalValue2dist = new HashMap<>();
         for (QSpan qSpan : filtered) {
-            List<Interval> intervals = qSpan.getExtIntervalSimples();
+            List<Interval> intervals = qSpan.getValues();
             if (intervals == null || intervals.size() == 0) continue;
             for (Interval interval : intervals) {
                 String key = interval.getStart() + "-" + interval.getEnd() + "-" + interval.getLine();
@@ -1835,7 +1662,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
 
         while (spanIter2.hasNext()) {
             QSpan qSpan = spanIter2.next();
-            List<Interval> intervals = qSpan.getExtIntervalSimples();
+            List<Interval> intervals = qSpan.getValues();
             if (intervals == null || intervals.size() == 0) continue;
             String qspanKey = qSpan.getStart() + "-" + qSpan.getEnd() + "-" + qSpan.getLine();
             ListIterator<Interval> iter = intervals.listIterator();
@@ -1858,7 +1685,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
         ListIterator<QSpan> iter = filtered.listIterator();
         while (iter.hasNext()) {
             QSpan qSpan = iter.next();
-            List<Interval> list = qSpan.getExtIntervalSimples();
+            List<Interval> list = qSpan.getValues();
             if (list == null || list.size() == 0) continue;
             ListIterator<Interval> iter_int = list.listIterator();
             while (iter_int.hasNext()) {
