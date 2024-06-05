@@ -16,24 +16,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-public class TextBox extends BaseTextBox implements Comparable<TextBox> {
+public class TextBox extends BaseTextBox {
     final private static Logger logger = LoggerFactory.getLogger(TextBox.class);
 
     final private static float spc_lower = 2.0f;
     final private static float spc_upper = 4.0f;
     final private static float avg_char_width_unit = 50f; // this is the width for an `e`
-
-    @Override
-    public int compareTo(TextBox that) {
-
-        if (this.getBase() == that.getBase() && this.getTop() == that.getTop()) return 0;
-
-        //primitive numbers follow this form
-        if (this.getBase() < that.getBase()) return -1;
-        if (this.getBase() > that.getBase()) return +1;
-
-        return 0;
-    }
 
     @Override
     public String toString(){
@@ -644,14 +632,14 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         }
     }
 
-    public static BaseTextBox findAssociatedTextBox(Map<Integer, BaseTextBox> lineTextBoxMap,
+    public static BaseTextBox findAssociatedTextBox(Map<Integer, List<BaseTextBox>> lineTextBoxMap,
                                                     String str,
-                                                    LineInfo lineInfo,
+                                                    int line_number,
                                                     boolean ignorePrefixBoxes)
     {
         if (lineTextBoxMap == null) return null;
-        BaseTextBox line_text_boxes = lineTextBoxMap.get(lineInfo.getLineNumber());
-        if (line_text_boxes == null) return null;
+        List<BaseTextBox> childs = lineTextBoxMap.get(line_number);
+        if (childs == null) return null;
 
         String line_str = line_text_boxes.getLine_str();
         //TODO: Ideally we should pass the analyzer here
@@ -662,12 +650,9 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
     //    int str_start_1 = line_str.indexOf(str);
         int str_start_1 = norm_line_str.indexOf(norm_str);
         if (str_start_1 < 0) {
-            logger.warn("{} was not found in line_str {}", str, line_str);
+            logger.warn("{} was not found", str, line_str);
             return null;
         }
-
-        List<BaseTextBox> childs = line_text_boxes.getChilds();
-        if (childs.size() == 0) return null;
 
         //align textbox lefts with string indices
         int index = 0;
@@ -882,6 +867,18 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         return overlap / Math.min(w1, w2);
     }
 
+    public static float getHorizentalOverlaps(List<BaseTextBox> list1,
+                                             List<BaseTextBox> list2){
+        float h = 0;
+        for (BaseTextBox b1 : list1){
+            for (BaseTextBox b2 : list2){
+                h += getHorizentalOverlap(b1, b2);
+            }
+        }
+        return h;
+    }
+
+
     public static float getHorizentalOverlap(BaseTextBox textBox1,
                                              BaseTextBox textBox2){
         float l1 = textBox1.getLeft();
@@ -915,8 +912,6 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         }
         return overlap / Math.min(w1, w2);
     }
-
-
     public static float getOverlapPerc(BaseTextBox textBox1,
                                        BaseTextBox textBox2){
         float l1 = textBox1.getLeft();
@@ -1060,6 +1055,18 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         }
         l += (last_end - last_start);
         return l;
+    }
+
+    public static float getVerticalOverlaps(List<BaseTextBox> list1,
+                                            List<BaseTextBox> list2)
+    {
+        float v = 0;
+        for (BaseTextBox b1 : list1){
+            for (BaseTextBox b2 : list2){
+                v += getVerticalOverlap(b1, b2);
+            }
+        }
+        return v;
     }
 
     public static float getVerticalOverlap(BaseTextBox textBox1, BaseTextBox textBox2)

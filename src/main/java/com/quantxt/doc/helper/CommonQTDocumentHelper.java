@@ -196,13 +196,6 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 filterMultiTokenMultiLineSpans(dictSearch1.getCompact_spans(), all_one_line_positive_multi_token_spans);
                 filterMultiTokenMultiLineSpans(dictSearch1.getCompact_negatives(), all_one_line_negative_multi_token_spans);
 
-                /*
-                for (int j = 0; j < extractDictionaries.size(); j++) {
-                    if (i == j) continue;
-                    QTSearchable dictSearch2 = (QTSearchable) extractDictionaries.get(j);
-                    dictSearch1.filterOverlap(dictSearch2);
-                }
-                 */
 
                 List<QSpan> dicLabels = dictSearch1.postSearch(hasTextBoxes);
                 if (!dicLabels.isEmpty()) {
@@ -418,7 +411,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     tblHdr.add(ext);
                 }
             }
-            tblHdr.process(null);
+            tblHdr.process();
             tableHeader.firstRow = qSpan1.getLine();
             tableHeaders.add(tableHeader);
         }

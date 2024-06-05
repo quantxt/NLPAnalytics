@@ -17,7 +17,7 @@
 
     <properties>
         <lucene.version>9.10.0</lucene.version>
-        <qt-core.version>2.16.0</qt-core.version>
+        <qt-core.version>2.17.0</qt-core.version>
     </properties>
 
     <licenses>

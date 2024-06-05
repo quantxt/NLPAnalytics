@@ -4,7 +4,6 @@ import com.quantxt.model.DictSearch;
 import com.quantxt.model.ExtInterval;
 import com.quantxt.model.Interval;
 import com.quantxt.model.document.BaseTextBox;
-import com.quantxt.model.document.ExtIntervalTextBox;
 import com.quantxt.nlp.analyzer.QStopFilter;
 import com.quantxt.nlp.search.span.*;
 import com.quantxt.nlp.tokenizer.QLetterOnlyTokenizer;
@@ -151,13 +150,13 @@ public class SearchUtils {
                                                  final boolean mergeCntsFrags,
                                                  final boolean ignorePfx,
                                                  final int slop,
-                                                final Analyzer search_analyzer,
-                                                final Analyzer keyphrase_analyzer,
-                                                final String searchField,
-                                                final String vocab_name, //group_name
-                                                final String vocab_id, //group_id
-                                                final String str,
-                                                final Map<Integer, BaseTextBox> lineTextBoxMap) throws Exception {
+                                                 final Analyzer search_analyzer,
+                                                 final Analyzer keyphrase_analyzer,
+                                                 final String searchField,
+                                                 final String vocab_name, //group_name
+                                                 final String vocab_id, //group_id
+                                                 final String str,
+                                                 final Map<Integer, List<BaseTextBox>> lineTextBoxMap) throws Exception {
 
         boolean isFuzzy = mode == FUZZY_ORDERED_SPAN || mode == PARTIAL_FUZZY_SPAN || mode ==  PARTIAL_FUZZY_ORDERED_SPAN
                 || mode == FUZZY_SPAN;
@@ -188,8 +187,6 @@ public class SearchUtils {
             QTextFragment[] frags = highlighter.getBestTextFragments(tokenStream, str, false, 10);
             ArrayList<QToken> tokenList = highlighter.getTokenList();
             if (tokenList.size() == 0) continue;
-    //        if (mergeCntsFrags) {
-    //            ExtInterval[] merged = QTextFragment.mergeContiguousFragments(tokenList, num_tokens-1, category, vocab_name, vocab_id);
 
             List<BaseTextBox> tb_list = new ArrayList<>();
             ExtInterval extInterval = new ExtInterval();
@@ -199,47 +196,28 @@ public class SearchUtils {
             extInterval.setDict_name(vocab_name);
             extInterval.setDict_id(vocab_id);
             extInterval.setStr(str.substring(start_pharse, end_pharse));
-            List<Interval> partitions = new ArrayList<>();
+            extInterval.setStart(start_pharse);
+            extInterval.setEnd(end_pharse);
+            boolean lineItSet = false;
             for (QToken qToken : tokenList) {
                 Interval interval = new Interval();
                 interval.setStart(qToken.getStart());
                 interval.setEnd(qToken.getEnd());
-                interval.setStr(qToken.getStr());
                 LineInfo lineInfo = new LineInfo(str, interval);
-                interval.setLine(lineInfo.getLineNumber());
-                partitions.add(interval);
+                if (!lineItSet){
+                    extInterval.setLine(lineInfo.getLineNumber());
+                    lineItSet = true;
+                }
                 BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, qToken.getStr(), lineInfo,  ignorePfx); // ture
                 if (btb != null) {
-                    tb_list.add(btb);
+                    btb = new BaseTextBox();
                 }
-                extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
-    //            if (slop == 0 && num_tokens > 1 && extInterval.getStr().indexOf('\n') > 0){
-                    // when searching for multi token that is split in mutiple lines
-                    // make sure it is a paragraph and not random form fields
-    //                if (extInterval.getStr().indexOf("   ") > 0) continue;
-    //            }
-
-    //            LineInfo lineInfo = new LineInfo(str, extInterval);
-    //            extInterval.setLine(lineInfo.getLineNumber());
-    //            BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  ignorePfx); // ture
+                btb.setLine(lineInfo.getLineNumber());
+                btb.setStr(qToken.getStr());
+                tb_list.add(btb);
             }
-    //        ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
             extInterval.setTextBoxes(tb_list);
             all_matches.add(extInterval);
-//         } else {
-//             for (QToken qToken : tokenList) {
-//                 ExtInterval extInterval = new ExtInterval(qToken.getStart(), qToken.getEnd());
-   //                 extInterval.setCategory(category);
-   //                 extInterval.setDict_name(vocab_name);
-   //                 extInterval.setDict_id(vocab_id);
-   //                 extInterval.setStr(str.substring(extInterval.getStart(), extInterval.getEnd()));
-   //                 LineInfo lineInfo = new LineInfo(str, extInterval);
-   //                 extInterval.setLine(lineInfo.getLineNumber());
-   //                 BaseTextBox btb = findAssociatedTextBox(lineTextBoxMap, extInterval.getStr(), lineInfo,  false); // false
-   //                 ExtIntervalTextBox eitb = new ExtIntervalTextBox(extInterval, btb);
-   //                 all_matches.add(eitb);
-   //             }
-   //         }
         }
 
         List<ExtInterval> noOverlapOutput = getNonOverlappingIntervals(all_matches);

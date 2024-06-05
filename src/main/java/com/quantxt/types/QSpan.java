@@ -54,7 +54,7 @@ public class QSpan {
         return keys.size();
     }
 
-    public void process(String content){
+    public void process(){
 
         HashSet<Integer> lines = new HashSet<>();
         for (Interval ext : keys){
@@ -85,8 +85,8 @@ public class QSpan {
     }
     public ExtInterval getExtInterval(boolean useLocalLineStart){
         ExtInterval extInterval = new ExtInterval();
-        extInterval.setDict_name(extIntervalTextBoxes.get(0).getExtInterval().getDict_name());
-        extInterval.setDict_id(extIntervalTextBoxes.get(0).getExtInterval().getDict_id());
+        extInterval.setDict_name(dict_name);
+        extInterval.setDict_id(dict_id);
         extInterval.setStr(str);
         extInterval.setCategory(extIntervalTextBoxes.get(0).getExtInterval().getCategory());
         if (useLocalLineStart){
