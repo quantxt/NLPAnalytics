@@ -55,7 +55,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
     final private static String genricPharse = "([^:\\s]+)";
     final private static String SpcCharacter1 = "[0-9_\\-\\.\\/\\)\\(\\*]+";
     final private static String numAlphabet = "(\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]+|[\\p{L}]|[\\p{L}\\-]+\\p{N}[\\p{L}\\p{N}\\-\\/\\)\\(\\.]*)";
-    final private static Pattern FormKey = Pattern.compile("(?<=\\s{2})(\\p{L}(?:[^\\: \\n]+ )*[^\\:\\n ]+ {0,20}[\\:](?:(?: {0,35}(?:(?:[^ \\n]*[^\\:\\n]) ){0,4}[^ \\n]+[^\\:])))" + end_pad);
+    final private static Pattern FormKey = Pattern.compile("(?<=\\s{2})(\\p{L}(?:[^\\: \\n]+ )*[^\\:\\n ]+ {0,10}[\\:](?:(?: {0,35}(?:(?:[^ \\n]*[^\\:\\n]) ){0,4}[^ \\n]+[^\\:])))" + end_pad);
     final private static Pattern GenericDate1 = Pattern.compile(begin_pad + "((?:[1-9]|[0123]\\d)[ -\\/\\.](?:[1-9]|[0123]\\d)[ -\\/\\.](?:19\\d{2}|20\\d{2}|\\d{2}))" + end_pad);  // mm dd yyyy
     final private static Pattern GenericDate2 = Pattern.compile(begin_pad + "([12]\\d{3}[ -\\/](?:0[1-9]|1[0-2])[ -\\/](?:0[1-9]|[12]\\d|3[01]))" + end_pad);  // YYYY-mm-dd
     // Dec 12, 2013
@@ -1068,7 +1068,12 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             QSpan qSpan = freeTextLabels.get(i);
             int start_srch = qSpan.getExtInterval(false).getEnd();
             DictSearch dictSearch = voacbId2dic.get(qSpan.getDict_id());
-            int end_srch = i < total - 1 ? freeTextLabels.get(i + 1).getExtInterval(false).getStart() : -1;
+            int end_srch = -1;
+            for (int j=i+1; j< total; j++){
+                end_srch = freeTextLabels.get(j).getExtInterval(false).getStart();
+                if (end_srch > start_srch) break;
+            }
+
             List<Interval> rowValues = findAllHorizentalMatches(content, dictSearch, start_srch, end_srch);
 
             if (searchVertical && rowValues.size() == 0) {
@@ -1825,7 +1830,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 String key = interval.getStart() + "-" + interval.getEnd() + "-" + interval.getLine();
                 ValueDistance vd = verticalValue2dist.get(key);
                 int dist = interval.getLine() - qSpan.getLine();
-                if (vd == null || dist < vd.dist) {
+                if (dist == 0) continue;
+                if (vd == null || dist < vd.dist) { // horizental key/value are always fine
                     verticalValue2dist.put(key, new ValueDistance(qSpan, dist));
                 }
             }
