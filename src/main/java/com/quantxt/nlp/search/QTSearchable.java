@@ -1149,7 +1149,7 @@ public class QTSearchable extends DictSearch<ExtInterval, QSpan> implements Seri
                 float vo = getVerticalOverlap(b1, b2);
                 if (ho > .95 && vo > .95) {  // i completely covers j
                     bad_spans.add(j);
-                } else if (ho > 0 && vo > 0) {
+                } else if (ho > .3 && vo > .3) {
                     float s2 = (b2.getRight() - b2.getLeft()) * (b2.getBase() - b2.getTop());
                     if (s1 > s2) {
                         bad_spans.add(i);
