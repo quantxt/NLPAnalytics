@@ -1,0 +1,55 @@
+               SERFF Tracking #:      HART-131285329         State Tracking #:                                      Company Tracking #:       FN.21HS.312.2017.01
+
+
+
+               State:                     District of Columbia                                  First Filing Company:      Twin City Fire Insurance Company, ...
+
+               TOI/Sub-TOI:               17.0 Other Liability-Occ/Claims Made/17.0022 Other
+
+               Product Name:              CYBER PRODUCTS
+
+               Project Name/Number:       CYBER PRODUCTS/FN.21HS.312.2017.01
+
+
+
+
+               For     Schedule
+
+               Item    Schedule Item      Form                       Form        Edition         Form Form              Action Specific               Readability
+
+               No.     Status             Name                       Number      Date            Type   Action          Data                          Score          Attachments
+               1       APPROVED           District of Columbia       HR 08                       END    New                                                          HR08H003.pdf
+                       01/03/2018         Cancellation and           H003 00
+                                          Nonrenewal Endorsement 0605
+               2       APPROVED           Cyber Insurance            CB 00                       ABE    New                                           0.000          CB00H001.pdf
+                       01/03/2018         Application                H001 00
+                                                                     1017
+               3       APPROVED           Declarations               CB 00                       DEC    New                                           0.000          CB00H002.pdf
+                       01/03/2018                                    H002 00
+                                                                     1017
+               4       APPROVED           Cyber Insurance Policy     CB 00                       PCF    New                                           0.000          CB00H003.pdf
+                       01/03/2018                                    H003 00
+                                                                     1017
+               5       APPROVED           Electronic Transfer Fraud  CB 00                       END    New                                           0.000          CB00H010.pdf
+                       01/03/2018         Endorsement                H010 00
+                                                                     1017
+               6       APPROVED           Additional Insured         CB 00                       END    New                                           0.000          CB00H015.pdf
+                       01/03/2018         Organization(s)            H015 00
+                                          Endorsement                1017
+               7       APPROVED           Amend Definition of        CB 00                       END    New                                           0.000          CB00H016.pdf
+                       01/03/2018         Executive Officer          H016 00
+                                          Endorsement                1017
+               8       APPROVED           Extended Reporting         CB 00                       END    New                                           0.000          CB00H017.pdf
+                       01/03/2018         Period Election            H017 00
+                                                                     1017
+               9       APPROVED           Specific Events /          CB 00                       END    New                                           0.000          CB00H020.pdf
+                       01/03/2018         Proceedings Exclusion      H020 00
+                                                                     1017
+               10      APPROVED           CyberChoice Breach         CB 00                       END    New                                           0.000          CB00H023.pdf
+                       01/03/2018         Coach Endorsement          H023 00
+                                                                     1017
+               11      APPROVED           Liberalization             CB 00                       END    New                                           0.000          CB00H024.pdf
+                       01/03/2018         Endorsement (Including     H024 00
+                                          Exceptions)                1017
+               12      APPROVED           Digital Content            CB 00                       END    New                                           0.000          CB00H025.pdf
+                       01/03/2018         Amendatory Endorsement H025 00

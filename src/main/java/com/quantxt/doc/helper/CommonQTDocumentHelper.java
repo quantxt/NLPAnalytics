@@ -1651,8 +1651,8 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                     if (interval == null) continue;
                     for (Interval inv : interval) {
                         if (inv.getLine() != ext.getLine()) continue;
-                        if ((inv.getStart() >= s && inv.getStart() <= e) ||
-                                (s >= inv.getStart() && s <= inv.getEnd())) {
+                        if ((inv.getStart() >= s && inv.getStart() < e) ||
+                                (s >= inv.getStart() && s < inv.getEnd())) {
                             hasOverlap = true;
                             break;
                         }
@@ -1711,7 +1711,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
             if (dictSearch != null) {
                 String raw_ptr = dictSearch.getDictionary().getPattern().pattern();
                 //        isAuto = raw_ptr.equals(AUTO);
-                isAuto = raw_ptr.startsWith(AUTO);
+                isAuto = raw_ptr.equals(AUTO);
             }
             if (!isAuto) continue;
             int label_line = qSpan.getLine();
@@ -1830,7 +1830,7 @@ public class CommonQTDocumentHelper implements QTDocumentHelper {
                 String key = interval.getStart() + "-" + interval.getEnd() + "-" + interval.getLine();
                 ValueDistance vd = verticalValue2dist.get(key);
                 int dist = interval.getLine() - qSpan.getLine();
-                if (dist == 0) continue;
+            //    if (dist == 0) continue;
                 if (vd == null || dist < vd.dist) { // horizental key/value are always fine
                     verticalValue2dist.put(key, new ValueDistance(qSpan, dist));
                 }

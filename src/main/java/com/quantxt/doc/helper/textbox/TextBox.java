@@ -676,9 +676,10 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         for (int i = 0; i < childs.size(); i++) {
             BaseTextBox baseTextBox = childs.get(i);
             String child_str = baseTextBox.getStr();
-            String norm_child_str = child_str.replaceAll("[\\p{Punct}]", " ");
-            index = norm_line_str.indexOf(norm_child_str, index);
-        //    index = line_str.indexOf(child_str, index);
+            if (child_str == null || child_str.trim().length() == 0) continue;
+        //    String norm_child_str = child_str.replaceAll("[\\p{Punct}]", " ");
+        //    index = norm_line_str.indexOf(norm_child_str, index);
+            index = line_str.indexOf(child_str, index);
             childIdx2StrIdx[i][0] = index;
             childIdx2StrIdx[i][1] = index + child_str.length();
             index += child_str.length();
@@ -690,6 +691,7 @@ public class TextBox extends BaseTextBox implements Comparable<TextBox> {
         int spanStart = lineInfo.getLocalStart();
         int spanEnd = lineInfo.getLocalEnd();
         for (int i = 0; i < childIdx2StrIdx.length; i++) {
+            if (childIdx2StrIdx[i] == null) continue;
             int current_start = childIdx2StrIdx[i][0];
             if (current_start > spanEnd) break;
             int current_end = childIdx2StrIdx[i][1];
